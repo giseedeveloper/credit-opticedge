@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Laravel dev artifacts
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*.log
+/bootstrap/cache/*.php
+
+# Tests
+tests
+phpunit.xml
+.phpunit.result.cache
+coverage
+
+# Dev config
+.env
+.env.local
+.env.*.local
+.env.testing
+
+# Docker source (already inside image)
+docker
+Dockerfile
+docker-compose*.yml
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Docs
+README.md
+CHANGELOG.md
+*.md
+
+# CI
+.github
+.circleci
+
+# Misc
+Makefile

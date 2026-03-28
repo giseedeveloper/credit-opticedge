@@ -1,0 +1,91 @@
+<?php
+
+namespace App\Livewire\Credit;
+
+use App\Models\Branch;
+use App\Models\Loan;
+use Livewire\Component;
+use Livewire\WithPagination;
+
+class Defaulters extends Component
+{
+    use WithPagination;
+
+    public string $search       = '';
+    public string $branchFilter = '';
+    public string $riskFilter   = '';
+
+    public bool $showDetail      = false;
+    public ?string $detailLoanId = null;
+
+    public function mount(): void
+    {
+        abort_unless(auth()->user()->canAccess('loans.view'), 403);
+    }
+
+    public function updatedSearch(): void      { $this->resetPage(); }
+    public function updatedBranchFilter(): void { $this->resetPage(); }
+    public function updatedRiskFilter(): void   { $this->resetPage(); }
+
+    public function openDetail(string $id): void
+    {
+        $this->detailLoanId = $id;
+        $this->showDetail   = true;
+    }
+
+    public function closeDetail(): void
+    {
+        $this->showDetail   = false;
+        $this->detailLoanId = null;
+    }
+
+    public function getDetailLoanProperty(): ?Loan
+    {
+        if (! $this->detailLoanId) {
+            return null;
+        }
+
+        return Loan::with([
+            'customer.branch',
+            'inventoryUnit.phoneModel.brand',
+            'vendor',
+            'branch',
+            'disbursedBy',
+            'approvedBy',
+            'repaymentSchedules',
+            'transactions' => fn ($q) => $q->latest('transacted_at')->take(10),
+            'recoveryTickets.agent',
+        ])->find($this->detailLoanId);
+    }
+
+    public function render()
+    {
+        $query = Loan::with(['customer', 'inventoryUnit.phoneModel.brand', 'branch'])
+            ->whereIn('status', ['overdue', 'defaulted'])
+            ->when($this->search, fn ($q) => $q->where(function ($q) {
+                $q->where('loan_number', 'ilike', "%{$this->search}%")
+                    ->orWhereHas('customer', fn ($q) => $q
+                        ->where('first_name', 'ilike', "%{$this->search}%")
+                        ->orWhere('last_name', 'ilike', "%{$this->search}%")
+                        ->orWhere('phone', 'ilike', "%{$this->search}%"));
+            }))
+            ->when($this->branchFilter, fn ($q) => $q->where('branch_id', $this->branchFilter))
+            ->when($this->riskFilter === 'moderate', fn ($q) => $q->whereRaw('due_date >= NOW() - INTERVAL \'30 days\''))
+            ->when($this->riskFilter === 'high', fn ($q) => $q->whereRaw('due_date BETWEEN NOW() - INTERVAL \'60 days\' AND NOW() - INTERVAL \'31 days\''))
+            ->when($this->riskFilter === 'critical', fn ($q) => $q->whereRaw('due_date < NOW() - INTERVAL \'60 days\''));
+
+        $defaulters = (clone $query)->orderByRaw('due_date ASC NULLS LAST')->paginate(20);
+
+        $stats = [
+            'total'       => Loan::whereIn('status', ['overdue', 'defaulted'])->count(),
+            'outstanding' => Loan::whereIn('status', ['overdue', 'defaulted'])->sum('outstanding_balance'),
+            'penalty'     => Loan::whereIn('status', ['overdue', 'defaulted'])->sum('penalty_amount'),
+            'exposure'    => Loan::whereIn('status', ['overdue', 'defaulted'])->selectRaw('SUM(outstanding_balance + COALESCE(penalty_amount, 0))')->value('sum') ?? 0,
+        ];
+
+        $branches = Branch::orderBy('name')->get();
+
+        return view('livewire.credit.defaulters', compact('defaulters', 'stats', 'branches'))
+            ->layout('layouts.app', ['title' => 'Defaulters List']);
+    }
+}

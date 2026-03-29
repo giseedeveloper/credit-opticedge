@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!collect(\Illuminate\Support\Facades\DB::select("SELECT indexname FROM pg_indexes WHERE tablename='loans' AND indexname='loans_loan_number_unique'"))->isNotEmpty()) {
+        if (! Schema::hasIndex('loans', 'loans_loan_number_unique')) {
             Schema::table('loans', function (Blueprint $table) {
                 $table->unique('loan_number');
             });

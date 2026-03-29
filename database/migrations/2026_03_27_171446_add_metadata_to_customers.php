@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('customers', function (Blueprint $table) {
-            $table->jsonb('metadata')->nullable()->after('status');
+            $table->json('metadata')->nullable()->after('credit_status');
         });
     }
 

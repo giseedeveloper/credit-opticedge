@@ -11,6 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::dropIfExists('journal_entries');
+
         Schema::create('journal_entries', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('reference')->unique();

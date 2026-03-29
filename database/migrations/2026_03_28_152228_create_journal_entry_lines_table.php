@@ -11,6 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::dropIfExists('journal_entry_lines');
+
         Schema::create('journal_entry_lines', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('journal_entry_id')->constrained()->cascadeOnDelete();

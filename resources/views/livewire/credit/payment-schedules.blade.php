@@ -18,7 +18,7 @@
 
     {{-- Stats Bar --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-indigo-900/20">
+        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
                 <div class="p-1.5 rounded-lg bg-white/20"><flux:icon name="calendar-days" class="size-4" /></div>
@@ -93,9 +93,9 @@
                     $lProgress    = $lTotalPay > 0 ? min(100, round(($lPaid / $lTotalPay) * 100)) : 0;
                     $isSelected   = $selectedLoanId === $loan->id;
                     $isOverdue    = $loan->status === 'overdue';
-                    $lProgColor   = $isOverdue ? 'bg-red-500' : 'bg-indigo-500';
+                    $lProgColor   = $isOverdue ? 'bg-red-500' : 'bg-blue-500';
                     $lBorder      = $isSelected
-                        ? 'border-l-4 border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                        ? 'border-l-4 border-orange-500 bg-blue-50 dark:bg-blue-900/20'
                         : ($isOverdue ? 'border-l-4 border-red-400' : 'border-l-4 border-transparent');
                 @endphp
                 <button wire:click="selectLoan('{{ $loan->id }}')"
@@ -103,7 +103,7 @@
                         class="w-full px-4 py-3.5 text-left transition-colors {{ $lBorder }}
                             {{ $isSelected ? '' : 'hover:bg-gray-50 dark:hover:bg-zinc-800/60' }}">
                     <div class="flex items-center justify-between mb-1.5">
-                        <span class="font-mono text-xs font-bold {{ $isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400' }}">
+                        <span class="font-mono text-xs font-bold {{ $isSelected ? 'text-orange-500 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400' }}">
                             {{ $loan->loan_number }}
                         </span>
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold
@@ -161,7 +161,7 @@
                 $dlProgressColor = match($dl->status) {
                     'completed' => 'bg-emerald-500',
                     'overdue'   => 'bg-red-500',
-                    default     => 'bg-indigo-500',
+                    default     => 'bg-blue-500',
                 };
                 $schedTotal  = $dl->repaymentSchedules->sum('amount_due');
                 $schedPaid   = $dl->repaymentSchedules->sum('amount_paid');
@@ -171,7 +171,7 @@
             <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
 
                 {{-- Detail Header --}}
-                <div class="px-5 py-4 bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
+                <div class="px-5 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-xs font-semibold text-white/70 uppercase tracking-wider">Schedule</p>
@@ -213,7 +213,7 @@
                     </div>
                     <div class="px-4 py-3 text-center">
                         <p class="text-[10px] text-gray-400 uppercase font-bold">Progress</p>
-                        <p class="text-sm font-black text-indigo-600 dark:text-indigo-400 mt-0.5">{{ $dlProgress }}%</p>
+                        <p class="text-sm font-black text-orange-500 dark:text-blue-400 mt-0.5">{{ $dlProgress }}%</p>
                     </div>
                 </div>
 
@@ -268,7 +268,7 @@
                                 <td class="px-3 py-2.5 text-right text-gray-700 dark:text-gray-300 font-medium">
                                     {{ number_format($sched->principal_component ?? 0, 0) }}
                                 </td>
-                                <td class="px-3 py-2.5 text-right text-indigo-600 dark:text-indigo-400">
+                                <td class="px-3 py-2.5 text-right text-orange-500 dark:text-blue-400">
                                     {{ number_format($sched->interest_component ?? 0, 0) }}
                                 </td>
                                 <td class="px-3 py-2.5 text-right font-bold text-gray-900 dark:text-white">
@@ -317,7 +317,7 @@
                         @foreach($dl->transactions as $txn)
                         <div class="flex items-center justify-between bg-gray-50 dark:bg-zinc-800 rounded-xl px-3 py-2">
                             <div>
-                                <p class="text-xs font-mono font-semibold text-indigo-600 dark:text-indigo-400">{{ $txn->reference }}</p>
+                                <p class="text-xs font-mono font-semibold text-orange-500 dark:text-blue-400">{{ $txn->reference }}</p>
                                 <p class="text-[10px] text-gray-400 mt-0.5">{{ ucfirst($txn->type ?? 'payment') }} · {{ $txn->channel ?? '—' }}</p>
                             </div>
                             <div class="text-right">

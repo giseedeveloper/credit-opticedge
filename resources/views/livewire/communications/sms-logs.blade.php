@@ -16,15 +16,15 @@
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">SMS Logs</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Automated and manual SMS dispatch records</p>
         </div>
-        <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/40">
-            <flux:icon name="chat-bubble-left-right" class="size-4 text-indigo-500" />
-            <span class="text-sm font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($stats['total']) }} total messages</span>
+        <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40">
+            <flux:icon name="chat-bubble-left-right" class="size-4 text-blue-500" />
+            <span class="text-sm font-bold text-orange-500 dark:text-blue-400">{{ number_format($stats['total']) }} total messages</span>
         </div>
     </div>
 
     {{-- Stats Bar --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-indigo-900/20">
+        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
                 <div class="p-1.5 rounded-lg bg-white/20"><flux:icon name="chat-bubble-left-right" class="size-4" /></div>
@@ -64,7 +64,7 @@
     <div class="flex gap-3">
         <div class="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/30">
             <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-            <span class="text-xs font-bold text-blue-600 dark:text-blue-400">{{ number_format($stats['bulk']) }} Bulk SMS</span>
+            <span class="text-xs font-bold text-orange-500 dark:text-blue-400">{{ number_format($stats['bulk']) }} Bulk SMS</span>
         </div>
         <div class="flex items-center gap-2 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-900/30">
             <span class="w-2 h-2 rounded-full bg-orange-500"></span>
@@ -119,7 +119,7 @@
                     @php
                         $smsType    = \App\Livewire\Communications\SmsLogs::smsTypeFromDescription($log->description);
                         $typeMeta   = match($smsType) {
-                            'bulk'      => ['label' => 'Bulk',      'color' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'],
+                            'bulk'      => ['label' => 'Bulk',      'color' => 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-400'],
                             'automated' => ['label' => 'Automated', 'color' => 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'],
                             'welcome'   => ['label' => 'Welcome',   'color' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'],
                             default     => ['label' => 'System',    'color' => 'bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400'],
@@ -163,7 +163,7 @@
 
                         <td class="px-4 py-3 text-right">
                             <button wire:click.stop="openDetail('{{ $log->id }}')"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
+                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-orange-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                                 View
                             </button>
                         </td>
@@ -204,7 +204,7 @@
                 $dl      = $this->detailLog;
                 $dlType  = \App\Livewire\Communications\SmsLogs::smsTypeFromDescription($dl->description);
                 $dlMeta  = match($dlType) {
-                    'bulk'      => ['label' => 'Bulk SMS',       'grad' => 'from-blue-600 to-indigo-700'],
+                    'bulk'      => ['label' => 'Bulk SMS',       'grad' => 'from-orange-500 to-orange-600'],
                     'automated' => ['label' => 'Automated SMS',  'grad' => 'from-orange-500 to-red-600'],
                     'welcome'   => ['label' => 'Welcome SMS',    'grad' => 'from-emerald-600 to-teal-700'],
                     default     => ['label' => 'System SMS',     'grad' => 'from-gray-600 to-gray-700'],

@@ -71,7 +71,7 @@
                                             <span class="text-gray-500">{{ number_format($loan->remaining_balance) }} left</span>
                                         </div>
                                         <div class="w-full bg-gray-200 rounded-full h-1.5 dark:bg-zinc-700">
-                                            <div class="h-1.5 rounded-full @if($progress < 30) bg-rose-500 @elseif($progress < 80) bg-[#4b0082] @else bg-emerald-500 @endif" style="width: {{ $progress }}%"></div>
+                                            <div class="h-1.5 rounded-full @if($progress < 30) bg-rose-500 @elseif($progress < 80) bg-orange-500 @else bg-emerald-500 @endif" style="width: {{ $progress }}%"></div>
                                         </div>
                                     </td>
                                     <td class="px-4 py-3 text-center">
@@ -114,9 +114,9 @@
 
         <!-- Right Col: Calculator Matrix -->
         <div class="lg:col-span-1">
-            <div class="bg-white dark:bg-zinc-900 shadow-sm rounded-xl border border-indigo-100 dark:border-zinc-800 sticky top-6">
+            <div class="bg-white dark:bg-zinc-900 shadow-sm rounded-xl border border-blue-100 dark:border-zinc-800 sticky top-6">
                 <div class="p-6 border-b border-gray-100 dark:border-zinc-800">
-                    <h3 class="font-bold text-lg text-[#4b0082] dark:text-indigo-400">Live Simulator</h3>
+                    <h3 class="font-bold text-lg text-orange-500 dark:text-blue-400">Live Simulator</h3>
                     <p class="text-sm text-gray-500">Real-time amortization pricing</p>
                 </div>
                 
@@ -138,7 +138,7 @@
 
                     <div class="mt-6 pt-6 border-t border-gray-100 dark:border-zinc-700">
                         <p class="text-gray-500 text-sm mb-1">Expected Monthly Due</p>
-                        <p class="text-3xl font-black @if($calcEmi > 0) text-[#4b0082] dark:text-white @else text-gray-300 @endif">
+                        <p class="text-3xl font-black @if($calcEmi > 0) text-orange-500 dark:text-white @else text-gray-300 @endif">
                             TZS {{ number_format($calcEmi, 2) }}
                         </p>
                     </div>
@@ -170,7 +170,7 @@
                             @foreach($customers as $c)
                                 <button type="button"
                                     wire:click="$set('newCustomerId', '{{ $c->id }}')"
-                                    class="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-50 dark:hover:bg-zinc-800 transition-colors @if($newCustomerId === $c->id) bg-purple-50 dark:bg-zinc-800 font-semibold text-[#4b0082] @endif">
+                                    class="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-zinc-800 transition-colors @if($newCustomerId === $c->id) bg-blue-50 dark:bg-zinc-800 font-semibold text-orange-500 @endif">
                                     {{ $c->first_name }} {{ $c->last_name }}
                                     <span class="text-xs text-gray-400 ml-2">{{ $c->phone }}</span>
                                 </button>
@@ -179,7 +179,7 @@
                     @endif
                     @if($newCustomerId)
                         @php $selected = $customers->firstWhere('id', $newCustomerId); @endphp
-                        <div class="mt-1 flex items-center gap-2 text-sm text-[#4b0082] dark:text-indigo-400">
+                        <div class="mt-1 flex items-center gap-2 text-sm text-orange-500 dark:text-blue-400">
                             <flux:icon name="check-circle" class="size-4" />
                             {{ $selected?->first_name }} {{ $selected?->last_name }} selected
                         </div>

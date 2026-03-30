@@ -17,7 +17,7 @@
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">All registered customers — verified, pending and unverified</p>
         </div>
         <a href="{{ route('kyc.wizard') }}" wire:navigate
-           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 text-white hover:opacity-90 transition-opacity shadow-sm">
+           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:opacity-90 transition-opacity shadow-sm">
             <flux:icon name="user-plus" class="size-4" />
             New KYC Wizard
         </a>
@@ -26,7 +26,7 @@
     {{-- Stats Bar --}}
     @php
     $statDefs = [
-        ['key' => 'total',    'label' => 'Total Customers', 'grad'   => 'from-[#4b0082] to-[#7c3aed]',                              'hero' => true,  'sub' => 'All registered'],
+        ['key' => 'total',    'label' => 'Total Customers', 'grad'   => 'from-[#2563eb] to-[#2563eb]',                              'hero' => true,  'sub' => 'All registered'],
         ['key' => 'verified', 'label' => 'Verified',        'icolor' => 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600',    'sub' => 'KYC approved'],
         ['key' => 'pending',  'label' => 'In Review',       'icolor' => 'bg-amber-100 dark:bg-amber-900/30 text-amber-600',          'sub' => 'Awaiting decision'],
         ['key' => 'rejected', 'label' => 'Rejected',        'icolor' => 'bg-red-100 dark:bg-red-900/30 text-red-600',               'sub' => 'Need re-submission'],
@@ -35,7 +35,7 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         @foreach($statDefs as $sd)
         @if(!empty($sd['hero']))
-        <div class="bg-gradient-to-br {{ $sd['grad'] }} rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-purple-900/20">
+        <div class="bg-gradient-to-br {{ $sd['grad'] }} rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
                 <div class="p-1.5 rounded-lg bg-white/20"><flux:icon name="users" class="size-5" /></div>
@@ -122,7 +122,7 @@
                 <tr wire:key="cust-{{ $customer->id }}" class="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
                     <td class="px-4 py-3.5">
                         <div class="flex items-center gap-3">
-                            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-xs font-black flex-shrink-0">
+                            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 text-white text-xs font-black flex-shrink-0">
                                 {{ strtoupper(substr($customer->first_name, 0, 1).substr($customer->last_name, 0, 1)) }}
                             </div>
                             <div>
@@ -148,7 +148,7 @@
                     </td>
                     <td class="px-4 py-3.5 hidden md:table-cell">
                         @if($loanCount > 0)
-                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-300">
                             <flux:icon name="banknotes" class="size-3" />
                             {{ $loanCount }} loan{{ $loanCount !== 1 ? 's' : '' }}
                         </span>
@@ -162,7 +162,7 @@
                     <td class="px-4 py-3.5 text-right">
                         <div class="flex items-center justify-end gap-1">
                             <button wire:click="openDetail('{{ $customer->id }}')"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 transition-colors">
+                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-orange-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 View
                             </button>
@@ -226,7 +226,7 @@
             @endphp
 
             {{-- Header --}}
-            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
+            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-lg font-black">
                         {{ strtoupper(substr($dc->first_name, 0, 1).substr($dc->last_name, 0, 1)) }}
@@ -384,7 +384,7 @@
                         @endphp
                         <div class="flex items-center justify-between bg-gray-50 dark:bg-zinc-800 rounded-xl px-4 py-2.5">
                             <div>
-                                <p class="text-xs font-mono font-semibold text-indigo-600 dark:text-indigo-400">{{ $ln->loan_number }}</p>
+                                <p class="text-xs font-mono font-semibold text-orange-500 dark:text-blue-400">{{ $ln->loan_number }}</p>
                                 <p class="text-[10px] text-gray-500">TZS {{ number_format($ln->principal_amount) }}</p>
                             </div>
                             <div class="text-right">

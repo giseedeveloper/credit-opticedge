@@ -31,8 +31,8 @@
     <div class="flex flex-wrap gap-2 mb-5">
         @php
         $actions = [
-            ['label' => 'New Loan',      'icon' => 'plus-circle',       'href' => route('credit.panel'),    'color' => 'bg-[#4b0082] hover:bg-[#3b006a] text-white'],
-            ['label' => 'KYC Register',  'icon' => 'identification',    'href' => route('kyc.wizard'),      'color' => 'bg-indigo-600 hover:bg-indigo-700 text-white'],
+            ['label' => 'New Loan',      'icon' => 'plus-circle',       'href' => route('credit.panel'),    'color' => 'bg-orange-500 hover:bg-orange-600 text-white'],
+            ['label' => 'KYC Register',  'icon' => 'identification',    'href' => route('kyc.wizard'),      'color' => 'bg-orange-500 hover:bg-orange-600 text-white'],
             ['label' => 'View Loans',    'icon' => 'document-text',     'href' => route('credit.panel'),    'color' => 'bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-zinc-700'],
             ['label' => 'Stock Manager', 'icon' => 'device-phone-mobile','href' => route('stock.index'),    'color' => 'bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-zinc-700'],
             ['label' => 'Schedules',     'icon' => 'calendar-days',     'href' => route('credit.schedules'),'color' => 'bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-zinc-700'],
@@ -73,17 +73,17 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
 
         {{-- Portfolio --}}
-        <div class="bg-gradient-to-br from-[#4b0082] to-[#7c3aed] rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-purple-900/20">
+        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-orange-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
                 <div class="p-1.5 rounded-lg bg-white/20">
                     <flux:icon name="banknotes" class="size-5" />
                 </div>
-                <span class="text-xs font-semibold text-purple-200 uppercase tracking-wider">Portfolio</span>
+                <span class="text-xs font-semibold text-orange-100 uppercase tracking-wider">Portfolio</span>
             </div>
             @if($readyToLoad)
                 <p class="text-xl font-black truncate">TZS {{ number_format($portfolioValue, 0) }}</p>
-                <p class="text-xs text-purple-300 mt-1">Active loan book</p>
+                <p class="text-xs text-orange-100 mt-1">Active loan book</p>
             @else
                 <div class="h-7 bg-white/20 rounded-lg w-3/4 animate-pulse mt-1"></div>
                 <div class="h-3 bg-white/10 rounded w-1/2 animate-pulse mt-2"></div>
@@ -127,8 +127,8 @@
         {{-- Active Devices --}}
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                    <flux:icon name="device-phone-mobile" class="size-5 text-blue-600 dark:text-blue-400" />
+                <div class="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+                    <flux:icon name="device-phone-mobile" class="size-5 text-orange-500 dark:text-orange-400" />
                 </div>
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active Devices</span>
             </div>
@@ -145,12 +145,12 @@
     {{-- ── Secondary KPIs (clickable) ── --}}
     @php
     $secKpis = [
-        ['label'=>'Active Loans',     'value'=> number_format($totalActiveLoans),  'icon'=>'document-text',      'bg'=>'bg-violet-100 dark:bg-violet-900/30', 'ic'=>'text-violet-600 dark:text-violet-400', 'href'=> route('credit.panel')],
+        ['label'=>'Active Loans',     'value'=> number_format($totalActiveLoans),  'icon'=>'document-text',      'bg'=>'bg-orange-100 dark:bg-orange-900/30', 'ic'=>'text-orange-500 dark:text-orange-400', 'href'=> route('credit.panel')],
         ['label'=>'Customers',        'value'=> number_format($totalCustomers),    'icon'=>'users',              'bg'=>'bg-sky-100 dark:bg-sky-900/30',      'ic'=>'text-sky-600 dark:text-sky-400',      'href'=> route('kyc.customers')],
         ['label'=>'New Loans (MTD)',   'value'=> number_format($newLoansThisMonth), 'icon'=>'plus-circle',        'bg'=>'bg-amber-100 dark:bg-amber-900/30',  'ic'=>'text-amber-600 dark:text-amber-400',  'href'=> route('credit.panel')],
         ['label'=>'MTD Collections',  'value'=>'TZS '.number_format($monthCollections,0), 'icon'=>'banknotes',  'bg'=>'bg-teal-100 dark:bg-teal-900/30',    'ic'=>'text-teal-600 dark:text-teal-400',    'href'=> route('financials.collections')],
         ['label'=>'Overdue / Default','value'=> number_format($overdueCount),      'icon'=>'exclamation-circle', 'bg'=>'bg-red-100 dark:bg-red-900/30',      'ic'=>'text-red-600 dark:text-red-400',      'href'=> route('credit.defaulters'),  'alert'=>$overdueCount > 0],
-        ['label'=>'Available Stock',  'value'=> number_format($availableStockCount),'icon'=>'device-phone-mobile','bg'=>'bg-blue-100 dark:bg-blue-900/30',   'ic'=>'text-blue-600 dark:text-blue-400',    'href'=> route('stock.index')],
+        ['label'=>'Available Stock',  'value'=> number_format($availableStockCount),'icon'=>'device-phone-mobile','bg'=>'bg-orange-100 dark:bg-orange-900/30',   'ic'=>'text-orange-500 dark:text-orange-400',    'href'=> route('stock.index')],
     ];
     @endphp
     <div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-6">
@@ -220,7 +220,7 @@
             <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden sticky top-4 flex flex-col" style="max-height:640px;">
                 <div class="px-5 py-4 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between flex-shrink-0">
                     <div>
-                        <h3 class="font-bold text-[#4b0082] dark:text-purple-300">Live Activity</h3>
+                        <h3 class="font-bold text-orange-500 dark:text-orange-300">Live Activity</h3>
                         <p class="text-xs text-gray-400 mt-0.5">Recent loan disbursements</p>
                     </div>
                     <span class="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
@@ -245,7 +245,7 @@
                             @forelse($liveSalesFeed as $feed)
                                 <li class="hover:bg-gray-50 dark:hover:bg-zinc-800/40 transition-colors">
                                     <a href="{{ route('credit.panel') }}" wire:navigate class="p-4 flex gap-3 items-start block">
-                                        <div class="w-9 h-9 rounded-full bg-[#4b0082]/10 dark:bg-purple-900/30 flex items-center justify-center text-[#4b0082] dark:text-purple-300 font-black text-xs border border-[#4b0082]/15 flex-shrink-0 uppercase">
+                                        <div class="w-9 h-9 rounded-full bg-orange-500/10 dark:bg-orange-900/30 flex items-center justify-center text-orange-500 dark:text-orange-300 font-black text-xs border border-orange-500/15 flex-shrink-0 uppercase">
                                             {{ substr($feed['device']['brand'] ?? '?', 0, 2) }}
                                         </div>
                                         <div class="flex-1 min-w-0">
@@ -285,7 +285,7 @@
                 </div>
 
                 <div class="p-3 border-t border-gray-100 dark:border-zinc-800 text-center flex-shrink-0">
-                    <a href="{{ route('credit.panel') }}" wire:navigate class="text-xs font-bold text-[#4b0082] dark:text-purple-400 hover:underline">
+                    <a href="{{ route('credit.panel') }}" wire:navigate class="text-xs font-bold text-orange-500 dark:text-orange-400 hover:underline">
                         View All Loans →
                     </a>
                 </div>
@@ -390,7 +390,7 @@
                             <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">{{ $branch['name'] }}</p>
                             <p class="text-[10px] text-gray-400">{{ $branch['active_loans'] }} active {{ Str::plural('loan', $branch['active_loans']) }}</p>
                         </div>
-                        <p class="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+                        <p class="text-xs font-bold text-orange-500 dark:text-orange-400 flex-shrink-0">
                             TZS {{ number_format($branch['collections'] / 1000, 0) }}K
                         </p>
                     </div>
@@ -457,7 +457,7 @@
                         toolbar: { show: false }, fontFamily: 'inherit', background: 'transparent',
                         animations: { enabled: true, easing: 'easeinout', speed: 600 },
                     },
-                    colors: ['#4b0082', '#a855f7'],
+                    colors: ['#2563eb', '#60a5fa'],
                     dataLabels: { enabled: false },
                     stroke: { curve: 'smooth', width: [3, 2] },
                     fill: {
@@ -506,7 +506,7 @@
                                 name: { show: true, fontSize: '11px', color: '#9ca3af', offsetY: 14 },
                                 value: {
                                     show: true, fontSize: '26px', fontWeight: 800,
-                                    color: '#4b0082', offsetY: -10,
+                                    color: '#2563eb', offsetY: -10,
                                     formatter: v => v + '%',
                                 },
                             },
@@ -517,7 +517,7 @@
                         gradient: { shade: 'dark', type: 'horizontal', gradientToColors: ['#fb7185'], stops: [0, 100] },
                     },
                     stroke: { lineCap: 'round' },
-                    colors: ['#4b0082'],
+                    colors: ['#2563eb'],
                     labels: ['At-Risk Loans'],
                     theme: { mode: document.documentElement.classList.contains('dark') ? 'dark' : 'light' },
                 });
@@ -532,7 +532,7 @@
                     series: invSeries.length ? invSeries : [1],
                     labels: invLabels.length ? invLabels : ['No Data'],
                     chart: { type: 'donut', height: 220, background: 'transparent', fontFamily: 'inherit' },
-                    colors: ['#4b0082', '#7c3aed', '#a855f7', '#c084fc', '#e9d5ff'],
+                    colors: ['#2563eb', '#2563eb', '#60a5fa', '#c084fc', '#e9d5ff'],
                     dataLabels: { enabled: false },
                     plotOptions: {
                         pie: {

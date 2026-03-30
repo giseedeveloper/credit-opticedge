@@ -2,7 +2,7 @@
     <button
         @click="open = !open"
         @click.outside="open = false"
-        class="relative flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-[#4b0082] hover:bg-purple-50 transition-colors"
+        class="relative flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:text-orange-500 hover:bg-blue-50 transition-colors"
         title="Alerts"
     >
         <flux:icon name="bell" class="size-5" />
@@ -39,7 +39,7 @@
                     <div class="mt-0.5 flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full
                         @if($alert['type'] === 'danger') bg-rose-100 text-rose-600
                         @elseif($alert['type'] === 'warning') bg-amber-100 text-amber-600
-                        @else bg-blue-100 text-blue-600
+                        @else bg-blue-100 text-orange-500
                         @endif">
                         <flux:icon name="{{ $alert['icon'] }}" class="size-4" />
                     </div>
@@ -57,7 +57,7 @@
         </div>
 
         <div class="px-4 py-3 border-t border-gray-100 dark:border-zinc-800">
-            <a href="{{ route('credit.defaulters') }}" wire:navigate class="text-xs font-semibold text-[#4b0082] dark:text-indigo-400 hover:underline">
+            <a href="{{ route('credit.defaulters') }}" wire:navigate class="text-xs font-semibold text-orange-500 dark:text-blue-400 hover:underline">
                 View all defaulters →
             </a>
         </div>

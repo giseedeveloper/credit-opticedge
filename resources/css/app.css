@@ -23,16 +23,44 @@
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
 
-    --color-accent: var(--color-neutral-800);
-    --color-accent-content: var(--color-neutral-800);
-    --color-accent-foreground: var(--color-white);
+    /* ── Brand / Action ── */
+    --color-primary:       #f97316;
+    --color-primary-hover: #ea580c;
+    --color-primary-light: #fff7ed;
+
+    /* ── Semantic states ── */
+    --color-success:       #22c55e;
+    --color-success-light: #dcfce7;
+    --color-danger:        #ef4444;
+    --color-danger-light:  #fee2e2;
+    --color-warning:       #f59e0b;
+    --color-warning-light: #fef3c7;
+
+    /* ── Layout surfaces ── */
+    --color-page:    #f9fafb;
+    --color-surface: #ffffff;
+    --color-border:  #e5e7eb;
+
+    /* ── Typography ── */
+    --color-text:  #111827;
+    --color-muted: #6b7280;
+
+    /* ── Accent (used by Flux UI components) ── */
+    --color-accent:            #f97316;
+    --color-accent-content:    #f97316;
+    --color-accent-foreground: #ffffff;
 }
 
 @layer theme {
     .dark {
-        --color-accent: var(--color-white);
-        --color-accent-content: var(--color-white);
-        --color-accent-foreground: var(--color-neutral-800);
+        --color-accent:            #60a5fa;
+        --color-accent-content:    #60a5fa;
+        --color-accent-foreground: #ffffff;
+        --color-page:              #0f172a;
+        --color-surface:           #1e293b;
+        --color-border:            #334155;
+        --color-text:              #f1f5f9;
+        --color-muted:             #94a3b8;
     }
 }
 
@@ -43,7 +71,12 @@
     ::before,
     ::backdrop,
     ::file-selector-button {
-        border-color: var(--color-gray-200, currentColor);
+        border-color: var(--color-border, currentColor);
+    }
+
+    body {
+        background-color: var(--color-page);
+        color: var(--color-text);
     }
 }
 

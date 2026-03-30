@@ -21,7 +21,7 @@
     {{-- Stats Bar --}}
     @php
     $statDefs = [
-        ['key' => 'portfolio',   'label' => 'Active Portfolio',   'grad'   => 'from-[#4b0082] to-[#7c3aed]', 'hero' => true, 'sub' => 'Active + overdue principal'],
+        ['key' => 'portfolio',   'label' => 'Active Portfolio',   'grad'   => 'from-[#2563eb] to-[#2563eb]', 'hero' => true, 'sub' => 'Active + overdue principal'],
         ['key' => 'collected',   'label' => 'Total Collected',    'icolor' => 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600', 'sub' => 'All-time repayments'],
         ['key' => 'outstanding', 'label' => 'Total Outstanding',  'icolor' => 'bg-amber-100 dark:bg-amber-900/30 text-amber-600',     'sub' => 'Unpaid balances'],
         ['key' => 'overdue_amt', 'label' => 'Overdue Balance',    'icolor' => 'bg-red-100 dark:bg-red-900/30 text-red-600',           'sub' => 'Overdue loans only'],
@@ -30,7 +30,7 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         @foreach($statDefs as $sd)
         @if(!empty($sd['hero']))
-        <div class="bg-gradient-to-br {{ $sd['grad'] }} rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-purple-900/20">
+        <div class="bg-gradient-to-br {{ $sd['grad'] }} rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
                 <div class="p-1.5 rounded-lg bg-white/20"><flux:icon name="banknotes" class="size-5" /></div>
@@ -64,7 +64,7 @@
                 {{ $label }}
                 @if(isset($counts[$status]) && $counts[$status] > 0)
                 <span class="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold
-                    {{ $status === 'overdue' ? 'bg-red-100 text-red-600' : 'bg-purple-100 text-purple-600' }}">
+                    {{ $status === 'overdue' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-orange-500' }}">
                     {{ $counts[$status] }}
                 </span>
                 @endif
@@ -125,21 +125,21 @@
                     $progressBar = match($loan->status) {
                         'completed' => 'bg-emerald-500',
                         'overdue'   => 'bg-red-500',
-                        default     => 'bg-indigo-500',
+                        default     => 'bg-blue-500',
                     };
                     $isDuePast = $loan->due_date?->isPast() && $loan->status !== 'completed';
                 @endphp
                 <tr wire:key="loan-{{ $loan->id }}" class="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer"
                     wire:click="openDetail('{{ $loan->id }}')">
                     <td class="px-4 py-3.5">
-                        <p class="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">{{ $loan->loan_number }}</p>
+                        <p class="font-mono text-xs font-bold text-orange-500 dark:text-blue-400">{{ $loan->loan_number }}</p>
                         @if($loan->branch)
                         <p class="text-[10px] text-gray-400 mt-0.5">{{ $loan->branch->name }}</p>
                         @endif
                     </td>
                     <td class="px-4 py-3.5">
                         <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-black flex-shrink-0">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white text-[10px] font-black flex-shrink-0">
                                 {{ strtoupper(substr($loan->customer?->first_name ?? '?', 0, 1).substr($loan->customer?->last_name ?? '?', 0, 1)) }}
                             </div>
                             <div>
@@ -196,7 +196,7 @@
                     </td>
                     <td class="px-4 py-3.5 text-right">
                         <button wire:click.stop="openDetail('{{ $loan->id }}')"
-                                class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 transition-colors">
+                                class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-orange-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 transition-colors">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                             Details
                         </button>
@@ -249,12 +249,12 @@
                 $dlProgressBar = match($dl->status) {
                     'completed' => 'bg-emerald-500',
                     'overdue'   => 'bg-red-500',
-                    default     => 'bg-indigo-500',
+                    default     => 'bg-blue-500',
                 };
             @endphp
 
             {{-- Header --}}
-            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
+            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
                 <div>
                     <p class="text-xs font-semibold text-white/70 uppercase tracking-wider">Loan Details</p>
                     <h2 class="text-xl font-black mt-0.5 font-mono">{{ $dl->loan_number }}</h2>
@@ -291,7 +291,7 @@
                 <div>
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Customer</h3>
                     <div class="flex items-center gap-3 bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
                             {{ strtoupper(substr($dl->customer?->first_name ?? '?', 0, 1).substr($dl->customer?->last_name ?? '?', 0, 1)) }}
                         </div>
                         <div class="flex-1 min-w-0">
@@ -455,7 +455,7 @@
                         @foreach($dl->transactions as $txn)
                         <div class="flex items-center justify-between bg-gray-50 dark:bg-zinc-800 rounded-xl px-3 py-2.5">
                             <div>
-                                <p class="text-xs font-mono font-semibold text-indigo-600 dark:text-indigo-400">{{ $txn->reference }}</p>
+                                <p class="text-xs font-mono font-semibold text-orange-500 dark:text-blue-400">{{ $txn->reference }}</p>
                                 <p class="text-[10px] text-gray-400 mt-0.5">
                                     {{ ucfirst($txn->type ?? 'payment') }} · {{ $txn->channel ?? '—' }}
                                     @if($txn->recordedBy) · {{ $txn->recordedBy->name }} @endif

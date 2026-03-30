@@ -456,7 +456,7 @@
                         @php
                             $tBadge = match($ticket->status) {
                                 'completed'  => 'bg-emerald-100 text-emerald-700',
-                                'in_progress'=> 'bg-blue-100 text-blue-700',
+                                'in_progress'=> 'bg-blue-100 text-orange-600',
                                 'open'       => 'bg-amber-100 text-amber-700',
                                 default      => 'bg-zinc-100 text-zinc-600',
                             };
@@ -551,7 +551,7 @@
                         @foreach($dl->transactions as $txn)
                         <div class="flex items-center justify-between bg-gray-50 dark:bg-zinc-800 rounded-xl px-3 py-2.5">
                             <div>
-                                <p class="text-xs font-mono font-semibold text-indigo-600 dark:text-indigo-400">{{ $txn->reference }}</p>
+                                <p class="text-xs font-mono font-semibold text-orange-500 dark:text-blue-400">{{ $txn->reference }}</p>
                                 <p class="text-[10px] text-gray-400 mt-0.5">
                                     {{ ucfirst($txn->type ?? 'payment') }} · {{ $txn->channel ?? '—' }}
                                 </p>

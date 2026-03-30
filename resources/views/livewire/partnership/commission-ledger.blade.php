@@ -37,7 +37,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600"><flux:icon name="calendar-days" class="size-4" /></div>
+                <div class="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-orange-500"><flux:icon name="calendar-days" class="size-4" /></div>
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">This Month</span>
             </div>
             <p class="text-xl font-black text-gray-900 dark:text-white">TZS {{ number_format($stats['this_month_sum'], 0) }}</p>
@@ -45,7 +45,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600"><flux:icon name="queue-list" class="size-4" /></div>
+                <div class="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-orange-500"><flux:icon name="queue-list" class="size-4" /></div>
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Records</span>
             </div>
             <p class="text-2xl font-black text-gray-900 dark:text-white">{{ number_format($stats['total_count']) }}</p>
@@ -114,7 +114,7 @@
                         {{-- Vendor --}}
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-2.5">
-                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-black flex-shrink-0">
+                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white text-[10px] font-black flex-shrink-0">
                                     {{ strtoupper(substr($record->vendor?->name ?? '?', 0, 2)) }}
                                 </div>
                                 <div>
@@ -126,7 +126,7 @@
 
                         {{-- Loan / Customer --}}
                         <td class="px-4 py-3">
-                            <p class="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                            <p class="font-mono text-xs font-bold text-orange-500 dark:text-blue-400">
                                 {{ $record->loan?->loan_number ?? '—' }}
                             </p>
                             <p class="text-[10px] text-gray-400 mt-0.5">{{ $record->loan?->customer?->full_name ?? '—' }}</p>
@@ -141,7 +141,7 @@
 
                         {{-- Rate --}}
                         <td class="px-4 py-3 text-right">
-                            <span class="text-xs font-bold text-purple-600 dark:text-purple-400">
+                            <span class="text-xs font-bold text-orange-500 dark:text-blue-400">
                                 {{ $record->commission_rate ?? 0 }}%
                             </span>
                         </td>
@@ -169,7 +169,7 @@
                         {{-- Action --}}
                         <td class="px-4 py-3 text-right">
                             <button wire:click.stop="openDetail('{{ $record->id }}')"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
+                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-orange-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                                 Details
                             </button>
                         </td>
@@ -242,19 +242,19 @@
                 <div>
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Vendor</h3>
                     <div class="flex items-center gap-3 bg-gray-50 dark:bg-zinc-800 rounded-xl p-4">
-                        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-black flex-shrink-0">
+                        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white font-black flex-shrink-0">
                             {{ strtoupper(substr($dr->vendor?->name ?? '?', 0, 2)) }}
                         </div>
                         <div class="flex-1">
                             <p class="font-bold text-gray-900 dark:text-white">{{ $dr->vendor?->name ?? '—' }}</p>
                             <p class="text-xs text-gray-400 mt-0.5">{{ $dr->vendor?->phone ?? '' }}{{ $dr->vendor?->code ? ' · '.$dr->vendor->code : '' }}</p>
                             @if($dr->vendor?->branch)
-                            <p class="text-[10px] text-purple-500 mt-0.5 font-semibold">{{ $dr->vendor->branch->name }}</p>
+                            <p class="text-[10px] text-blue-500 mt-0.5 font-semibold">{{ $dr->vendor->branch->name }}</p>
                             @endif
                         </div>
                         <div class="text-right">
                             <p class="text-[10px] text-gray-400 uppercase font-bold">Comm. Rate</p>
-                            <p class="text-lg font-black text-purple-600 dark:text-purple-400">{{ $dr->vendor?->commission_rate ?? $dr->commission_rate ?? 0 }}%</p>
+                            <p class="text-lg font-black text-orange-500 dark:text-blue-400">{{ $dr->vendor?->commission_rate ?? $dr->commission_rate ?? 0 }}%</p>
                         </div>
                     </div>
                 </div>
@@ -266,7 +266,7 @@
                     <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-4 space-y-3">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="font-mono text-sm font-bold text-indigo-600 dark:text-indigo-400">{{ $dr->loan->loan_number }}</p>
+                                <p class="font-mono text-sm font-bold text-orange-500 dark:text-blue-400">{{ $dr->loan->loan_number }}</p>
                                 <p class="text-xs text-gray-500 mt-0.5">{{ $dr->loan->customer?->full_name ?? '—' }}</p>
                                 @if($dr->loan->customer?->phone)
                                 <p class="text-[10px] text-gray-400">{{ $dr->loan->customer->phone }}</p>
@@ -290,7 +290,7 @@
                             </div>
                             <div class="text-center">
                                 <p class="text-[10px] text-gray-400 uppercase font-bold">Interest</p>
-                                <p class="text-xs font-bold text-indigo-600 mt-0.5">{{ $dr->loan->interest_rate }}% {{ $dr->loan->interest_type }}</p>
+                                <p class="text-xs font-bold text-orange-500 mt-0.5">{{ $dr->loan->interest_rate }}% {{ $dr->loan->interest_type }}</p>
                             </div>
                             <div class="text-center">
                                 <p class="text-[10px] text-gray-400 uppercase font-bold">Device</p>
@@ -310,7 +310,7 @@
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Linked Transaction</h3>
                     <div class="flex items-center justify-between bg-gray-50 dark:bg-zinc-800 rounded-xl px-4 py-3">
                         <div>
-                            <p class="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">{{ $dr->transaction->reference }}</p>
+                            <p class="text-xs font-mono font-bold text-orange-500 dark:text-blue-400">{{ $dr->transaction->reference }}</p>
                             <p class="text-[10px] text-gray-400 mt-0.5">{{ ucfirst($dr->transaction->type ?? 'payment') }} · {{ $dr->transaction->channel ?? '—' }}</p>
                         </div>
                         <div class="text-right">

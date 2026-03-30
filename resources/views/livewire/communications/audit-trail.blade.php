@@ -51,7 +51,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-violet-100 dark:bg-violet-900/30 text-violet-600"><flux:icon name="users" class="size-4" /></div>
+                <div class="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-orange-500"><flux:icon name="users" class="size-4" /></div>
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active Users</span>
             </div>
             <p class="text-2xl font-black text-gray-900 dark:text-white">{{ number_format($stats['unique_users']) }}</p>
@@ -67,7 +67,7 @@
         </div>
         <div class="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/30">
             <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-            <span class="text-xs font-bold text-blue-700 dark:text-blue-400">{{ number_format($stats['updated']) }} Updated</span>
+            <span class="text-xs font-bold text-orange-600 dark:text-blue-400">{{ number_format($stats['updated']) }} Updated</span>
         </div>
         <div class="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900/30">
             <span class="w-2 h-2 rounded-full bg-red-500"></span>
@@ -132,12 +132,12 @@
                     @php
                         $eventColor = match($log->event) {
                             'created' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-                            'updated' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                            'updated' => 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-400',
                             'deleted' => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
                             default   => 'bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400',
                         };
                         $channelColor = match($log->log_name) {
-                            'loan'      => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+                            'loan'      => 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-400',
                             'system'    => 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
                             'inventory' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
                             'security'  => 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
@@ -173,7 +173,7 @@
                         <td class="px-4 py-3 max-w-xs">
                             <p class="text-xs text-gray-800 dark:text-gray-200 truncate">{{ $log->description }}</p>
                             @if($hasChanges)
-                            <p class="text-[10px] text-indigo-400 mt-0.5 font-semibold">Has changes →</p>
+                            <p class="text-[10px] text-blue-400 mt-0.5 font-semibold">Has changes →</p>
                             @endif
                         </td>
 
@@ -190,7 +190,7 @@
                         {{-- Performed By --}}
                         <td class="px-4 py-3 hidden lg:table-cell">
                             <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-[9px] font-black flex-shrink-0">
+                                <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-[9px] font-black flex-shrink-0">
                                     {{ strtoupper(substr($log->causer?->name ?? 'S', 0, 1)) }}
                                 </div>
                                 <div>
@@ -210,7 +210,7 @@
 
                         <td class="px-4 py-3 text-right">
                             <button wire:click.stop="openDetail('{{ $log->id }}')"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
+                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-orange-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                                 View
                             </button>
                         </td>
@@ -252,7 +252,7 @@
                 $dlEvent   = $dl->event ?? 'log';
                 $dlGrad    = match($dlEvent) {
                     'created' => 'from-emerald-600 to-teal-700',
-                    'updated' => 'from-blue-600 to-indigo-700',
+                    'updated' => 'from-orange-500 to-orange-600',
                     'deleted' => 'from-red-600 to-rose-700',
                     default   => 'from-slate-600 to-gray-700',
                 };
@@ -290,7 +290,7 @@
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Actor & Timing</h3>
                     <div class="grid grid-cols-2 gap-2">
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3 flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
                                 {{ strtoupper(substr($dl->causer?->name ?? 'S', 0, 1)) }}
                             </div>
                             <div>
@@ -325,7 +325,7 @@
                                 @elseif(isset($dl->subject->full_name))
                                 <p class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ $dl->subject->full_name }}</p>
                                 @elseif(isset($dl->subject->loan_number))
-                                <p class="text-xs font-semibold text-indigo-600 font-mono">{{ $dl->subject->loan_number }}</p>
+                                <p class="text-xs font-semibold text-orange-500 font-mono">{{ $dl->subject->loan_number }}</p>
                                 @endif
                                 @if(isset($dl->subject->phone))
                                 <p class="text-[10px] text-gray-400 mt-0.5">{{ $dl->subject->phone }}</p>

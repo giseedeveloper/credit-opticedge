@@ -28,8 +28,8 @@
     ];
     $colorMap = [
         'teal'   => 'bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 border-teal-100 dark:border-teal-800',
-        'purple' => 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-100 dark:border-purple-800',
-        'blue'   => 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-100 dark:border-blue-800',
+        'purple' => 'bg-blue-50 dark:bg-blue-900/20 text-orange-600 dark:text-blue-300 border-blue-100 dark:border-blue-800',
+        'blue'   => 'bg-blue-50 dark:bg-blue-900/20 text-orange-600 dark:text-blue-300 border-blue-100 dark:border-blue-800',
         'amber'  => 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-800',
         'green'  => 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-800',
         'rose'   => 'bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border-rose-100 dark:border-rose-800',
@@ -45,7 +45,7 @@
     </div>
 
     {{-- Hero Search Box --}}
-    <div class="bg-gradient-to-br from-[#4b0082] to-[#7c3aed] rounded-2xl p-6 shadow-lg shadow-purple-900/20 relative overflow-hidden">
+    <div class="bg-gradient-to-br from-[#2563eb] to-[#2563eb] rounded-2xl p-6 shadow-lg shadow-blue-900/20 relative overflow-hidden">
         <div class="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="absolute -left-6 -bottom-6 w-24 h-24 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
         <div class="relative">
@@ -62,7 +62,7 @@
                     class="flex-1 bg-white/10 backdrop-blur border border-white/20 text-white placeholder-white/40 rounded-xl px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/30"
                 />
                 <button wire:click="search" wire:loading.attr="disabled"
-                        class="flex items-center gap-2 px-5 py-3 bg-white text-[#4b0082] font-bold text-sm rounded-xl hover:bg-purple-50 transition-colors shadow disabled:opacity-60">
+                        class="flex items-center gap-2 px-5 py-3 bg-white text-orange-500 font-bold text-sm rounded-xl hover:bg-blue-50 transition-colors shadow disabled:opacity-60">
                     <svg wire:loading wire:target="search" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                     <flux:icon wire:loading.remove wire:target="search" name="magnifying-glass" class="size-4" />
                     <span wire:loading.remove wire:target="search">Search</span>
@@ -97,8 +97,8 @@
             $margin = ($retail > 0 && $cost > 0) ? round(($retail - $cost) / $retail * 100, 1) : null;
             $statusColors = [
                 'available'    => 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
-                'hq_stock'     => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-                'vendor_stock' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+                'hq_stock'     => 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-300',
+                'vendor_stock' => 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-300',
                 'in_transit'   => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
                 'sold'         => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
                 'returned'     => 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
@@ -114,7 +114,7 @@
 
                 {{-- Device Header Card --}}
                 <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
-                    <div class="bg-gradient-to-r from-indigo-600 to-purple-700 px-6 py-5 flex items-center justify-between">
+                    <div class="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-5 flex items-center justify-between">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-white">
                                 <flux:icon name="device-phone-mobile" class="size-6" />
@@ -182,7 +182,7 @@
                         <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Specifications</h3>
                         <div class="flex flex-wrap gap-2">
                             @foreach($specs as $specKey => $specVal)
-                            <span class="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-semibold">
+                            <span class="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-orange-600 dark:text-blue-300 rounded-lg text-xs font-semibold">
                                 {{ ucfirst($specKey) }}: {{ $specVal }}
                             </span>
                             @endforeach
@@ -233,7 +233,7 @@
                         @foreach($r->stockTransfers as $transfer)
                         <div class="px-6 py-3 flex items-center justify-between gap-3">
                             <div class="flex items-center gap-3 min-w-0 flex-1">
-                                <div class="w-2 h-2 rounded-full bg-indigo-400 flex-shrink-0"></div>
+                                <div class="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0"></div>
                                 <div class="min-w-0">
                                     <p class="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate">
                                         {{ $transfer->from_location ?? '—' }} → {{ $transfer->to_location ?? '—' }}
@@ -244,7 +244,7 @@
                                 </div>
                             </div>
                             <div class="text-right flex-shrink-0">
-                                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 uppercase">
+                                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-orange-500 dark:bg-blue-900/20 dark:text-blue-400 uppercase">
                                     {{ $transfer->status ?? 'completed' }}
                                 </span>
                                 <p class="text-[10px] text-gray-400 mt-0.5">{{ $transfer->created_at->format('d M Y') }}</p>
@@ -270,8 +270,8 @@
                         default     => 'bg-zinc-100 text-zinc-600',
                     };
                 @endphp
-                <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-purple-100 dark:border-purple-900/40 shadow-sm overflow-hidden">
-                    <div class="px-5 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+                <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-blue-100 dark:border-blue-900/40 shadow-sm overflow-hidden">
+                    <div class="px-5 py-4 bg-gradient-to-r from-orange-500 to-orange-500 text-white">
                         <p class="text-xs font-semibold text-white/70 uppercase tracking-wider">Linked Loan</p>
                         <h3 class="text-lg font-bold mt-0.5 font-mono">{{ $loan->loan_number }}</h3>
                         <span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold mt-1 {{ $loanStatusColor }}">
@@ -310,7 +310,7 @@
                     </div>
                     <div class="px-5 pb-4">
                         <a href="{{ route('credit.panel') }}" wire:navigate
-                           class="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
+                           class="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-colors">
                             View Loan →
                         </a>
                     </div>
@@ -361,7 +361,7 @@
                     <div class="space-y-2">
                         @can('devices.edit')
                         <button wire:click="openStatusModal"
-                                class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-sm font-semibold hover:bg-indigo-100 transition-colors">
+                                class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-orange-600 dark:text-blue-300 text-sm font-semibold hover:bg-blue-100 transition-colors">
                             <flux:icon name="pencil-square" class="size-4 flex-shrink-0" />
                             Change Status
                         </button>

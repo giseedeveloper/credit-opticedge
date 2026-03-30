@@ -25,7 +25,7 @@
     @php
     $statDefs = [
         ['key' => 'pending',    'label' => 'Pending',    'icon' => 'clock',             'grad' => 'from-amber-500 to-orange-500'],
-        ['key' => 'in_transit', 'label' => 'In Transit', 'icon' => 'truck',             'grad' => 'from-blue-600 to-indigo-600'],
+        ['key' => 'in_transit', 'label' => 'In Transit', 'icon' => 'truck',             'grad' => 'from-orange-500 to-orange-500'],
         ['key' => 'delivered',  'label' => 'Delivered',  'icon' => 'check-circle',      'grad' => 'from-emerald-500 to-teal-600'],
         ['key' => 'cancelled',  'label' => 'Cancelled',  'icon' => 'x-circle',          'grad' => 'from-rose-500 to-red-600'],
     ];
@@ -93,7 +93,7 @@
                 @php
                     $statusBadge = match($transfer->status) {
                         'pending'    => ['color' => 'bg-amber-100 text-amber-700',   'dot' => 'bg-amber-400'],
-                        'in_transit' => ['color' => 'bg-blue-100 text-blue-700',     'dot' => 'bg-blue-400'],
+                        'in_transit' => ['color' => 'bg-blue-100 text-orange-600',     'dot' => 'bg-blue-400'],
                         'delivered'  => ['color' => 'bg-emerald-100 text-emerald-700','dot'=> 'bg-emerald-400'],
                         'cancelled'  => ['color' => 'bg-red-100 text-red-700',       'dot' => 'bg-red-400'],
                         default      => ['color' => 'bg-zinc-100 text-zinc-600',     'dot' => 'bg-zinc-400'],
@@ -103,7 +103,7 @@
                 @endphp
                 <tr wire:key="transfer-{{ $transfer->id }}" class="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
                     <td class="px-4 py-3">
-                        <span class="font-mono text-xs font-bold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-lg">
+                        <span class="font-mono text-xs font-bold text-orange-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg">
                             {{ $transfer->reference }}
                         </span>
                     </td>
@@ -138,7 +138,7 @@
                     <td class="px-4 py-3 text-right">
                         <div class="flex items-center justify-end gap-1">
                             <button wire:click="openDetail('{{ $transfer->id }}')"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 transition-colors">
+                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-orange-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 Details
                             </button>
@@ -196,7 +196,7 @@
                 $dt = $detailTransfer;
                 $dtStatus = match($dt->status) {
                     'pending'    => ['bg' => 'bg-amber-100 text-amber-700',   'dot' => 'bg-amber-400'],
-                    'in_transit' => ['bg' => 'bg-blue-100 text-blue-700',     'dot' => 'bg-blue-400'],
+                    'in_transit' => ['bg' => 'bg-blue-100 text-orange-600',     'dot' => 'bg-blue-400'],
                     'delivered'  => ['bg' => 'bg-emerald-100 text-emerald-700','dot'=> 'bg-emerald-400'],
                     'cancelled'  => ['bg' => 'bg-red-100 text-red-700',       'dot' => 'bg-red-400'],
                     default      => ['bg' => 'bg-zinc-100 text-zinc-600',     'dot' => 'bg-zinc-400'],
@@ -206,7 +206,7 @@
             @endphp
 
             {{-- Gradient Header --}}
-            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
+            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
                 <div>
                     <p class="text-xs font-semibold text-white/70 uppercase tracking-wider">Transfer Record</p>
                     <h2 class="text-xl font-black font-mono mt-0.5">{{ $dt->reference }}</h2>
@@ -226,7 +226,7 @@
                 <div>
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Device</h3>
                     <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-4 flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center flex-shrink-0">
                             <flux:icon name="device-phone-mobile" class="size-5 text-white" />
                         </div>
                         <div>
@@ -249,12 +249,12 @@
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-4">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-1">From</p>
                             <p class="font-semibold text-gray-900 dark:text-white text-sm">{{ $dt->from?->name ?? 'HQ' }}</p>
-                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 font-semibold">{{ $dtFromType }}</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-orange-500 font-semibold">{{ $dtFromType }}</span>
                         </div>
-                        <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 border border-indigo-100 dark:border-indigo-800">
-                            <p class="text-[10px] text-indigo-400 uppercase tracking-wider font-semibold mb-1">To</p>
-                            <p class="font-semibold text-indigo-900 dark:text-indigo-100 text-sm">{{ $dt->to?->name ?? 'HQ' }}</p>
-                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-white text-indigo-600 font-semibold">{{ $dtToType }}</span>
+                        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-800">
+                            <p class="text-[10px] text-blue-400 uppercase tracking-wider font-semibold mb-1">To</p>
+                            <p class="font-semibold text-blue-900 dark:text-blue-100 text-sm">{{ $dt->to?->name ?? 'HQ' }}</p>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-white text-orange-500 font-semibold">{{ $dtToType }}</span>
                         </div>
                     </div>
                 </div>
@@ -333,7 +333,7 @@
                 <div class="mt-1 border border-gray-200 dark:border-zinc-700 rounded-xl max-h-44 overflow-y-auto bg-white dark:bg-zinc-900 shadow-sm">
                     @foreach($availableUnits as $u)
                     <button type="button" wire:click="$set('transferUnitId', '{{ $u->id }}')"
-                            class="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-50 dark:hover:bg-zinc-800 transition-colors border-b border-gray-50 dark:border-zinc-800 last:border-0 {{ $transferUnitId === $u->id ? 'bg-indigo-50 font-semibold text-indigo-700' : '' }}">
+                            class="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-zinc-800 transition-colors border-b border-gray-50 dark:border-zinc-800 last:border-0 {{ $transferUnitId === $u->id ? 'bg-blue-50 font-semibold text-orange-600' : '' }}">
                         <span class="font-semibold">{{ $u->phoneModel?->brand?->name }} {{ $u->phoneModel?->name }}</span>
                         <span class="font-mono text-xs text-gray-400 ml-2">{{ $u->imei_1 }}</span>
                         <span class="text-[10px] ml-1 px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">{{ str_replace('_', ' ', $u->status) }}</span>
@@ -343,7 +343,7 @@
                 @endif
                 @if($transferUnitId)
                 @php $selUnit = $availableUnits->firstWhere('id', $transferUnitId); @endphp
-                <div class="mt-1 flex items-center gap-2 text-sm text-indigo-600 dark:text-indigo-400 font-semibold">
+                <div class="mt-1 flex items-center gap-2 text-sm text-orange-500 dark:text-blue-400 font-semibold">
                     <flux:icon name="check-circle" class="size-4" />
                     {{ $selUnit?->phoneModel?->name }} — {{ $selUnit?->imei_1 }}
                 </div>

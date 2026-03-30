@@ -31,8 +31,8 @@
     {{-- Stats Bar --}}
     @php
     $statDefs = [
-        ['key'=>'hq_stock',     'label'=>'HQ Stock',     'grad'=>'from-[#4b0082] to-[#7c3aed]', 'hero'=>true],
-        ['key'=>'vendor_stock', 'label'=>'Vendor Stock', 'icon_color'=>'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'],
+        ['key'=>'hq_stock',     'label'=>'HQ Stock',     'grad'=>'from-[#2563eb] to-[#2563eb]', 'hero'=>true],
+        ['key'=>'vendor_stock', 'label'=>'Vendor Stock', 'icon_color'=>'bg-blue-100 dark:bg-blue-900/30 text-orange-500 dark:text-blue-400'],
         ['key'=>'in_transit',   'label'=>'In Transit',   'icon_color'=>'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'],
         ['key'=>'sold',         'label'=>'Sold/Loaned',  'icon_color'=>'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'],
         ['key'=>'returned',     'label'=>'Returned',     'icon_color'=>'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'],
@@ -42,7 +42,7 @@
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
         @foreach($statDefs as $sd)
         @if(!empty($sd['hero']))
-        <div class="bg-gradient-to-br {{ $sd['grad'] }} rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-purple-900/20">
+        <div class="bg-gradient-to-br {{ $sd['grad'] }} rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
                 <div class="p-1.5 rounded-lg bg-white/20">
@@ -111,8 +111,8 @@
                         $cost   = (float)($unit->purchase_price ?? 0);
                         $margin = ($retail > 0 && $cost > 0) ? round(($retail - $cost) / $retail * 100, 1) : null;
                         $statusBadge = match($unit->status) {
-                            'hq_stock'     => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-                            'vendor_stock' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+                            'hq_stock'     => 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-300',
+                            'vendor_stock' => 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-300',
                             'available'    => 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
                             'sold'         => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
                             'in_transit'   => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
@@ -129,7 +129,7 @@
                     <tr wire:key="unit-{{ $unit->id }}" class="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
                         <td class="px-5 py-3.5">
                             <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-black">
+                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center flex-shrink-0 text-white text-xs font-black">
                                     {{ strtoupper(substr($unit->phoneModel?->brand?->name ?? 'U', 0, 2)) }}
                                 </div>
                                 <div>
@@ -175,7 +175,7 @@
                         <td class="px-5 py-3.5 text-right">
                             <div class="flex items-center justify-end gap-1">
                                 <button wire:click="openDetail('{{ $unit->id }}')"
-                                        class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 transition-colors">
+                                        class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-orange-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                     Details
                                 </button>
@@ -230,8 +230,8 @@
                 $duCost   = (float)($du->purchase_price ?? 0);
                 $duMargin = ($duRetail > 0 && $duCost > 0) ? round(($duRetail - $duCost) / $duRetail * 100, 1) : null;
                 $duSc = match($du->status) {
-                    'hq_stock'     => 'bg-purple-100 text-purple-700',
-                    'vendor_stock' => 'bg-blue-100 text-blue-700',
+                    'hq_stock'     => 'bg-blue-100 text-orange-600',
+                    'vendor_stock' => 'bg-blue-100 text-orange-600',
                     'available'    => 'bg-teal-100 text-teal-700',
                     'sold'         => 'bg-emerald-100 text-emerald-700',
                     'in_transit'   => 'bg-amber-100 text-amber-700',
@@ -241,7 +241,7 @@
             @endphp
 
             {{-- Header --}}
-            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
+            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
                 <div>
                     <p class="text-xs font-semibold text-white/70 uppercase tracking-wider">{{ $du->phoneModel?->brand?->name }}</p>
                     <h2 class="text-xl font-black mt-0.5">{{ $du->phoneModel?->name ?? 'Unknown Device' }}</h2>
@@ -294,7 +294,7 @@
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Specifications</h3>
                     <div class="flex flex-wrap gap-2">
                         @foreach($duSpecs as $sk => $sv)
-                        <span class="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-semibold">
+                        <span class="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-orange-600 dark:text-blue-300 rounded-lg text-xs font-semibold">
                             {{ ucfirst($sk) }}: {{ $sv }}
                         </span>
                         @endforeach
@@ -339,9 +339,9 @@
                 @endphp
                 <div>
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Linked Loan</h3>
-                    <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-900/40 rounded-xl p-4">
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40 rounded-xl p-4">
                         <div class="flex items-center justify-between mb-2">
-                            <p class="font-mono font-bold text-indigo-800 dark:text-indigo-300 text-sm">{{ $dl->loan_number }}</p>
+                            <p class="font-mono font-bold text-blue-800 dark:text-blue-300 text-sm">{{ $dl->loan_number }}</p>
                             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full {{ $dlc }}">{{ ucfirst($dl->status) }}</span>
                         </div>
                         <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">
@@ -361,8 +361,8 @@
                         @foreach($du->stockTransfers as $tr)
                         <div class="flex items-center justify-between bg-gray-50 dark:bg-zinc-800 rounded-xl px-4 py-2.5">
                             <div class="flex items-center gap-2">
-                                <div class="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></div>
-                                <span class="text-xs font-mono font-semibold text-indigo-600 dark:text-indigo-400">{{ $tr->reference }}</span>
+                                <div class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></div>
+                                <span class="text-xs font-mono font-semibold text-orange-500 dark:text-blue-400">{{ $tr->reference }}</span>
                             </div>
                             <div class="text-right">
                                 <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white dark:bg-zinc-700 text-gray-600 dark:text-gray-300">{{ ucfirst($tr->status) }}</span>
@@ -379,7 +379,7 @@
             <div class="px-6 py-4 border-t border-gray-100 dark:border-zinc-800 flex gap-2">
                 @can('devices.edit')
                 <button wire:click="openEditModal('{{ $du->id }}')"
-                        class="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
+                        class="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-colors">
                     <flux:icon name="pencil-square" class="size-4" />
                     Edit Unit
                 </button>

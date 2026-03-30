@@ -17,15 +17,15 @@
         {{-- KPI Cards Row 1 --}}
         <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
             {{-- Active Loans --}}
-            <div class="rounded-2xl bg-gradient-to-br from-purple-700 to-indigo-800 p-5 text-white shadow-lg shadow-purple-900/30">
+            <div class="rounded-2xl bg-gradient-to-br from-blue-700 to-blue-800 p-5 text-white shadow-lg shadow-blue-900/30">
                 <div class="flex items-center justify-between mb-3">
-                    <span class="text-xs font-semibold text-purple-200 uppercase tracking-wider">Active Loans</span>
+                    <span class="text-xs font-semibold text-blue-200 uppercase tracking-wider">Active Loans</span>
                     <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10">
                         <flux:icon name="document-text" class="size-4 text-white" />
                     </div>
                 </div>
                 <div class="text-3xl font-bold">{{ number_format($stats['active_loans']) }}</div>
-                <div class="mt-1 text-xs text-purple-300">Portfolio running</div>
+                <div class="mt-1 text-xs text-blue-300">Portfolio running</div>
             </div>
 
             {{-- Overdue Loans --}}
@@ -98,7 +98,7 @@
             <div class="rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-6 shadow-sm">
                 <div class="flex items-center justify-between mb-4">
                     <flux:heading size="sm">Portfolio Balance</flux:heading>
-                    <flux:icon name="chart-bar" class="size-5 text-purple-500" />
+                    <flux:icon name="chart-bar" class="size-5 text-blue-500" />
                 </div>
 
                 <div class="text-3xl font-bold text-zinc-900 dark:text-white mb-1">
@@ -154,7 +154,7 @@
                             <tbody class="divide-y divide-zinc-50 dark:divide-zinc-700/50">
                                 @foreach($recentLoans as $loan)
                                     <tr class="group hover:bg-zinc-50 dark:hover:bg-zinc-700/30 transition-colors">
-                                        <td class="py-3 font-mono text-xs text-purple-600 dark:text-purple-400">
+                                        <td class="py-3 font-mono text-xs text-orange-500 dark:text-blue-400">
                                             {{ $loan->loan_number }}
                                         </td>
                                         <td class="py-3 text-zinc-900 dark:text-zinc-100">
@@ -187,27 +187,27 @@
         </div>
 
         {{-- Quick Actions --}}
-        <div class="rounded-2xl bg-gradient-to-r from-purple-900/50 to-indigo-900/50 border border-purple-800/30 p-6">
+        <div class="rounded-2xl bg-gradient-to-r from-blue-900/50 to-blue-900/50 border border-blue-800/30 p-6">
             <flux:heading size="sm" class="text-white mb-4">Quick Actions</flux:heading>
             <div class="flex flex-wrap gap-3">
                 <flux:button :href="route('kyc.customers')" variant="ghost" size="sm" wire:navigate icon="user-plus"
-                    class="!text-purple-200 !border-purple-700/50 hover:!border-purple-500">
+                    class="!text-blue-200 !border-blue-700/50 hover:!border-orange-500">
                     New Customer
                 </flux:button>
                 <flux:button :href="route('stock.imei')" variant="ghost" size="sm" wire:navigate icon="magnifying-glass"
-                    class="!text-purple-200 !border-purple-700/50 hover:!border-purple-500">
+                    class="!text-blue-200 !border-blue-700/50 hover:!border-orange-500">
                     IMEI Search
                 </flux:button>
                 <flux:button :href="route('credit.calculator')" variant="ghost" size="sm" wire:navigate icon="calculator"
-                    class="!text-purple-200 !border-purple-700/50 hover:!border-purple-500">
+                    class="!text-blue-200 !border-blue-700/50 hover:!border-orange-500">
                     Loan Calculator
                 </flux:button>
                 <flux:button :href="route('financials.collections')" variant="ghost" size="sm" wire:navigate icon="currency-dollar"
-                    class="!text-purple-200 !border-purple-700/50 hover:!border-purple-500">
+                    class="!text-blue-200 !border-blue-700/50 hover:!border-orange-500">
                     Record Payment
                 </flux:button>
                 <flux:button :href="route('kyc.pending')" variant="ghost" size="sm" wire:navigate icon="clock"
-                    class="!text-purple-200 !border-purple-700/50 hover:!border-purple-500">
+                    class="!text-blue-200 !border-blue-700/50 hover:!border-orange-500">
                     Verify KYC ({{ $stats['pending_kyc'] }})
                 </flux:button>
             </div>

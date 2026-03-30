@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-[#1a0033]">
+<html lang="en" class="h-full bg-[#0f172a]">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,7 +11,7 @@
      
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="h-full font-sans antialiased bg-[#1a0033] text-white selection:bg-[#4b0082]/30 selection:text-white">
+<body class="h-full font-sans antialiased bg-[#0f172a] text-white selection:bg-orange-500/30 selection:text-white">
     {{ $slot }}
     
     @fluxScripts

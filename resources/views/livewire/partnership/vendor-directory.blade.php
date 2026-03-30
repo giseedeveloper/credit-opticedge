@@ -16,15 +16,15 @@
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Vendor Directory</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Distribution partners, performance metrics &amp; commission tracking</p>
         </div>
-        <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-900/40">
-            <flux:icon name="building-storefront" class="size-4 text-purple-500" />
-            <span class="text-sm font-bold text-purple-600 dark:text-purple-400">{{ $stats['total'] }} vendors</span>
+        <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40">
+            <flux:icon name="building-storefront" class="size-4 text-blue-500" />
+            <span class="text-sm font-bold text-orange-500 dark:text-blue-400">{{ $stats['total'] }} vendors</span>
         </div>
     </div>
 
     {{-- Stats Bar --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-purple-900/20">
+        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
                 <div class="p-1.5 rounded-lg bg-white/20"><flux:icon name="building-storefront" class="size-4" /></div>
@@ -97,19 +97,19 @@
         <div wire:key="vendor-{{ $vendor->id }}"
              wire:click="openDetail('{{ $vendor->id }}')"
              class="group bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-5 shadow-sm
-                    hover:shadow-lg hover:border-purple-200 dark:hover:border-purple-800 hover:-translate-y-0.5
+                    hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-800 hover:-translate-y-0.5
                     transition-all duration-200 cursor-pointer">
 
             {{-- Card Header --}}
             <div class="flex items-start gap-3 mb-4">
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white font-black text-sm flex-shrink-0 shadow-md shadow-purple-900/20">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 text-white font-black text-sm flex-shrink-0 shadow-md shadow-blue-900/20">
                     {{ strtoupper(substr($vendor->name, 0, 2)) }}
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="font-bold text-gray-900 dark:text-white truncate">{{ $vendor->name }}</p>
                     <p class="text-xs text-gray-400 mt-0.5">{{ $vendor->code ?? '—' }} · {{ $vendor->phone ?? '—' }}</p>
                     @if($vendor->branch)
-                    <p class="text-[10px] text-purple-500 dark:text-purple-400 mt-0.5 font-semibold">{{ $vendor->branch->name }}</p>
+                    <p class="text-[10px] text-blue-500 dark:text-blue-400 mt-0.5 font-semibold">{{ $vendor->branch->name }}</p>
                     @endif
                 </div>
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0
@@ -130,17 +130,17 @@
                 </div>
                 <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-2.5 text-center">
                     <p class="text-[10px] text-gray-400 uppercase font-bold">Rate</p>
-                    <p class="text-base font-black text-purple-600 dark:text-purple-400 mt-0.5">{{ $vendor->commission_rate ?? 0 }}%</p>
+                    <p class="text-base font-black text-orange-500 dark:text-blue-400 mt-0.5">{{ $vendor->commission_rate ?? 0 }}%</p>
                 </div>
             </div>
 
             {{-- Wallet Balance --}}
             @if($walletBal > 0 || $totalEarned > 0)
-            <div class="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl p-3 border border-purple-100 dark:border-purple-900/30 mb-3">
+            <div class="bg-gradient-to-r from-blue-50 to-blue-50 dark:from-blue-900/20 dark:to-blue-900/20 rounded-xl p-3 border border-blue-100 dark:border-blue-900/30 mb-3">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-[10px] text-purple-500 uppercase font-bold">Wallet Balance</p>
-                        <p class="text-sm font-black text-purple-700 dark:text-purple-300">TZS {{ number_format($walletBal, 0) }}</p>
+                        <p class="text-[10px] text-blue-500 uppercase font-bold">Wallet Balance</p>
+                        <p class="text-sm font-black text-orange-600 dark:text-blue-300">TZS {{ number_format($walletBal, 0) }}</p>
                     </div>
                     <div class="text-right">
                         <p class="text-[10px] text-gray-400 uppercase font-bold">Total Earned</p>
@@ -166,8 +166,8 @@
 
             {{-- Hover cta --}}
             <div class="mt-3 pt-3 border-t border-gray-50 dark:border-zinc-800 flex items-center justify-between">
-                <span class="text-[10px] text-gray-300 dark:text-zinc-600 group-hover:text-purple-400 transition-colors font-semibold">Click to view details</span>
-                <svg class="w-3.5 h-3.5 text-gray-300 dark:text-zinc-600 group-hover:text-purple-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span class="text-[10px] text-gray-300 dark:text-zinc-600 group-hover:text-blue-400 transition-colors font-semibold">Click to view details</span>
+                <svg class="w-3.5 h-3.5 text-gray-300 dark:text-zinc-600 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
             </div>
@@ -215,7 +215,7 @@
             @endphp
 
             {{-- Header --}}
-            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-purple-600 to-indigo-700 text-white">
+            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
                 <div class="flex items-center gap-4">
                     <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white font-black text-lg flex-shrink-0">
                         {{ strtoupper(substr($dv->name, 0, 2)) }}
@@ -242,7 +242,7 @@
             <div class="grid grid-cols-3 divide-x divide-gray-100 dark:divide-zinc-700 bg-gray-50 dark:bg-zinc-800/60 border-b border-gray-100 dark:border-zinc-700">
                 <div class="px-4 py-3 text-center">
                     <p class="text-[10px] text-gray-400 uppercase font-bold">Wallet Balance</p>
-                    <p class="text-base font-black text-purple-600 dark:text-purple-400 mt-0.5">TZS {{ number_format($dvBalance, 0) }}</p>
+                    <p class="text-base font-black text-orange-500 dark:text-blue-400 mt-0.5">TZS {{ number_format($dvBalance, 0) }}</p>
                 </div>
                 <div class="px-4 py-3 text-center">
                     <p class="text-[10px] text-gray-400 uppercase font-bold">Total Earned</p>
@@ -274,7 +274,7 @@
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase font-semibold">Commission Rate</p>
-                            <p class="text-sm font-black text-purple-600 dark:text-purple-400 mt-0.5">{{ $dv->commission_rate ?? 0 }}%</p>
+                            <p class="text-sm font-black text-orange-500 dark:text-blue-400 mt-0.5">{{ $dv->commission_rate ?? 0 }}%</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3 col-span-2">
                             <p class="text-[10px] text-gray-400 uppercase font-semibold">Address</p>
@@ -313,9 +313,9 @@
                             <p class="text-[10px] text-gray-400 uppercase font-bold">Total Loans</p>
                             <p class="text-2xl font-black text-gray-900 dark:text-white mt-0.5">{{ $dv->loans_count }}</p>
                         </div>
-                        <div class="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-3 text-center">
-                            <p class="text-[10px] text-purple-500 uppercase font-bold">Loan Value</p>
-                            <p class="text-sm font-black text-purple-700 dark:text-purple-300 mt-0.5">{{ number_format($dvLoanValue, 0) }}</p>
+                        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center">
+                            <p class="text-[10px] text-blue-500 uppercase font-bold">Loan Value</p>
+                            <p class="text-sm font-black text-orange-600 dark:text-blue-300 mt-0.5">{{ number_format($dvLoanValue, 0) }}</p>
                         </div>
                     </div>
                 </div>
@@ -325,7 +325,7 @@
                 <div>
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
                         Recent Commissions
-                        <span class="ml-1 px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-600 text-[9px] font-bold">{{ $dv->commissionLedgers->count() }}</span>
+                        <span class="ml-1 px-1.5 py-0.5 rounded-full bg-blue-100 text-orange-500 text-[9px] font-bold">{{ $dv->commissionLedgers->count() }}</span>
                     </h3>
                     <div class="space-y-1.5">
                         @foreach($dv->commissionLedgers as $ledger)
@@ -344,7 +344,7 @@
                                 <p class="text-[10px] text-gray-400 mt-0.5">{{ $ledger->posted_at?->format('d M Y') ?? '—' }}</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-sm font-black text-purple-600 dark:text-purple-400">
+                                <p class="text-sm font-black text-orange-500 dark:text-blue-400">
                                     TZS {{ number_format($ledger->commission_amount, 0) }}
                                 </p>
                                 <span class="px-1.5 py-0.5 rounded-full text-[9px] font-bold {{ $lBadge }}">{{ ucfirst($ledger->status) }}</span>
@@ -372,7 +372,7 @@
                         @endphp
                         <div class="flex items-center justify-between bg-gray-50 dark:bg-zinc-800 rounded-xl px-3 py-2.5">
                             <div>
-                                <p class="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">{{ $loan->loan_number }}</p>
+                                <p class="text-xs font-mono font-bold text-orange-500 dark:text-blue-400">{{ $loan->loan_number }}</p>
                                 <p class="text-[10px] text-gray-400 mt-0.5">{{ $loan->customer?->full_name ?? '—' }}</p>
                             </div>
                             <div class="text-right">

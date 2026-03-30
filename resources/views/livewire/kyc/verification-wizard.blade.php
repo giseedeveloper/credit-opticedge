@@ -47,7 +47,7 @@
                 </p>
                 <div class="flex justify-center gap-3 mt-6">
                     <button wire:click="startNew"
-                            class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 text-white hover:opacity-90 transition-opacity">
+                            class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:opacity-90 transition-opacity">
                         <flux:icon name="plus" class="size-4" />
                         Register Another
                     </button>
@@ -77,7 +77,7 @@
                         <div class="flex items-center {{ $n < 4 ? 'flex-1' : '' }}">
                             <div class="flex flex-col items-center flex-shrink-0">
                                 <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black transition-colors
-                                    {{ $step > $n ? 'bg-emerald-500 text-white' : ($step === $n ? 'bg-gradient-to-br from-indigo-600 to-purple-700 text-white shadow-md shadow-indigo-200' : 'bg-gray-200 dark:bg-zinc-700 text-gray-500 dark:text-gray-400') }}">
+                                    {{ $step > $n ? 'bg-emerald-500 text-white' : ($step === $n ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-md shadow-blue-200' : 'bg-gray-200 dark:bg-zinc-700 text-gray-500 dark:text-gray-400') }}">
                                     @if($step > $n)
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                                     @else
@@ -103,7 +103,7 @@
                         @if($step === 1)
                         <div class="space-y-4">
                             <div>
-                                <p class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">Step 1 of 4</p>
+                                <p class="text-xs font-bold text-orange-500 dark:text-blue-400 uppercase tracking-wider mb-1">Step 1 of 4</p>
                                 <h3 class="text-lg font-black text-gray-900 dark:text-white">Personal Information</h3>
                                 <p class="text-sm text-gray-500 mt-0.5">Legal names as they appear on national ID</p>
                             </div>
@@ -150,7 +150,7 @@
                         @if($step === 2)
                         <div class="space-y-4">
                             <div>
-                                <p class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">Step 2 of 4</p>
+                                <p class="text-xs font-bold text-orange-500 dark:text-blue-400 uppercase tracking-wider mb-1">Step 2 of 4</p>
                                 <h3 class="text-lg font-black text-gray-900 dark:text-white">Contact & Location</h3>
                                 <p class="text-sm text-gray-500 mt-0.5">Phone number and residential details</p>
                             </div>
@@ -196,7 +196,7 @@
                         @if($step === 3)
                         <div class="space-y-4">
                             <div>
-                                <p class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">Step 3 of 4</p>
+                                <p class="text-xs font-bold text-orange-500 dark:text-blue-400 uppercase tracking-wider mb-1">Step 3 of 4</p>
                                 <h3 class="text-lg font-black text-gray-900 dark:text-white">Financial & Identity</h3>
                                 <p class="text-sm text-gray-500 mt-0.5">National ID and income details for credit assessment</p>
                             </div>
@@ -284,7 +284,7 @@
 
                             @if($step < 4)
                             <button type="submit"
-                                    class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 text-white hover:opacity-90 transition-opacity">
+                                    class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:opacity-90 transition-opacity">
                                 Continue
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                             </button>
@@ -307,7 +307,7 @@
         <div class="lg:col-span-2 flex flex-col gap-4">
             <div class="flex items-center justify-between">
                 <h3 class="font-bold text-gray-900 dark:text-white text-sm">Recently Registered</h3>
-                <a href="{{ route('kyc.customers') }}" wire:navigate class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold">View all →</a>
+                <a href="{{ route('kyc.customers') }}" wire:navigate class="text-xs text-orange-500 hover:text-blue-800 font-semibold">View all →</a>
             </div>
 
             <div class="flex flex-col gap-3">
@@ -334,8 +334,8 @@
                     };
                 @endphp
                 <div wire:key="vault-{{ $profile->id }}"
-                     class="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm p-4 flex items-center gap-3 hover:border-indigo-200 dark:hover:border-indigo-700 transition-colors">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+                     class="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm p-4 flex items-center gap-3 hover:border-blue-200 dark:hover:border-blue-700 transition-colors">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
                         {{ strtoupper(substr($profile->first_name, 0, 1).substr($profile->last_name, 0, 1)) }}
                     </div>
                     <div class="flex-1 min-w-0">
@@ -361,7 +361,7 @@
             </div>
 
             {{-- Quick Stats --}}
-            <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-5 text-white mt-2">
+            <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white mt-2">
                 <p class="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1">Today's Registrations</p>
                 <p class="text-3xl font-black">{{ \App\Models\Customer::whereDate('created_at', today())->count() }}</p>
                 <p class="text-xs text-white/60 mt-1">customers registered today</p>

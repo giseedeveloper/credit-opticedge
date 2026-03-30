@@ -30,7 +30,7 @@
     @php
         $cards = [
             ['label' => 'Available',    'key' => 'available',    'color' => 'from-teal-600 to-emerald-700',  'icon' => 'check-circle'],
-            ['label' => 'HQ Stock',     'key' => 'hq_stock',     'color' => 'from-purple-700 to-indigo-800', 'icon' => 'building-office'],
+            ['label' => 'HQ Stock',     'key' => 'hq_stock',     'color' => 'from-blue-700 to-blue-800', 'icon' => 'building-office'],
             ['label' => 'Vendor Stock', 'key' => 'vendor_stock', 'color' => 'from-sky-600 to-blue-800',      'icon' => 'building-storefront'],
             ['label' => 'In Transit',   'key' => 'in_transit',   'color' => 'from-amber-500 to-orange-600',  'icon' => 'truck'],
             ['label' => 'Sold',         'key' => 'sold',         'color' => 'from-emerald-700 to-teal-800',  'icon' => 'check-badge'],
@@ -150,7 +150,7 @@
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-1">
                                 <button wire:click="openDetail('{{ $unit->id }}')"
-                                        class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 transition-colors">
+                                        class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-orange-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                     Details
                                 </button>
@@ -218,8 +218,8 @@
                             : null;
                 $statusColor = match($du->status) {
                     'available'    => 'bg-teal-100 text-teal-700',
-                    'hq_stock'     => 'bg-purple-100 text-purple-700',
-                    'vendor_stock' => 'bg-blue-100 text-blue-700',
+                    'hq_stock'     => 'bg-blue-100 text-orange-600',
+                    'vendor_stock' => 'bg-blue-100 text-orange-600',
                     'in_transit'   => 'bg-amber-100 text-amber-700',
                     'sold'         => 'bg-green-100 text-green-700',
                     'returned'     => 'bg-red-100 text-red-700',
@@ -228,7 +228,7 @@
             @endphp
 
             {{-- Slide header --}}
-            <div class="flex items-start justify-between px-6 py-5 border-b border-zinc-100 dark:border-zinc-800 bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
+            <div class="flex items-start justify-between px-6 py-5 border-b border-zinc-100 dark:border-zinc-800 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
                 <div>
                     <p class="text-xs font-semibold text-white/70 uppercase tracking-wider">{{ $brand?->name }}</p>
                     <h2 class="text-xl font-bold mt-0.5">{{ $model?->name ?? 'Unknown Device' }}</h2>
@@ -291,9 +291,9 @@
                     <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Specifications</h3>
                     <div class="grid grid-cols-3 gap-3">
                         @foreach($specs as $specKey => $specVal)
-                        <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-3 text-center">
-                            <p class="text-[10px] text-indigo-400 uppercase tracking-wider">{{ ucfirst($specKey) }}</p>
-                            <p class="text-sm font-bold text-indigo-700 dark:text-indigo-300 mt-0.5">{{ $specVal }}</p>
+                        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center">
+                            <p class="text-[10px] text-blue-400 uppercase tracking-wider">{{ ucfirst($specKey) }}</p>
+                            <p class="text-sm font-bold text-orange-600 dark:text-blue-300 mt-0.5">{{ $specVal }}</p>
                         </div>
                         @endforeach
                     </div>
@@ -374,7 +374,7 @@
             <div class="px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 flex gap-2">
                 @can('devices.edit')
                 <button wire:click="openStatusModal('{{ $du->id }}')"
-                        class="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
+                        class="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
                     Change Status
                 </button>

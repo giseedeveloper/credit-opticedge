@@ -4,7 +4,7 @@
     <div x-data="{ show:false, msg:'', type:'success' }"
          x-on:toast.window="msg=$event.detail.message; type=$event.detail.type; show=true; setTimeout(()=>show=false,3500)"
          x-show="show" x-transition
-         :class="type==='success' ? 'bg-teal-600' : type==='danger' ? 'bg-red-500' : 'bg-indigo-600'"
+         :class="type==='success' ? 'bg-teal-600' : type==='danger' ? 'bg-red-500' : 'bg-orange-500'"
          class="fixed bottom-5 right-5 z-[60] text-white text-sm font-medium px-5 py-3 rounded-xl shadow-xl flex items-center gap-2">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         <span x-text="msg"></span>
@@ -27,19 +27,19 @@
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wider">Role Name</label>
                     <input wire:model="newRoleName" type="text" placeholder="e.g. branch-manager"
-                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
                     @error('newRoleName') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wider">Description</label>
                     <input wire:model="newRoleDescription" type="text" placeholder="e.g. Branch Manager privileges"
-                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
                     @error('newRoleDescription') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-50 dark:bg-zinc-800/60 rounded-b-2xl flex justify-end gap-3">
                 <button wire:click="$set('showCreateModal',false)" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-xl transition-colors">Cancel</button>
-                <button wire:click="createRole" wire:loading.attr="disabled" class="px-5 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded-xl transition-colors shadow-sm">Create Role</button>
+                <button wire:click="createRole" wire:loading.attr="disabled" class="px-5 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-xl transition-colors shadow-sm">Create Role</button>
             </div>
         </div>
     </div>
@@ -74,7 +74,7 @@
         </div>
     </div>
     <div class="grid grid-cols-3 gap-4 mb-5">
-        <div class="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-indigo-900/20">
+        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
                 <div class="p-1.5 rounded-lg bg-white/20">
@@ -97,7 +97,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-violet-100 dark:bg-violet-900/30 text-violet-600">
+                <div class="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-orange-500">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
                 </div>
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Assigned Users</span>
@@ -118,7 +118,7 @@
                         <p class="text-xs text-gray-400 mt-0.5">{{ $roles->count() }} roles configured</p>
                     </div>
                     <button wire:click="$set('showCreateModal',true)"
-                            class="shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-full transition-colors">
+                            class="shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-full transition-colors">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
                         New
                     </button>
@@ -128,17 +128,17 @@
                     @php $isSelected = $selectedRole && $selectedRole->id === $role->id; @endphp
                     <button wire:click="selectRole('{{ $role->id }}')"
                             class="w-full text-left px-5 py-3.5 transition-all
-                                   {{ $isSelected ? 'bg-indigo-50 dark:bg-indigo-950/40 border-l-2 border-l-indigo-500' : 'hover:bg-gray-50 dark:hover:bg-zinc-800/50 border-l-2 border-l-transparent' }}">
+                                   {{ $isSelected ? 'bg-blue-50 dark:bg-blue-950/40 border-l-2 border-l-blue-500' : 'hover:bg-gray-50 dark:hover:bg-zinc-800/50 border-l-2 border-l-transparent' }}">
                         <div class="flex items-center justify-between gap-2">
-                            <span class="text-sm font-bold {{ $isSelected ? 'text-indigo-700 dark:text-indigo-400' : 'text-gray-800 dark:text-gray-100' }}">
+                            <span class="text-sm font-bold {{ $isSelected ? 'text-orange-600 dark:text-blue-400' : 'text-gray-800 dark:text-gray-100' }}">
                                 {{ ucwords(str_replace(['-','_'], ' ', $role->name)) }}
                             </span>
-                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full {{ $isSelected ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-gray-100 text-gray-500 dark:bg-zinc-700 dark:text-zinc-400' }}">
+                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full {{ $isSelected ? 'bg-blue-100 text-orange-500 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-gray-100 text-gray-500 dark:bg-zinc-700 dark:text-zinc-400' }}">
                                 {{ $role->users_count }} {{ Str::plural('user', $role->users_count) }}
                             </span>
                         </div>
                         @if($role->description)
-                        <div class="text-xs mt-0.5 truncate {{ $isSelected ? 'text-indigo-400' : 'text-gray-400' }}">{{ $role->description }}</div>
+                        <div class="text-xs mt-0.5 truncate {{ $isSelected ? 'text-blue-400' : 'text-gray-400' }}">{{ $role->description }}</div>
                         @endif
                     </button>
                     @endforeach
@@ -159,17 +159,17 @@
                             <div>
                                 <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Role Name</label>
                                 <input wire:model="editRoleName" type="text"
-                                       class="w-full px-3 py-2 text-sm border border-indigo-300 dark:border-indigo-700 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                                       class="w-full px-3 py-2 text-sm border border-blue-300 dark:border-blue-700 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
                                 @error('editRoleName') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                             </div>
                             <div>
                                 <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Description</label>
                                 <input wire:model="editRoleDescription" type="text"
-                                       class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                                       class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
                             </div>
                         </div>
                         <div class="flex items-center gap-2 pt-5">
-                            <button wire:click="saveRoleEdit" class="px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors">Save</button>
+                            <button wire:click="saveRoleEdit" class="px-4 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-colors">Save</button>
                             <button wire:click="$set('editingRole',false)" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-xl transition-colors">Cancel</button>
                         </div>
                     </div>
@@ -180,7 +180,7 @@
                                 <h3 class="text-lg font-bold text-gray-900 dark:text-white">
                                     {{ ucwords(str_replace(['-','_'], ' ', $selectedRole->name)) }}
                                 </h3>
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-300">
                                     {{ count($rolePermissions) }} {{ Str::plural('permission', count($rolePermissions)) }}
                                 </span>
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300">
@@ -229,7 +229,7 @@
                             wire:loading.attr="disabled"
                             wire:target="savePermissions"
                             :disabled="$wire.savingPermissions"
-                            class="flex items-center gap-2 px-5 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded-xl shadow-sm transition-colors">
+                            class="flex items-center gap-2 px-5 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-xl shadow-sm transition-colors">
                         <span wire:loading.remove wire:target="savePermissions">Save Changes</span>
                         <span wire:loading wire:target="savePermissions" class="flex items-center gap-1.5">
                             <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
@@ -300,20 +300,20 @@
                 @if($activeTab === 'users')
                 <div class="px-5 py-3 border-b border-gray-100 dark:border-zinc-800">
                     <input wire:model.live.debounce.300="userSearch" type="text" placeholder="Search users by name or email…"
-                           class="w-full max-w-sm px-3.5 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                           class="w-full max-w-sm px-3.5 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
                 </div>
                 <div class="divide-y divide-gray-100 dark:divide-zinc-800">
                     @forelse($users as $user)
                     @php $hasRole = in_array($user->id, $roleUsers); @endphp
                     <div class="flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50 dark:hover:bg-zinc-800/40 transition-colors">
-                        <div class="size-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        <div class="size-9 rounded-full bg-gradient-to-br from-blue-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
                             {{ $user->initials() }}
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{{ $user->name }}</span>
                                 @if($hasRole)
-                                <span class="text-[10px] font-bold px-1.5 py-0.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-full">
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-300 rounded-full">
                                     {{ ucwords(str_replace(['-','_'], ' ', $selectedRole->name)) }}
                                 </span>
                                 @endif
@@ -322,7 +322,7 @@
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
                             <button wire:click="openUserDetail('{{ $user->id }}')"
-                                    class="px-2.5 py-1.5 text-xs font-semibold text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors">
+                                    class="px-2.5 py-1.5 text-xs font-semibold text-gray-500 hover:text-orange-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
                                 View
                             </button>
                             @if($hasRole)
@@ -332,7 +332,7 @@
                             </button>
                             @else
                             <button wire:click="assignRole('{{ $user->id }}')"
-                                    class="px-3 py-1.5 text-xs font-semibold text-indigo-600 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors">
+                                    class="px-3 py-1.5 text-xs font-semibold text-orange-500 border border-blue-200 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
                                 Assign
                             </button>
                             @endif
@@ -388,7 +388,7 @@
             @endphp
 
             {{-- Header --}}
-            <div class="px-6 py-6 bg-gradient-to-r from-indigo-700 to-violet-800 text-white">
+            <div class="px-6 py-6 bg-gradient-to-r from-blue-700 to-blue-800 text-white">
                 <div class="flex items-start justify-between">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-white text-lg font-black flex-shrink-0">
@@ -449,8 +449,8 @@
                 <div>
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Activity</h3>
                     <div class="grid grid-cols-2 gap-2">
-                        <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-3 text-center border border-indigo-100 dark:border-indigo-900/30">
-                            <p class="text-xl font-black text-indigo-600 dark:text-indigo-400">{{ number_format($loansCount) }}</p>
+                        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center border border-blue-100 dark:border-blue-900/30">
+                            <p class="text-xl font-black text-orange-500 dark:text-blue-400">{{ number_format($loansCount) }}</p>
                             <p class="text-[10px] text-gray-400 mt-0.5 font-semibold">Loans Disbursed</p>
                         </div>
                         <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 text-center border border-emerald-100 dark:border-emerald-900/30">
@@ -465,7 +465,7 @@
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Assigned Roles</h3>
                     <div class="flex flex-wrap gap-2">
                         @foreach($du->roles as $role)
-                        <span class="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                        <span class="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-300">
                             {{ ucwords(str_replace(['-','_'],' ',$role->name)) }}
                         </span>
                         @endforeach

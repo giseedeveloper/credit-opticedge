@@ -26,14 +26,14 @@
 
         {{-- Sidebar: stashable mobile + custom Alpine icon-only collapse desktop --}}
         <flux:sidebar stashable sticky
-            class="border-e border-gray-200 bg-white flex flex-col p-0 shadow-sm"
+            class="border-e border-gray-200 bg-[#f0f2f5] flex flex-col p-0 shadow-sm"
             x-data
         >
             {{-- Mobile close --}}
             <flux:sidebar.toggle class="lg:hidden absolute top-3 right-3 text-gray-400 z-10" icon="x-mark" />
 
             {{-- Brand --}}
-            <div class="flex items-center gap-3 px-4 py-4 border-b border-gray-100 shrink-0"
+            <div class="flex items-center gap-3 px-4 py-4 border-b border-gray-200 shrink-0"
                  :class="$store.sidebar.open ? 'justify-start' : 'justify-center'">
                 <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-500 shadow-sm">
                     <flux:icon name="credit-card" class="size-5 text-white" />
@@ -95,9 +95,9 @@
                     <div x-show="$store.sidebar.open" x-transition.opacity
                          class="flex items-center gap-2 px-3 pt-4 pb-1">
                         <flux:icon name="{{ $group['icon'] }}" class="size-3.5 shrink-0
-                            {{ $group['active'] ? 'text-orange-500' : 'text-gray-400' }}" />
+                            {{ $group['active'] ? 'text-orange-500' : 'text-gray-500' }}" />
                         <span class="text-[10px] font-bold tracking-widest uppercase truncate
-                              {{ $group['active'] ? 'text-orange-500' : 'text-gray-400' }}">
+                              {{ $group['active'] ? 'text-orange-500' : 'text-gray-600' }}">
                             {{ $group['label'] }}
                         </span>
                     </div>
@@ -110,9 +110,9 @@
                            class="flex items-center gap-2.5 px-3 py-2 text-[13px] rounded-lg transition-all duration-150
                                {{ $link['active']
                                    ? 'bg-orange-50 text-orange-700 font-semibold'
-                                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                                   : 'text-gray-800 hover:bg-gray-200 hover:text-gray-950' }}">
                             <flux:icon name="{{ $link['icon'] }}" class="size-4 shrink-0
-                                {{ $link['active'] ? 'text-orange-500' : 'text-gray-400' }}" />
+                                {{ $link['active'] ? 'text-orange-500' : 'text-gray-500' }}" />
                             {{ $link['label'] }}
                         </a>
                         @endforeach
@@ -128,7 +128,7 @@
                                class="flex items-center justify-center w-full py-2.5 rounded-lg transition-all duration-150
                                    {{ $link['active']
                                        ? 'bg-orange-50 text-orange-500'
-                                       : 'text-gray-400 hover:bg-gray-50 hover:text-gray-700' }}">
+                                       : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900' }}">
                                 <flux:icon name="{{ $link['icon'] }}" class="size-5" />
                             </a>
                             <template x-teleport="body">

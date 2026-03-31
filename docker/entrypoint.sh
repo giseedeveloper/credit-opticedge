@@ -26,7 +26,7 @@ fi
 
 # ── Run migrations ─────────────────────────────────────────────────────────────
 echo "[3/6] Running migrations..."
-php "$APP_DIR/artisan" migrate --force --no-interaction
+php "$APP_DIR/artisan" migrate --force
 
 # ── Seed roles & permissions (only if table empty) ────────────────────────────
 echo "[4/6] Seeding roles & permissions if needed..."

@@ -1,4 +1,3 @@
-# ──────────────────────────────────────────────────────────────────────────────
 # Stage 1: Node – build Vite assets
 # ──────────────────────────────────────────────────────────────────────────────
 FROM node:22-alpine AS node-builder
@@ -25,12 +24,12 @@ RUN composer install \
     --quiet
 
 COPY . .
-RUN composer dump-autoload --optimize --classmap-authoritative --quiet
+RUN composer dump-autoload --optimize --classmap-authoritative --quiet --no-scripts
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Stage 3: Production image
 # ──────────────────────────────────────────────────────────────────────────────
-FROM php:8.3-fpm-alpine AS production
+FROM php:8.4-fpm-alpine AS production
 
 LABEL maintainer="Opticedge Credit <ops@opticedge.co.tz>"
 
@@ -68,8 +67,9 @@ RUN docker-php-ext-configure gd \
         zip \
         intl \
         xml \
-        dom \
+dom \
         opcache
+
 
 # ── Redis extension (via PECL) ─────────────────────────────────────────────────
 RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \

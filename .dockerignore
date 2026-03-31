@@ -28,7 +28,7 @@ coverage
 .env.testing
 
 # Docker source (already inside image)
-docker
+#docker
 Dockerfile
 docker-compose*.yml
 

@@ -17,25 +17,42 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 #[Fillable([
     'branch_id', 'vendor_id', 'registered_by', 'first_name', 'last_name', 'middle_name',
     'phone', 'alt_phone', 'email', 'nida_number', 'date_of_birth', 'gender',
-    'occupation', 'employer', 'monthly_income', 'address', 'latitude', 'longitude', 'region', 'district',
-    'kyc_status', 'credit_status', 'status', 'location_metadata', 'metadata',
+    'occupation', 'employer', 'monthly_income', 'monthly_expenses',
+    'address', 'latitude', 'longitude', 'region', 'district',
+    'kyc_status', 'kyc_stage', 'credit_status', 'status', 'location_metadata', 'metadata',
+    'imei_number', 'device_specs', 'imei_photo_path',
+    'id_front_photo_path', 'id_back_photo_path', 'headshot_photo_path', 'client_fo_photo_path',
+    'nok_name', 'nok_phone', 'nok_relationship',
 ])]
 class Customer extends Model implements HasMedia
 {
     /** @use HasFactory<CustomerFactory> */
-    use HasFactory, HasUuids, SoftDeletes, InteractsWithMedia;
+    use HasFactory, HasUuids, InteractsWithMedia, SoftDeletes;
 
     protected function casts(): array
     {
         return [
             'date_of_birth' => 'date',
             'monthly_income' => 'decimal:2',
+            'monthly_expenses' => 'decimal:2',
+            'kyc_stage' => 'integer',
             'latitude' => 'decimal:8',
             'longitude' => 'decimal:8',
             'is_active' => 'boolean',
             'location_metadata' => 'array',
             'metadata' => 'array',
         ];
+    }
+
+    public function kycStageLabel(): string
+    {
+        return match ($this->kyc_stage ?? 1) {
+            1 => 'Device Verification',
+            2 => 'KYC & Financial Data',
+            3 => 'Confirmation Call',
+            4 => 'Next of Kin + Final',
+            default => 'Unknown',
+        };
     }
 
     public function registerMediaCollections(): void

@@ -66,10 +66,10 @@
                 <div class="px-6 pt-5 pb-4 border-b border-gray-100 dark:border-zinc-800 bg-gray-50/60 dark:bg-zinc-800/60">
                     @php
                     $steps = [
-                        1 => ['label' => 'Personal',  'desc' => 'Name, gender, DOB'],
-                        2 => ['label' => 'Contact',   'desc' => 'Phone, location'],
-                        3 => ['label' => 'Financial', 'desc' => 'NIDA, income'],
-                        4 => ['label' => 'Review',    'desc' => 'Confirm & submit'],
+                        1 => ['label' => 'Device',   'desc' => 'IMEI & specs'],
+                        2 => ['label' => 'Personal', 'desc' => 'Name, gender'],
+                        3 => ['label' => 'Contact',  'desc' => 'Phone, location'],
+                        4 => ['label' => 'Identity', 'desc' => 'NIDA, docs, NOK'],
                     ];
                     @endphp
                     <div class="flex items-center gap-0">
@@ -97,13 +97,48 @@
 
                 {{-- Form Body --}}
                 <div class="p-6">
-                    <form wire:submit.prevent="{{ $step === 4 ? 'processApplication' : 'nextStep' }}">
+                    <form wire:submit.prevent="{{ $step === 4 ? 'processApplication' : 'nextStep' }}" enctype="multipart/form-data">
 
-                        {{-- STEP 1: Personal Info --}}
+                        {{-- STEP 1: Device Verification --}}
                         @if($step === 1)
                         <div class="space-y-4">
                             <div>
-                                <p class="text-xs font-bold text-orange-500 dark:text-blue-400 uppercase tracking-wider mb-1">Step 1 of 4</p>
+                                <p class="text-xs font-bold text-orange-500 uppercase tracking-wider mb-1">Step 1 of 4</p>
+                                <h3 class="text-lg font-black text-gray-900 dark:text-white">Device Verification</h3>
+                                <p class="text-sm text-gray-500 mt-0.5">Capture IMEI number and device details</p>
+                            </div>
+                            <flux:field>
+                                <flux:label>IMEI Number <span class="text-red-500">*</span></flux:label>
+                                <flux:input wire:model="imeiNumber" placeholder="15-digit IMEI" class="font-mono" maxlength="15" />
+                                <flux:error name="imeiNumber" />
+                                <flux:description>Exactly 15 digits. Dial *#06# on the device to get IMEI.</flux:description>
+                            </flux:field>
+                            <flux:field>
+                                <flux:label>Device Specs <span class="text-red-500">*</span></flux:label>
+                                <flux:input wire:model="deviceSpecs" placeholder="e.g. Tecno Camon 20 – 8GB RAM, 256GB" />
+                                <flux:error name="deviceSpecs" />
+                            </flux:field>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                                    Device / IMEI Photo <span class="text-gray-400 font-normal">(optional)</span>
+                                </label>
+                                <input wire:model="imeiPhoto" type="file" accept="image/*"
+                                       class="block w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-gray-200 rounded-lg p-1" />
+                                @error('imeiPhoto') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                                <div wire:loading wire:target="imeiPhoto" class="mt-1 text-xs text-gray-400">Uploading…</div>
+                            </div>
+                            <div class="p-3 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-2">
+                                <flux:icon name="information-circle" class="size-4 text-amber-600 mt-0.5 shrink-0" />
+                                <p class="text-xs text-amber-700">IMEI must be exactly 15 digits. Back Office will validate authenticity and device match before proceeding.</p>
+                            </div>
+                        </div>
+                        @endif
+
+                        {{-- STEP 2: Personal Info --}}
+                        @if($step === 2)
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-xs font-bold text-orange-500 uppercase tracking-wider mb-1">Step 2 of 4</p>
                                 <h3 class="text-lg font-black text-gray-900 dark:text-white">Personal Information</h3>
                                 <p class="text-sm text-gray-500 mt-0.5">Legal names as they appear on national ID</p>
                             </div>
@@ -146,11 +181,11 @@
                         </div>
                         @endif
 
-                        {{-- STEP 2: Contact & Location --}}
-                        @if($step === 2)
+                        {{-- STEP 3: Contact & Location --}}
+                        @if($step === 3)
                         <div class="space-y-4">
                             <div>
-                                <p class="text-xs font-bold text-orange-500 dark:text-blue-400 uppercase tracking-wider mb-1">Step 2 of 4</p>
+                                <p class="text-xs font-bold text-orange-500 uppercase tracking-wider mb-1">Step 3 of 4</p>
                                 <h3 class="text-lg font-black text-gray-900 dark:text-white">Contact & Location</h3>
                                 <p class="text-sm text-gray-500 mt-0.5">Phone number and residential details</p>
                             </div>
@@ -192,80 +227,89 @@
                         </div>
                         @endif
 
-                        {{-- STEP 3: Financial & Identity --}}
-                        @if($step === 3)
-                        <div class="space-y-4">
-                            <div>
-                                <p class="text-xs font-bold text-orange-500 dark:text-blue-400 uppercase tracking-wider mb-1">Step 3 of 4</p>
-                                <h3 class="text-lg font-black text-gray-900 dark:text-white">Financial & Identity</h3>
-                                <p class="text-sm text-gray-500 mt-0.5">National ID and income details for credit assessment</p>
-                            </div>
-                            <flux:field>
-                                <flux:label>NIDA Number <span class="text-red-500">*</span></flux:label>
-                                <flux:input wire:model="nidaNumber" placeholder="19XXXXXXXXXXXXXXXXXX (20 digits)" class="font-mono" maxlength="20" />
-                                <flux:error name="nidaNumber" />
-                            </flux:field>
-                            <div class="grid grid-cols-2 gap-4">
-                                <flux:field>
-                                    <flux:label>Occupation <span class="text-gray-400 font-normal">(optional)</span></flux:label>
-                                    <flux:input wire:model="occupation" placeholder="e.g. Teacher, Trader" />
-                                </flux:field>
-                                <flux:field>
-                                    <flux:label>Employer <span class="text-gray-400 font-normal">(optional)</span></flux:label>
-                                    <flux:input wire:model="employer" placeholder="e.g. Govt, Self-employed" />
-                                </flux:field>
-                            </div>
-                            <flux:field>
-                                <flux:label>Monthly Income (TZS) <span class="text-gray-400 font-normal">(optional)</span></flux:label>
-                                <flux:input wire:model="monthlyIncome" type="number" min="0" placeholder="e.g. 500000" />
-                            </flux:field>
-                            <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/40">
-                                <div class="flex items-start gap-2">
-                                    <flux:icon name="information-circle" class="size-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                                    <p class="text-xs text-amber-700 dark:text-amber-300">NIDA number must be exactly 20 characters and must not already exist in the system. Double-check before proceeding.</p>
-                                </div>
-                            </div>
-                        </div>
-                        @endif
-
-                        {{-- STEP 4: Review & Submit --}}
+                        {{-- STEP 4: Identity, Docs, Financial & NOK --}}
                         @if($step === 4)
-                        <div class="space-y-4">
+                        <div class="space-y-5">
                             <div>
-                                <p class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Step 4 of 4</p>
-                                <h3 class="text-lg font-black text-gray-900 dark:text-white">Review & Submit</h3>
-                                <p class="text-sm text-gray-500 mt-0.5">Confirm all details before registering the customer</p>
+                                <p class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Step 4 of 4</p>
+                                <h3 class="text-lg font-black text-gray-900 dark:text-white">Identity, Financial & Next of Kin</h3>
+                                <p class="text-sm text-gray-500 mt-0.5">NIDA, documents, income and emergency contact</p>
                             </div>
 
-                            {{-- Personal --}}
-                            <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-4">
-                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Personal</p>
-                                <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-                                    <div><span class="text-gray-400 text-xs">Full Name</span><p class="font-semibold text-gray-800 dark:text-gray-100">{{ trim("$firstName $middleName $lastName") }}</p></div>
-                                    <div><span class="text-gray-400 text-xs">Gender</span><p class="font-semibold text-gray-800 dark:text-gray-100">{{ ucfirst($gender) }}</p></div>
-                                    @if($dob)<div><span class="text-gray-400 text-xs">Date of Birth</span><p class="font-semibold text-gray-800 dark:text-gray-100">{{ \Carbon\Carbon::parse($dob)->format('d M Y') }}</p></div>@endif
-                                    @if($email)<div><span class="text-gray-400 text-xs">Email</span><p class="font-semibold text-gray-800 dark:text-gray-100 truncate">{{ $email }}</p></div>@endif
+                            {{-- Identity --}}
+                            <div class="border border-gray-100 dark:border-zinc-700 rounded-xl p-4 space-y-4">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Identity</p>
+                                <flux:field>
+                                    <flux:label>NIDA Number <span class="text-red-500">*</span></flux:label>
+                                    <flux:input wire:model="nidaNumber" placeholder="19XXXXXXXXXXXXXXXXXX (20 digits)" class="font-mono" maxlength="20" />
+                                    <flux:error name="nidaNumber" />
+                                </flux:field>
+                                <div class="grid grid-cols-2 gap-3">
+                                    @foreach([['idFrontPhoto','ID Front Photo'],['idBackPhoto','ID Back Photo'],['headshotPhoto','Client Headshot'],['clientFoPhoto','Client + FO Photo']] as [$field,$label])
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">{{ $label }} <span class="text-gray-400 font-normal text-xs">(optional)</span></label>
+                                        <input wire:model="{{ $field }}" type="file" accept="image/*"
+                                               class="block w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-gray-200 rounded-lg p-1" />
+                                        @error($field) <p class="mt-0.5 text-xs text-red-500">{{ $message }}</p> @enderror
+                                    </div>
+                                    @endforeach
                                 </div>
                             </div>
 
-                            {{-- Contact --}}
-                            <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-4">
-                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Contact & Location</p>
-                                <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-                                    <div><span class="text-gray-400 text-xs">Phone</span><p class="font-semibold text-gray-800 dark:text-gray-100">{{ $phone }}</p></div>
-                                    @if($altPhone)<div><span class="text-gray-400 text-xs">Alt Phone</span><p class="font-semibold text-gray-800 dark:text-gray-100">{{ $altPhone }}</p></div>@endif
-                                    @if($address)<div class="col-span-2"><span class="text-gray-400 text-xs">Address</span><p class="font-semibold text-gray-800 dark:text-gray-100">{{ implode(', ', array_filter([$address, $district, $region])) }}</p></div>@endif
+                            {{-- Financial --}}
+                            <div class="border border-gray-100 dark:border-zinc-700 rounded-xl p-4 space-y-4">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Financial</p>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <flux:field>
+                                        <flux:label>Occupation <span class="text-gray-400 font-normal">(optional)</span></flux:label>
+                                        <flux:input wire:model="occupation" placeholder="e.g. Teacher, Trader" />
+                                    </flux:field>
+                                    <flux:field>
+                                        <flux:label>Employer <span class="text-gray-400 font-normal">(optional)</span></flux:label>
+                                        <flux:input wire:model="employer" placeholder="e.g. Govt, Self-employed" />
+                                    </flux:field>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <flux:field>
+                                        <flux:label>Monthly Income (TZS) <span class="text-red-500">*</span></flux:label>
+                                        <flux:input wire:model="monthlyIncome" type="number" min="0" placeholder="e.g. 500000" />
+                                        <flux:error name="monthlyIncome" />
+                                    </flux:field>
+                                    <flux:field>
+                                        <flux:label>Monthly Expenses (TZS) <span class="text-gray-400 font-normal">(optional)</span></flux:label>
+                                        <flux:input wire:model="monthlyExpenses" type="number" min="0" placeholder="e.g. 200000" />
+                                    </flux:field>
                                 </div>
                             </div>
 
-                            {{-- Financial & Identity --}}
-                            <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-4">
-                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Financial & Identity</p>
-                                <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-                                    <div class="col-span-2"><span class="text-gray-400 text-xs">NIDA Number</span><p class="font-mono font-bold text-gray-800 dark:text-gray-100">{{ $nidaNumber }}</p></div>
-                                    @if($occupation)<div><span class="text-gray-400 text-xs">Occupation</span><p class="font-semibold text-gray-800 dark:text-gray-100">{{ $occupation }}</p></div>@endif
-                                    @if($monthlyIncome)<div><span class="text-gray-400 text-xs">Monthly Income</span><p class="font-semibold text-teal-600 dark:text-teal-400">TZS {{ number_format((float)$monthlyIncome) }}</p></div>@endif
+                            {{-- Next of Kin --}}
+                            <div class="border border-gray-100 dark:border-zinc-700 rounded-xl p-4 space-y-4">
+                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Next of Kin</p>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <flux:field>
+                                        <flux:label>Full Name <span class="text-red-500">*</span></flux:label>
+                                        <flux:input wire:model="nokName" placeholder="e.g. John Mwangi" />
+                                        <flux:error name="nokName" />
+                                    </flux:field>
+                                    <flux:field>
+                                        <flux:label>Phone <span class="text-red-500">*</span></flux:label>
+                                        <flux:input wire:model="nokPhone" type="tel" placeholder="+255 7XX XXX XXX" />
+                                        <flux:error name="nokPhone" />
+                                    </flux:field>
                                 </div>
+                                <flux:field>
+                                    <flux:label>Relationship <span class="text-red-500">*</span></flux:label>
+                                    <flux:select wire:model="nokRelationship">
+                                        <flux:select.option value="">— Select —</flux:select.option>
+                                        <flux:select.option value="spouse">Spouse</flux:select.option>
+                                        <flux:select.option value="parent">Parent</flux:select.option>
+                                        <flux:select.option value="sibling">Sibling</flux:select.option>
+                                        <flux:select.option value="child">Child</flux:select.option>
+                                        <flux:select.option value="friend">Friend</flux:select.option>
+                                        <flux:select.option value="other">Other</flux:select.option>
+                                    </flux:select>
+                                    <flux:error name="nokRelationship" />
+                                </flux:field>
                             </div>
                         </div>
                         @endif

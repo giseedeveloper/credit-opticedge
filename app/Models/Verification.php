@@ -10,10 +10,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'customer_id', 'reviewed_by', 'type', 'status', 'stage',
+    'customer_id', 'reviewed_by', 'fo_id', 'type', 'status', 'stage',
     'notes', 'rejection_reason', 'reviewed_at',
+    'auto_check_status', 'auto_check_results', 'auto_check_ran_at',
     'stage1_status', 'stage1_reviewed_by', 'stage1_reviewed_at', 'stage1_notes', 'stage1_rejection_reason',
     'stage2_status', 'stage2_reviewed_by', 'stage2_reviewed_at', 'stage2_notes', 'stage2_rejection_reason',
+    'stage3_status', 'stage4_status',
     'confirmation_call_outcome', 'confirmation_call_notes', 'confirmation_called_at', 'confirmation_called_by',
     'nok_call_outcome', 'nok_call_notes', 'nok_called_at', 'nok_called_by',
 ])]
@@ -30,6 +32,8 @@ class Verification extends Model
             'stage2_reviewed_at' => 'datetime',
             'confirmation_called_at' => 'datetime',
             'nok_called_at' => 'datetime',
+            'auto_check_ran_at' => 'datetime',
+            'auto_check_results' => 'array',
             'stage' => 'integer',
         ];
     }
@@ -37,6 +41,11 @@ class Verification extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function fo(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'fo_id');
     }
 
     public function reviewedBy(): BelongsTo

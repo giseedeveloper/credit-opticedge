@@ -201,16 +201,18 @@
          x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
          x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
          class="fixed inset-0 z-50 flex justify-end" style="display:none">
-        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" wire:click="closeDetail"></div>
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" wire:click="closeDetail"></div>
         <div x-show="open"
+             x-data="{ tab: 'device' }"
              x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
              x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
-             class="relative w-full max-w-lg bg-white dark:bg-zinc-900 shadow-2xl overflow-y-auto flex flex-col">
+             class="relative w-full max-w-2xl bg-white dark:bg-zinc-900 shadow-2xl flex flex-col h-full">
             @if($detailCustomer)
             @php
                 $dc  = $detailCustomer;
                 $dcv = $dc->latestVerification;
                 $isApproved = $dcv?->status === 'approved';
+
                 $dcKycBadge = match($dcv?->status) {
                     'approved' => 'bg-emerald-100 text-emerald-700',
                     'pending'  => 'bg-amber-100 text-amber-700',
@@ -223,37 +225,134 @@
                     'rejected' => 'Rejected',
                     default    => 'Not Started',
                 };
+
+                $autoStatus = $dcv?->auto_check_status;
+                $autoBadge = match($autoStatus) {
+                    'passed'         => 'bg-emerald-100 text-emerald-700',
+                    'needs_correction'=> 'bg-amber-100 text-amber-700',
+                    'manual_review'  => 'bg-blue-100 text-blue-700',
+                    'auto_rejected'  => 'bg-red-100 text-red-700',
+                    default          => 'bg-zinc-100 text-zinc-500',
+                };
+
+                $photoBase = fn($path) => $path ? \Illuminate\Support\Facades\Storage::disk('public')->url($path) : null;
             @endphp
 
-            {{-- Header --}}
-            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-lg font-black">
+            {{-- ── Header ── --}}
+            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white flex-shrink-0">
+                <div class="flex items-center gap-4 min-w-0">
+                    @if($dc->headshot_photo_path)
+                    <img src="{{ $photoBase($dc->headshot_photo_path) }}"
+                         class="w-14 h-14 rounded-2xl object-cover ring-2 ring-white/30 flex-shrink-0" alt="Headshot">
+                    @else
+                    <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-xl font-black flex-shrink-0">
                         {{ strtoupper(substr($dc->first_name, 0, 1).substr($dc->last_name, 0, 1)) }}
                     </div>
-                    <div>
-                        <p class="text-xs font-semibold text-white/70 uppercase tracking-wider">Customer Profile</p>
-                        <h2 class="text-xl font-black mt-0.5">{{ $dc->full_name }}</h2>
-                        <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold mt-1.5 {{ $dcKycBadge }}">
-                            {{ $dcKycLabel }}
-                        </span>
+                    @endif
+                    <div class="min-w-0">
+                        <p class="text-[10px] font-semibold text-white/60 uppercase tracking-wider">Customer Profile</p>
+                        <h2 class="text-xl font-black mt-0.5 truncate">{{ $dc->full_name }}</h2>
+                        <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $dcKycBadge }}">{{ $dcKycLabel }}</span>
+                            @if($autoStatus)
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $autoBadge }}">Auto: {{ str_replace('_', ' ', ucfirst($autoStatus)) }}</span>
+                            @endif
+                        </div>
                     </div>
                 </div>
-                <button wire:click="closeDetail" class="p-1.5 rounded-lg hover:bg-white/10 transition-colors flex-shrink-0">
+                <button wire:click="closeDetail" class="p-1.5 rounded-lg hover:bg-white/10 transition-colors flex-shrink-0 ml-3">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
-            <div class="flex-1 px-6 py-5 space-y-5">
+            {{-- ── Tab Nav ── --}}
+            <div class="flex gap-0 border-b border-gray-100 dark:border-zinc-800 overflow-x-auto flex-shrink-0 bg-white dark:bg-zinc-900 scrollbar-hide">
+                @foreach([
+                    ['id'=>'device',   'label'=>'Device',    'icon'=>'device-phone-mobile'],
+                    ['id'=>'identity', 'label'=>'Identity',  'icon'=>'identification'],
+                    ['id'=>'contact',  'label'=>'Contact',   'icon'=>'map-pin'],
+                    ['id'=>'income',   'label'=>'Income',    'icon'=>'currency-dollar'],
+                    ['id'=>'nok',      'label'=>'NOK',       'icon'=>'users'],
+                    ['id'=>'consent',  'label'=>'Consent',   'icon'=>'shield-check'],
+                    ['id'=>'checks',   'label'=>'Checks',    'icon'=>'clipboard-document-check'],
+                    ['id'=>'history',  'label'=>'History',   'icon'=>'clock'],
+                ] as $t)
+                <button @click="tab='{{ $t['id'] }}'"
+                        :class="tab==='{{ $t['id'] }}' ? 'border-b-2 border-orange-500 text-orange-600 dark:text-orange-400 font-semibold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'"
+                        class="flex items-center gap-1.5 px-4 py-3 text-xs whitespace-nowrap transition-colors flex-shrink-0">
+                    <flux:icon name="{{ $t['icon'] }}" class="size-3.5" />
+                    {{ $t['label'] }}
+                </button>
+                @endforeach
+            </div>
 
-                {{-- Personal Info --}}
-                <div>
-                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Personal Information</h3>
-                    <div class="grid grid-cols-2 gap-2">
+            {{-- ── Tab Body ── --}}
+            <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+
+                {{-- ▸ DEVICE --}}
+                <div x-show="tab==='device'" x-cloak>
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <div class="col-span-2 bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Device / Model</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->device_specs ?? '—' }}</p>
+                        </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Phone</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->phone }}</p>
-                            @if($dc->alt_phone)<p class="text-xs text-gray-400">Alt: {{ $dc->alt_phone }}</p>@endif
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">IMEI 1</p>
+                            <p class="font-mono text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->imei_number ?? '—' }}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">IMEI 2</p>
+                            <p class="font-mono text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->imei_2 ?? '—' }}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Serial Number</p>
+                            <p class="font-mono text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->serial_number ?? '—' }}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Cash Price</p>
+                            <p class="text-sm font-bold text-orange-600 dark:text-orange-400 mt-0.5">
+                                {{ $dc->cash_price ? 'TZS '.number_format($dc->cash_price) : '—' }}
+                            </p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Deposit</p>
+                            <p class="text-sm font-bold text-teal-600 dark:text-teal-400 mt-0.5">
+                                {{ $dc->deposit_amount ? 'TZS '.number_format($dc->deposit_amount) : '—' }}
+                            </p>
+                        </div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Repayment Cycle</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->preferred_repayment ? ucfirst($dc->preferred_repayment) : '—' }}</p>
+                        </div>
+                    </div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Device Photos</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        @foreach([
+                            ['path' => $dc->imei_photo_path,      'label' => 'IMEI Label'],
+                            ['path' => $dc->device_box_photo_path, 'label' => 'Box Photo'],
+                            ['path' => $dc->device_photo_path,     'label' => 'Device Photo'],
+                        ] as $img)
+                        @if($photoBase($img['path']))
+                        <a href="{{ $photoBase($img['path']) }}" target="_blank" class="group relative rounded-xl overflow-hidden bg-gray-100 dark:bg-zinc-800 aspect-square block">
+                            <img src="{{ $photoBase($img['path']) }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="{{ $img['label'] }}">
+                            <span class="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[9px] font-semibold text-center py-1">{{ $img['label'] }}</span>
+                        </a>
+                        @else
+                        <div class="rounded-xl bg-gray-100 dark:bg-zinc-800 aspect-square flex flex-col items-center justify-center gap-1">
+                            <flux:icon name="photo" class="size-7 text-gray-300 dark:text-zinc-600" />
+                            <span class="text-[9px] text-gray-400">{{ $img['label'] }}</span>
+                        </div>
+                        @endif
+                        @endforeach
+                    </div>
+                </div>
+
+                {{-- ▸ IDENTITY --}}
+                <div x-show="tab==='identity'" x-cloak>
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Full Name</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->full_name }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Gender</p>
@@ -263,32 +362,94 @@
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Date of Birth</p>
                             <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">
                                 {{ $dc->date_of_birth?->format('d M Y') ?? '—' }}
-                                @if($dc->date_of_birth)<span class="text-xs text-gray-400">({{ $dc->date_of_birth->age }} yrs)</span>@endif
+                                @if($dc->date_of_birth) <span class="text-[10px] text-gray-400">({{ $dc->date_of_birth->age }}y)</span>@endif
                             </p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Email</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5 truncate">{{ $dc->email ?? '—' }}</p>
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">ID Type</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->id_type ? strtoupper(str_replace('_', ' ', $dc->id_type)) : '—' }}</p>
                         </div>
                         <div class="col-span-2 bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">NIDA Number</p>
                             <p class="font-mono text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->nida_number ?? '—' }}</p>
                         </div>
-                        @if($dc->address || $dc->region)
+                        <div class="col-span-2 bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Email</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->email ?? '—' }}</p>
+                        </div>
+                    </div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Identity Photos</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        @foreach([
+                            ['path' => $dc->id_front_photo_path,  'label' => 'ID Front'],
+                            ['path' => $dc->id_back_photo_path,   'label' => 'ID Back'],
+                            ['path' => $dc->headshot_photo_path,  'label' => 'Headshot / Selfie'],
+                            ['path' => $dc->client_fo_photo_path, 'label' => 'Client + FO Photo'],
+                        ] as $img)
+                        @if($photoBase($img['path']))
+                        <a href="{{ $photoBase($img['path']) }}" target="_blank" class="group relative rounded-xl overflow-hidden bg-gray-100 dark:bg-zinc-800 aspect-video block">
+                            <img src="{{ $photoBase($img['path']) }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="{{ $img['label'] }}">
+                            <span class="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[9px] font-semibold text-center py-1">{{ $img['label'] }}</span>
+                        </a>
+                        @else
+                        <div class="rounded-xl bg-gray-100 dark:bg-zinc-800 aspect-video flex flex-col items-center justify-center gap-1">
+                            <flux:icon name="photo" class="size-8 text-gray-300 dark:text-zinc-600" />
+                            <span class="text-[9px] text-gray-400">{{ $img['label'] }}</span>
+                        </div>
+                        @endif
+                        @endforeach
+                    </div>
+                </div>
+
+                {{-- ▸ CONTACT --}}
+                <div x-show="tab==='contact'" x-cloak>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Phone</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->phone ?? '—' }}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Alt Phone</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->alt_phone ?? '—' }}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Branch</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->branch?->name ?? '—' }}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Region</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->region ?? '—' }}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">District</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->district ?? '—' }}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Landmark</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->landmark ?? '—' }}</p>
+                        </div>
                         <div class="col-span-2 bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Address</p>
-                            <p class="text-sm text-gray-700 dark:text-gray-300 mt-0.5">
-                                {{ implode(', ', array_filter([$dc->address, $dc->district, $dc->region])) ?: '—' }}
-                            </p>
+                            <p class="text-sm text-gray-700 dark:text-gray-300 mt-0.5">{{ $dc->address ?? '—' }}</p>
+                        </div>
+                        @if($dc->latitude && $dc->longitude)
+                        <div class="col-span-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 flex items-center gap-3">
+                            <flux:icon name="map-pin" class="size-5 text-blue-500 flex-shrink-0" />
+                            <div>
+                                <p class="text-[10px] text-blue-500 uppercase tracking-wider font-semibold">GPS Coordinates</p>
+                                <a href="https://maps.google.com/?q={{ $dc->latitude }},{{ $dc->longitude }}" target="_blank"
+                                   class="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline mt-0.5 block">
+                                    {{ $dc->latitude }}, {{ $dc->longitude }}
+                                </a>
+                            </div>
                         </div>
                         @endif
                     </div>
                 </div>
 
-                {{-- Financial Profile --}}
-                <div>
-                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Financial Profile</h3>
-                    <div class="grid grid-cols-2 gap-2">
+                {{-- ▸ INCOME --}}
+                <div x-show="tab==='income'" x-cloak>
+                    <div class="grid grid-cols-2 gap-2 mb-4">
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Occupation</p>
                             <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->occupation ?? '—' }}</p>
@@ -297,80 +458,259 @@
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Employer</p>
                             <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->employer ?? '—' }}</p>
                         </div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Work Location</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->work_location ?? '—' }}</p>
+                        </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Monthly Income</p>
-                            <p class="text-sm font-bold {{ $dc->monthly_income ? 'text-teal-600 dark:text-teal-400' : 'text-gray-400' }} mt-0.5">
+                            <p class="text-sm font-bold text-teal-600 dark:text-teal-400 mt-0.5">
                                 {{ $dc->monthly_income ? 'TZS '.number_format($dc->monthly_income) : '—' }}
                             </p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Monthly Expenses</p>
+                            <p class="text-sm font-bold text-red-500 dark:text-red-400 mt-0.5">
+                                {{ $dc->monthly_expenses ? 'TZS '.number_format($dc->monthly_expenses) : '—' }}
+                            </p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Payment Cycle</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->income_payment_cycle ? ucfirst($dc->income_payment_cycle) : '—' }}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Duration at Work</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->duration_at_work ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Credit Status</p>
                             <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ ucfirst($dc->credit_status ?? 'unrated') }}</p>
                         </div>
                     </div>
+                    @if($photoBase($dc->business_photo_path))
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Business / Workplace Photo</p>
+                    <a href="{{ $photoBase($dc->business_photo_path) }}" target="_blank" class="group relative rounded-xl overflow-hidden bg-gray-100 dark:bg-zinc-800 block w-full aspect-video">
+                        <img src="{{ $photoBase($dc->business_photo_path) }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="Business Photo">
+                        <span class="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[9px] font-semibold text-center py-1">Click to view full size</span>
+                    </a>
+                    @endif
                 </div>
 
-                {{-- Registration --}}
-                <div>
-                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Registration</h3>
+                {{-- ▸ NOK --}}
+                <div x-show="tab==='nok'" x-cloak>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Primary Next of Kin</p>
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <div class="col-span-2 bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Full Name</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->nok_name ?? '—' }}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Phone</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->nok_phone ?? '—' }}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Relationship</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->nok_relationship ? ucfirst($dc->nok_relationship) : '—' }}</p>
+                        </div>
+                    </div>
+                    @if($dc->nok2_name)
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Secondary Next of Kin</p>
                     <div class="grid grid-cols-2 gap-2">
+                        <div class="col-span-2 bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Full Name</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->nok2_name }}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Phone</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->nok2_phone ?? '—' }}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Relationship</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->nok2_relationship ? ucfirst($dc->nok2_relationship) : '—' }}</p>
+                        </div>
+                    </div>
+                    @else
+                    <div class="rounded-xl border-2 border-dashed border-gray-200 dark:border-zinc-700 p-5 text-center text-gray-400 text-xs">No secondary next of kin recorded</div>
+                    @endif
+                </div>
+
+                {{-- ▸ CONSENT --}}
+                <div x-show="tab==='consent'" x-cloak>
+                    <div class="space-y-2 mb-4">
+                        @foreach([
+                            ['field' => $dc->terms_accepted,         'label' => 'Terms & Conditions accepted'],
+                            ['field' => $dc->data_consent_accepted,  'label' => 'Data processing consent given'],
+                            ['field' => $dc->call_consent_accepted,  'label' => 'Call consent given'],
+                        ] as $cs)
+                        <div class="flex items-center gap-3 bg-gray-50 dark:bg-zinc-800 rounded-xl px-4 py-3">
+                            @if($cs['field'])
+                            <div class="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            </div>
+                            @else
+                            <div class="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </div>
+                            @endif
+                            <p class="text-sm text-gray-700 dark:text-gray-300">{{ $cs['label'] }}</p>
+                        </div>
+                        @endforeach
+                        @if($dc->consent_timestamp)
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Consent Timestamp</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->consent_timestamp?->format('d M Y, H:i') }}</p>
+                        </div>
+                        @endif
+                    </div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">FO Submission Info</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Field Officer</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">
+                                {{ $dcv?->fo?->name ?? $dc->registeredBy?->name ?? '—' }}
+                            </p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Application Source</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">
+                                {{ $dc->application_source ? ucwords(str_replace('_', ' ', $dc->application_source)) : '—' }}
+                            </p>
+                        </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Branch</p>
                             <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->branch?->name ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Vendor/Agent</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->vendor?->name ?? '—' }}</p>
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Submitted</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->created_at->format('d M Y, H:i') }}</p>
                         </div>
-                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Registered By</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->registeredBy?->name ?? '—' }}</p>
+                        @if($dc->fo_notes)
+                        <div class="col-span-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3">
+                            <p class="text-[10px] text-amber-600 uppercase tracking-wider font-semibold mb-1">FO Notes</p>
+                            <p class="text-sm text-gray-700 dark:text-gray-300">{{ $dc->fo_notes }}</p>
                         </div>
-                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Joined</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->created_at->format('d M Y') }}</p>
-                        </div>
+                        @endif
                     </div>
                 </div>
 
-                {{-- Verification History --}}
-                @if($dc->verifications->count())
-                <div>
-                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Verification History</h3>
+                {{-- ▸ AUTO-CHECKS --}}
+                <div x-show="tab==='checks'" x-cloak>
+                    @if($dcv && $dcv->auto_check_results)
+                    @php
+                        $acChecks = $dcv->auto_check_results ?? [];
+                        $acStatusColors = [
+                            'passed'  => 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
+                            'warning' => 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800',
+                            'failed'  => 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
+                        ];
+                        $acIconColors = [
+                            'passed'  => 'text-emerald-500',
+                            'warning' => 'text-amber-500',
+                            'failed'  => 'text-red-500',
+                        ];
+                    @endphp
+                    <div class="mb-4 flex items-center gap-3 p-4 rounded-xl {{ match($autoStatus) {
+                        'passed'         => 'bg-emerald-50 dark:bg-emerald-900/20',
+                        'needs_correction'=> 'bg-amber-50 dark:bg-amber-900/20',
+                        'manual_review'  => 'bg-blue-50 dark:bg-blue-900/20',
+                        'auto_rejected'  => 'bg-red-50 dark:bg-red-900/20',
+                        default          => 'bg-gray-50 dark:bg-zinc-800',
+                    } }}">
+                        <flux:icon name="clipboard-document-check" class="size-8 {{ match($autoStatus) {
+                            'passed'         => 'text-emerald-500',
+                            'needs_correction'=> 'text-amber-500',
+                            'manual_review'  => 'text-blue-500',
+                            'auto_rejected'  => 'text-red-500',
+                            default          => 'text-gray-400',
+                        } }}" />
+                        <div>
+                            <p class="text-xs text-gray-500">Overall Auto-check Result</p>
+                            <p class="text-lg font-black text-gray-900 dark:text-white">{{ $autoStatus ? ucwords(str_replace('_', ' ', $autoStatus)) : 'Not Run' }}</p>
+                            @if($dcv->auto_check_ran_at)
+                            <p class="text-[10px] text-gray-400">Run at {{ $dcv->auto_check_ran_at->format('d M Y, H:i') }}</p>
+                            @endif
+                        </div>
+                    </div>
                     <div class="space-y-2">
+                        @foreach($acChecks as $check)
+                        @php
+                            $cs = $check['status'] ?? 'passed';
+                            $cardColor = $acStatusColors[$cs] ?? 'bg-gray-50 dark:bg-zinc-800 border-gray-200';
+                            $iconColor = $acIconColors[$cs] ?? 'text-gray-400';
+                        @endphp
+                        <div class="flex items-start gap-3 rounded-xl border px-4 py-3 {{ $cardColor }}">
+                            @if($cs === 'passed')
+                            <svg class="w-4 h-4 mt-0.5 flex-shrink-0 {{ $iconColor }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                            @elseif($cs === 'warning')
+                            <svg class="w-4 h-4 mt-0.5 flex-shrink-0 {{ $iconColor }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                            @else
+                            <svg class="w-4 h-4 mt-0.5 flex-shrink-0 {{ $iconColor }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            @endif
+                            <div>
+                                <p class="text-xs font-bold text-gray-800 dark:text-gray-100">{{ $check['check'] ?? 'Check' }}</p>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{{ $check['message'] ?? '' }}</p>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    @else
+                    <div class="flex flex-col items-center justify-center py-16 text-center gap-3">
+                        <flux:icon name="clipboard-document-check" class="size-12 text-gray-300 dark:text-zinc-600" />
+                        <p class="text-gray-500 font-medium text-sm">Auto-checks not yet run</p>
+                        <p class="text-gray-400 text-xs">Checks run automatically when the application is submitted via the wizard.</p>
+                    </div>
+                    @endif
+                </div>
+
+                {{-- ▸ HISTORY --}}
+                <div x-show="tab==='history'" x-cloak>
+                    {{-- Verification Records --}}
+                    @if($dc->verifications->count())
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Verification Records</p>
+                    <div class="space-y-2 mb-5">
                         @foreach($dc->verifications->sortByDesc('created_at') as $vr)
                         @php
                             $vrBadge = match($vr->status) {
-                                'approved' => 'bg-emerald-100 text-emerald-700',
-                                'rejected' => 'bg-red-100 text-red-700',
-                                'pending'  => 'bg-amber-100 text-amber-700',
+                                'approved' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+                                'rejected' => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+                                'pending'  => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
                                 default    => 'bg-zinc-100 text-zinc-600',
                             };
                         @endphp
-                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <div class="flex items-center justify-between mb-1">
-                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full {{ $vrBadge }}">{{ ucfirst($vr->status) }}</span>
-                                <span class="text-[10px] text-gray-400">{{ $vr->reviewed_at?->format('d M Y, H:i') ?? $vr->created_at->format('d M Y') }}</span>
+                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full {{ $vrBadge }}">{{ ucfirst($vr->status) }}</span>
+                                <span class="text-[10px] text-gray-400">{{ $vr->created_at->format('d M Y, H:i') }}</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-[11px]">
+                                <div>
+                                    <span class="text-gray-400">Stage:</span>
+                                    <span class="font-semibold text-gray-700 dark:text-gray-300 ml-1">{{ $vr->stage ?? '—' }} — {{ $vr->currentStageLabel() }}</span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400">Submitted by FO:</span>
+                                    <span class="font-semibold text-gray-700 dark:text-gray-300 ml-1">{{ $vr->fo?->name ?? '—' }}</span>
+                                </div>
                             </div>
                             @if($vr->rejection_reason)
-                            <p class="text-xs text-red-600 dark:text-red-400 mt-1">Reason: {{ $vr->rejection_reason }}</p>
+                            <p class="text-xs text-red-600 dark:text-red-400 mt-2 font-medium">Reason: {{ $vr->rejection_reason }}</p>
                             @endif
                             @if($vr->notes)
-                            <p class="text-xs text-gray-500 mt-1">{{ $vr->notes }}</p>
+                            <p class="text-xs text-gray-500 mt-1.5 italic">{{ $vr->notes }}</p>
                             @endif
                             @if($vr->reviewedBy)
-                            <p class="text-[10px] text-gray-400 mt-1">By: {{ $vr->reviewedBy->name }}</p>
+                            <p class="text-[10px] text-gray-400 mt-1.5">Reviewed by: <span class="font-semibold">{{ $vr->reviewedBy->name }}</span>
+                                @if($vr->reviewed_at) · {{ $vr->reviewed_at->format('d M Y, H:i') }}@endif
+                            </p>
                             @endif
                         </div>
                         @endforeach
                     </div>
-                </div>
-                @endif
+                    @endif
 
-                {{-- Loans --}}
-                @if($dc->loans?->count())
-                <div>
-                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Loan History</h3>
+                    {{-- Loans --}}
+                    @if($dc->loans?->count())
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Loan History</p>
                     <div class="space-y-1.5">
                         @foreach($dc->loans as $ln)
                         @php
@@ -384,7 +724,7 @@
                         @endphp
                         <div class="flex items-center justify-between bg-gray-50 dark:bg-zinc-800 rounded-xl px-4 py-2.5">
                             <div>
-                                <p class="text-xs font-mono font-semibold text-orange-500 dark:text-blue-400">{{ $ln->loan_number }}</p>
+                                <p class="text-xs font-mono font-semibold text-orange-500 dark:text-orange-400">{{ $ln->loan_number }}</p>
                                 <p class="text-[10px] text-gray-500">TZS {{ number_format($ln->principal_amount) }}</p>
                             </div>
                             <div class="text-right">
@@ -394,12 +734,20 @@
                         </div>
                         @endforeach
                     </div>
+                    @endif
+
+                    @if(!$dc->verifications->count() && !$dc->loans?->count())
+                    <div class="flex flex-col items-center justify-center py-16 text-center gap-3">
+                        <flux:icon name="clock" class="size-12 text-gray-300 dark:text-zinc-600" />
+                        <p class="text-gray-500 font-medium text-sm">No verification history yet</p>
+                    </div>
+                    @endif
                 </div>
-                @endif
+
             </div>
 
-            {{-- Footer --}}
-            <div class="px-6 py-4 border-t border-gray-100 dark:border-zinc-800 flex gap-2">
+            {{-- ── Footer Actions ── --}}
+            <div class="px-6 py-4 border-t border-gray-100 dark:border-zinc-800 flex gap-2 flex-shrink-0 bg-white dark:bg-zinc-900">
                 @if(!$isApproved)
                 @can('loans.create')
                 <button wire:click="openApproveModal('{{ $dc->id }}')"

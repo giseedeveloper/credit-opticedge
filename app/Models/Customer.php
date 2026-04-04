@@ -15,14 +15,30 @@ use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 #[Fillable([
-    'branch_id', 'vendor_id', 'registered_by', 'first_name', 'last_name', 'middle_name',
-    'phone', 'alt_phone', 'email', 'nida_number', 'date_of_birth', 'gender',
-    'occupation', 'employer', 'monthly_income', 'monthly_expenses',
-    'address', 'latitude', 'longitude', 'region', 'district',
+    'branch_id', 'vendor_id', 'registered_by',
+    // Identity
+    'first_name', 'last_name', 'middle_name', 'gender', 'date_of_birth', 'email',
+    'nida_number', 'id_type',
+    // Contact & Location
+    'phone', 'alt_phone', 'address', 'latitude', 'longitude', 'region', 'district', 'landmark',
+    // KYC state
     'kyc_status', 'kyc_stage', 'credit_status', 'status', 'location_metadata', 'metadata',
-    'imei_number', 'device_specs', 'imei_photo_path',
+    // Step 1 – Device
+    'imei_number', 'imei_2', 'serial_number', 'device_specs',
+    'cash_price', 'deposit_amount', 'preferred_repayment',
+    'imei_photo_path', 'device_box_photo_path', 'device_photo_path',
+    // Step 2 – Identity docs
     'id_front_photo_path', 'id_back_photo_path', 'headshot_photo_path', 'client_fo_photo_path',
+    // Step 4 – Work/Income
+    'occupation', 'employer', 'work_location', 'monthly_income', 'monthly_expenses',
+    'income_payment_cycle', 'duration_at_work', 'business_photo_path',
+    // Step 5 – NOK
     'nok_name', 'nok_phone', 'nok_relationship',
+    'nok2_name', 'nok2_phone', 'nok2_relationship',
+    // Step 6 – Consent
+    'terms_accepted', 'data_consent_accepted', 'call_consent_accepted', 'consent_timestamp',
+    // Step 7 – Submit metadata
+    'fo_notes', 'application_source',
 ])]
 class Customer extends Model implements HasMedia
 {
@@ -35,10 +51,16 @@ class Customer extends Model implements HasMedia
             'date_of_birth' => 'date',
             'monthly_income' => 'decimal:2',
             'monthly_expenses' => 'decimal:2',
+            'cash_price' => 'decimal:2',
+            'deposit_amount' => 'decimal:2',
             'kyc_stage' => 'integer',
             'latitude' => 'decimal:8',
             'longitude' => 'decimal:8',
             'is_active' => 'boolean',
+            'terms_accepted' => 'boolean',
+            'data_consent_accepted' => 'boolean',
+            'call_consent_accepted' => 'boolean',
+            'consent_timestamp' => 'datetime',
             'location_metadata' => 'array',
             'metadata' => 'array',
         ];

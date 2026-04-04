@@ -12,24 +12,32 @@ class CustomerProfiles extends Component
 {
     use WithPagination;
 
-    public string $search       = '';
-    public string $kycFilter    = '';
+    public string $search = '';
+
+    public string $kycFilter = '';
+
     public string $branchFilter = '';
 
     // ── Detail slide-over ──────────────────────────────────────────────────
-    public bool    $showDetail       = false;
+    public bool $showDetail = false;
+
     public ?string $detailCustomerId = null;
 
     // ── Approve ─────────────────────────────────────────────────────────
-    public bool    $showApproveModal  = false;
+    public bool $showApproveModal = false;
+
     public ?string $approveCustomerId = null;
-    public string  $approveNotes      = '';
+
+    public string $approveNotes = '';
 
     // ── Reject ──────────────────────────────────────────────────────────
-    public bool    $showRejectModal   = false;
-    public ?string $rejectCustomerId  = null;
-    public string  $rejectReason      = '';
-    public string  $rejectNotes       = '';
+    public bool $showRejectModal = false;
+
+    public ?string $rejectCustomerId = null;
+
+    public string $rejectReason = '';
+
+    public string $rejectNotes = '';
 
     /** @var array<string,int> */
     public array $statCounts = [];
@@ -40,16 +48,27 @@ class CustomerProfiles extends Component
         $this->loadStats();
     }
 
-    public function updatedSearch(): void      { $this->resetPage(); }
-    public function updatedKycFilter(): void   { $this->resetPage(); }
-    public function updatedBranchFilter(): void { $this->resetPage(); }
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedKycFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedBranchFilter(): void
+    {
+        $this->resetPage();
+    }
 
     private function loadStats(): void
     {
         $this->statCounts = [
-            'total'    => Customer::count(),
+            'total' => Customer::count(),
             'verified' => Customer::whereHas('verifications', fn ($q) => $q->where('status', 'approved'))->count(),
-            'pending'  => Customer::whereDoesntHave('verifications', fn ($q) => $q->where('status', 'approved'))
+            'pending' => Customer::whereDoesntHave('verifications', fn ($q) => $q->where('status', 'approved'))
                 ->whereHas('verifications', fn ($q) => $q->where('status', 'pending'))->count(),
             'rejected' => Customer::whereDoesntHave('verifications', fn ($q) => $q->where('status', 'approved'))
                 ->whereHas('verifications', fn ($q) => $q->where('status', 'rejected'))->count(),
@@ -60,12 +79,12 @@ class CustomerProfiles extends Component
     public function openDetail(string $id): void
     {
         $this->detailCustomerId = $id;
-        $this->showDetail       = true;
+        $this->showDetail = true;
     }
 
     public function closeDetail(): void
     {
-        $this->showDetail       = false;
+        $this->showDetail = false;
         $this->detailCustomerId = null;
     }
 
@@ -74,8 +93,8 @@ class CustomerProfiles extends Component
     {
         abort_unless(auth()->user()->canAccess('loans.create'), 403);
         $this->approveCustomerId = $id;
-        $this->approveNotes      = '';
-        $this->showApproveModal  = true;
+        $this->approveNotes = '';
+        $this->showApproveModal = true;
     }
 
     public function approveKyc(): void
@@ -88,10 +107,10 @@ class CustomerProfiles extends Component
         Verification::updateOrCreate(
             ['customer_id' => $customer->id, 'type' => 'kyc'],
             [
-                'status'      => 'approved',
+                'status' => 'approved',
                 'reviewed_by' => auth()->id(),
                 'reviewed_at' => now(),
-                'notes'       => $this->approveNotes ?: null,
+                'notes' => $this->approveNotes ?: null,
             ]
         );
 
@@ -113,9 +132,9 @@ class CustomerProfiles extends Component
     {
         abort_unless(auth()->user()->canAccess('loans.create'), 403);
         $this->rejectCustomerId = $id;
-        $this->rejectReason     = '';
-        $this->rejectNotes      = '';
-        $this->showRejectModal  = true;
+        $this->rejectReason = '';
+        $this->rejectNotes = '';
+        $this->showRejectModal = true;
     }
 
     public function rejectKyc(): void
@@ -123,7 +142,7 @@ class CustomerProfiles extends Component
         abort_unless(auth()->user()->canAccess('loans.create'), 403);
         $this->validate([
             'rejectReason' => 'required|string|max:255',
-            'rejectNotes'  => 'nullable|string|max:500',
+            'rejectNotes' => 'nullable|string|max:500',
         ]);
 
         $customer = Customer::findOrFail($this->rejectCustomerId);
@@ -131,11 +150,11 @@ class CustomerProfiles extends Component
         Verification::updateOrCreate(
             ['customer_id' => $customer->id, 'type' => 'kyc'],
             [
-                'status'           => 'rejected',
-                'reviewed_by'      => auth()->id(),
-                'reviewed_at'      => now(),
+                'status' => 'rejected',
+                'reviewed_by' => auth()->id(),
+                'reviewed_at' => now(),
                 'rejection_reason' => $this->rejectReason,
-                'notes'            => $this->rejectNotes ?: null,
+                'notes' => $this->rejectNotes ?: null,
             ]
         );
 
@@ -175,7 +194,9 @@ class CustomerProfiles extends Component
         $detailCustomer = $this->detailCustomerId
             ? Customer::with([
                 'verifications.reviewedBy',
+                'verifications.fo',
                 'latestVerification.reviewedBy',
+                'latestVerification.fo',
                 'branch',
                 'vendor',
                 'registeredBy',

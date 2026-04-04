@@ -1,42 +1,62 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\KycApiController;
-use App\Http\Controllers\Api\StockApiController;
-use App\Http\Controllers\Api\CollectionApiController;
-use App\Http\Controllers\Api\StaffApiController;
-use App\Http\Controllers\Api\SecurityApiController;
-use App\Http\Controllers\Api\RecoveryApiController;
-use App\Http\Controllers\Api\FinanceApiController;
-use App\Http\Controllers\Api\AnalyticsApiController;
-use App\Http\Controllers\Api\RoleApiController;
 use App\Exports\CollectionsExport;
-use App\Exports\InventoryExport;
 use App\Exports\DelinquencyExport;
+use App\Exports\InventoryExport;
+use App\Http\Controllers\Api\AnalyticsApiController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CollectionApiController;
+use App\Http\Controllers\Api\ComplianceApiController;
+use App\Http\Controllers\Api\FinanceApiController;
+use App\Http\Controllers\Api\FraudApiController;
+use App\Http\Controllers\Api\KycApiController;
+use App\Http\Controllers\Api\RecoveryApiController;
+use App\Http\Controllers\Api\RefurbishmentApiController;
+use App\Http\Controllers\Api\RoleApiController;
+use App\Http\Controllers\Api\SecurityApiController;
+use App\Http\Controllers\Api\StaffApiController;
+use App\Http\Controllers\Api\StockApiController;
+use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
 
 // Version 1 API
 Route::prefix('v1')->group(function () {
-    
+
     // Auth Routes
     Route::post('/login', [AuthController::class, 'login']);
-    
+
     // Webhook (unauthenticated because it is server-to-server callback)
     Route::post('/collection/webhook', [CollectionApiController::class, 'webhook']);
 
     // Protected Routes (Sanctum)
     Route::middleware('auth:sanctum')->group(function () {
-        
+
         Route::post('/logout', [AuthController::class, 'logout']);
-        
-        // KYC (Agent Mobile App)
+        Route::get('/me', [AuthController::class, 'me']);
+
+        // KYC — FO Mobile App: dashboard, customers, branches
         Route::prefix('kyc')->group(function () {
-            Route::post('/{customer_id}/upload-nida', [KycApiController::class, 'uploadNida']);
-            Route::post('/{customer_id}/upload-photo', [KycApiController::class, 'uploadPhoto']);
-            Route::post('/{customer_id}/finalize', [KycApiController::class, 'finalizeVerification']);
+            Route::get('/branches', [KycApiController::class, 'branches']);
+            Route::get('/dashboard', [KycApiController::class, 'dashboard']);
+            Route::get('/customers', [KycApiController::class, 'myCustomers']);
+            Route::get('/customers/{id}', [KycApiController::class, 'customerDetail']);
         });
+
+        // KYC — Agent Registration Steps (requires loans.create permission)
+        Route::prefix('kyc/application')
+            ->middleware('permission:loans.create')
+            ->group(function () {
+                // Step 1: creates the draft customer, returns customer_id
+                Route::post('/step1', [KycApiController::class, 'step1Device']);
+                // Steps 2-7: enrich the draft using the customer_id from step 1
+                Route::post('/{customer_id}/step2', [KycApiController::class, 'step2Identity']);
+                Route::post('/{customer_id}/step3', [KycApiController::class, 'step3Contact']);
+                Route::post('/{customer_id}/step4', [KycApiController::class, 'step4Income']);
+                Route::post('/{customer_id}/step5', [KycApiController::class, 'step5Nok']);
+                Route::post('/{customer_id}/step6', [KycApiController::class, 'step6Consent']);
+                Route::post('/{customer_id}/step7', [KycApiController::class, 'step7Submit']);
+                Route::get('/{customer_id}/status', [KycApiController::class, 'applicationStatus']);
+            });
 
         // Stock Search (Vendor Shop Floor)
         Route::prefix('stock')->group(function () {
@@ -80,7 +100,7 @@ Route::prefix('v1')->group(function () {
         // IFRS 9 Compliance & Reports (Excel Exports)
         Route::prefix('compliance')->middleware('role:admin|accountant|owner')->group(function () {
             Route::get('/reports', [ComplianceApiController::class, 'report']);
-            
+
             Route::middleware('can:reports.export')->group(function () {
                 Route::get('/export/collections', function () {
                     return Excel::download(new CollectionsExport, 'Opticedge_Collections_Report.xlsx');
@@ -102,7 +122,7 @@ Route::prefix('v1')->group(function () {
         // RBAC Access Control
         Route::prefix('access')->group(function () {
             Route::get('/me', [RoleApiController::class, 'currentAccess']);
-            
+
             // Strictly protected role management ops
             Route::middleware('role:admin|owner')->group(function () {
                 Route::get('/roles', [RoleApiController::class, 'index']);

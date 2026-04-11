@@ -1,94 +1,182 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../config/constants.dart';
+import '../../core/api/api_client.dart';
+import '../../core/models/customer_model.dart';
 import '../../core/providers/customer_provider.dart';
+import '../../widgets/common/app_button.dart';
 import '../../widgets/common/status_badge.dart';
 
 class CustomerDetailScreen extends ConsumerWidget {
   final String customerId;
-  const CustomerDetailScreen({super.key, required this.customerId});
+
+  const CustomerDetailScreen({
+    super.key,
+    required this.customerId,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(customerDetailProvider(customerId));
+
     return async.when(
       loading: () => const Scaffold(
         body: Center(
-            child: CircularProgressIndicator(color: AppConstants.primary)),
+          child: CircularProgressIndicator(color: AppConstants.primary),
+        ),
       ),
-      error: (e, _) => Scaffold(
+      error: (error, _) => Scaffold(
         appBar: AppBar(title: const Text('Customer Detail')),
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline,
-                  size: 48, color: AppConstants.error),
-              const SizedBox(height: 12),
-              Text(e.toString(),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
+                  size: 52,
+                  color: AppConstants.error,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  error.toString(),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppConstants.textSecondary)),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () =>
-                    ref.refresh(customerDetailProvider(customerId)),
-                child: const Text('Retry'),
-              ),
-            ],
+                  style: const TextStyle(color: AppConstants.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                AppButton(
+                  label: 'Retry',
+                  icon: Icons.refresh_rounded,
+                  onPressed: () =>
+                      ref.refresh(customerDetailProvider(customerId)),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-      data: (customer) => _DetailView(customer: customer),
+      data: (customer) => _DetailView(
+        customer: customer,
+        customerId: customerId,
+      ),
     );
   }
 }
 
-class _DetailView extends StatefulWidget {
-  final dynamic customer;
-  const _DetailView({required this.customer});
+class _DetailView extends ConsumerStatefulWidget {
+  final CustomerDetail customer;
+  final String customerId;
+
+  const _DetailView({
+    required this.customer,
+    required this.customerId,
+  });
 
   @override
-  State<_DetailView> createState() => _DetailViewState();
+  ConsumerState<_DetailView> createState() => _DetailViewState();
 }
 
-class _DetailViewState extends State<_DetailView> {
-  final Set<String> _expanded = {'personal', 'verification'};
+class _DetailViewState extends ConsumerState<_DetailView> {
+  final Set<String> _expanded = {
+    'personal',
+    'device',
+    'payment',
+    'release',
+  };
+
+  bool _releasing = false;
+
+  CustomerDetail get customer => widget.customer;
 
   @override
   Widget build(BuildContext context) {
-    final c = widget.customer;
+    final verification = customer.verification;
+    final isReleased = customer.release?.status == 'released';
+
     return Scaffold(
       backgroundColor: AppConstants.background,
+      bottomNavigationBar: customer.canReleaseAsset && !isReleased
+          ? SafeArea(
+              minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: AppButton(
+                label: 'Release Asset',
+                icon: Icons.inventory_2_outlined,
+                isLoading: _releasing,
+                onPressed: _releaseAsset,
+              ),
+            )
+          : null,
       body: CustomScrollView(
         slivers: [
-          _buildAppBar(context, c),
+          _buildAppBar(context),
           SliverPadding(
             padding: const EdgeInsets.all(16),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                // Verification status banner
-                if (c.verification != null) _buildStatusBanner(c.verification),
+                if (verification != null) _buildStatusBanner(verification),
+                if (customer.release?.status == 'released') ...[
+                  const SizedBox(height: 12),
+                  _releasedBanner(),
+                ],
                 const SizedBox(height: 12),
-
-                // Sections
-                _buildSection('personal', 'Personal Info',
-                    Icons.person_outline_rounded, _buildPersonalInfo(c)),
-                _buildSection('identity', 'ID & Identity', Icons.badge_outlined,
-                    _buildIdentityInfo(c)),
-                _buildSection('device', 'Device Details',
-                    Icons.smartphone_rounded, _buildDeviceInfo(c)),
-                _buildSection('contact', 'Contact & Location',
-                    Icons.location_on_outlined, _buildContactInfo(c)),
-                _buildSection('income', 'Work & Income',
-                    Icons.work_outline_rounded, _buildIncomeInfo(c)),
-                _buildSection('nok', 'Next of Kin',
-                    Icons.people_outline_rounded, _buildNokInfo(c)),
-                _buildSection('photos', 'Documents & Photos',
-                    Icons.photo_library_outlined, _buildPhotos(c)),
-                if (c.verification != null)
-                  _buildSection('verification', 'Verification Status',
-                      Icons.verified_outlined, _buildVerification(c)),
-
+                _buildSection(
+                  keyName: 'personal',
+                  title: 'Personal Info',
+                  icon: Icons.person_outline_rounded,
+                  content: _buildPersonalInfo(),
+                ),
+                _buildSection(
+                  keyName: 'identity',
+                  title: 'Identity & Contact',
+                  icon: Icons.badge_outlined,
+                  content: _buildIdentityAndContact(),
+                ),
+                _buildSection(
+                  keyName: 'device',
+                  title: 'Device & Offer Details',
+                  icon: Icons.smartphone_rounded,
+                  content: _buildDeviceInfo(),
+                ),
+                _buildSection(
+                  keyName: 'income',
+                  title: 'Work & Income',
+                  icon: Icons.work_outline_rounded,
+                  content: _buildIncomeInfo(),
+                ),
+                _buildSection(
+                  keyName: 'nok',
+                  title: 'Next of Kin',
+                  icon: Icons.people_outline_rounded,
+                  content: _buildNokInfo(),
+                ),
+                _buildSection(
+                  keyName: 'payment',
+                  title: 'Payment & Agreement',
+                  icon: Icons.payments_outlined,
+                  content: _buildPaymentAgreement(),
+                ),
+                _buildSection(
+                  keyName: 'photos',
+                  title: 'Photos, Signatures & Files',
+                  icon: Icons.photo_library_outlined,
+                  content: _buildPhotos(),
+                ),
+                if (verification != null)
+                  _buildSection(
+                    keyName: 'verification',
+                    title: 'Verification Status',
+                    icon: Icons.verified_outlined,
+                    content: _buildVerification(verification),
+                  ),
+                _buildSection(
+                  keyName: 'release',
+                  title: 'Asset Release',
+                  icon: Icons.inventory_2_outlined,
+                  content: _buildRelease(),
+                ),
                 const SizedBox(height: 24),
               ]),
             ),
@@ -98,18 +186,55 @@ class _DetailViewState extends State<_DetailView> {
     );
   }
 
-  SliverAppBar _buildAppBar(BuildContext context, c) {
+  Future<void> _releaseAsset() async {
+    setState(() {
+      _releasing = true;
+    });
+
+    try {
+      final response = await ApiClient.instance
+          .post('/kyc/customers/${widget.customerId}/release-asset');
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            response.data['message']?.toString() ??
+                'Asset released successfully.',
+          ),
+          backgroundColor: AppConstants.success,
+        ),
+      );
+      ref.invalidate(customerDetailProvider(widget.customerId));
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ApiClient.instance.parseError(error)),
+          backgroundColor: AppConstants.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _releasing = false;
+        });
+      }
+    }
+  }
+
+  SliverAppBar _buildAppBar(BuildContext context) {
     return SliverAppBar(
       pinned: true,
-      expandedHeight: 120,
+      expandedHeight: 150,
       backgroundColor: AppConstants.primary,
       foregroundColor: Colors.white,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.edit_outlined),
-          onPressed: () {},
-        ),
-      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: const BoxDecoration(
@@ -121,7 +246,7 @@ class _DetailViewState extends State<_DetailView> {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,20 +254,21 @@ class _DetailViewState extends State<_DetailView> {
                   Row(
                     children: [
                       CircleAvatar(
-                        radius: 26,
-                        backgroundColor: Colors.white.withOpacity(0.25),
-                        backgroundImage: c.photos['headshot'] != null
-                            ? NetworkImage(c.photos['headshot']!)
+                        radius: 28,
+                        backgroundColor: Colors.white.withValues(alpha: 0.22),
+                        backgroundImage: customer.photos['headshot'] != null
+                            ? NetworkImage(customer.photos['headshot']!)
                             : null,
-                        child: c.photos['headshot'] == null
+                        child: customer.photos['headshot'] == null
                             ? Text(
-                                c.fullName.isNotEmpty
-                                    ? c.fullName[0].toUpperCase()
+                                customer.fullName.isNotEmpty
+                                    ? customer.fullName[0].toUpperCase()
                                     : '?',
                                 style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700),
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               )
                             : null,
                       ),
@@ -152,22 +278,25 @@ class _DetailViewState extends State<_DetailView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              c.fullName,
+                              customer.fullName,
                               style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700),
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
+                            const SizedBox(height: 4),
                             Text(
-                              c.phone,
+                              customer.phone,
                               style: TextStyle(
-                                  color: Colors.white.withOpacity(0.8),
-                                  fontSize: 13),
+                                color: Colors.white.withValues(alpha: 0.82),
+                                fontSize: 13,
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      StatusBadge(status: c.kycStatus),
+                      StatusBadge(status: customer.kycStatus),
                     ],
                   ),
                 ],
@@ -176,39 +305,66 @@ class _DetailViewState extends State<_DetailView> {
           ),
         ),
       ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.copy_rounded),
+          onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: customer.id));
+            if (!context.mounted) {
+              return;
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Customer ID copied.'),
+                backgroundColor: AppConstants.success,
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
-  Widget _buildStatusBanner(Map<String, dynamic> v) {
-    final status = v['status']?.toString() ?? 'pending';
+  Widget _buildStatusBanner(Map<String, dynamic> verification) {
+    final status = verification['status']?.toString() ?? 'pending';
     final color = AppConstants.statusColors[status] ?? AppConstants.info;
-    final bg = AppConstants.statusBg[status] ?? AppConstants.borderLight;
+    final background =
+        AppConstants.statusBg[status] ?? AppConstants.borderLight;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.25)),
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline, color: color, size: 18),
+          Icon(Icons.info_outline_rounded, color: color, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  v['stage_label']?.toString() ?? 'Under Review',
+                  verification['stage_label']?.toString() ?? 'Under Review',
                   style: TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 13, color: color),
-                ),
-                if (v['rejection_reason'] != null)
-                  Text(
-                    v['rejection_reason'].toString(),
-                    style: const TextStyle(
-                        fontSize: 12, color: AppConstants.textSecondary),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: color,
                   ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  verification['notes']?.toString() ??
+                      'This application is moving through verification review.',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.45,
+                    color: AppConstants.textSecondary,
+                  ),
+                ),
               ],
             ),
           ),
@@ -217,48 +373,84 @@ class _DetailViewState extends State<_DetailView> {
     );
   }
 
-  Widget _buildSection(
-      String key, String title, IconData icon, Widget content) {
-    final isOpen = _expanded.contains(key);
+  Widget _releasedBanner() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppConstants.success.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle_rounded, color: AppConstants.success),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Asset released on ${customer.release?.releasedAt ?? '-'} by ${customer.release?.releasedBy ?? 'system'}.',
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppConstants.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSection({
+    required String keyName,
+    required String title,
+    required IconData icon,
+    required Widget content,
+  }) {
+    final isOpen = _expanded.contains(keyName);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: AppConstants.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppConstants.border),
       ),
       child: Column(
         children: [
           InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: () => setState(() {
-              if (isOpen) {
-                _expanded.remove(key);
-              } else {
-                _expanded.add(key);
-              }
-            }),
+            borderRadius: BorderRadius.circular(18),
+            onTap: () {
+              setState(() {
+                if (isOpen) {
+                  _expanded.remove(keyName);
+                } else {
+                  _expanded.add(keyName);
+                }
+              });
+            },
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
                   Container(
-                    width: 32,
-                    height: 32,
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
                       color: AppConstants.primarySurface,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(icon, color: AppConstants.primary, size: 16),
+                    child: Icon(icon, size: 17, color: AppConstants.primary),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       title,
                       style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppConstants.textPrimary),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppConstants.textPrimary,
+                      ),
                     ),
                   ),
                   Icon(
@@ -266,14 +458,13 @@ class _DetailViewState extends State<_DetailView> {
                         ? Icons.keyboard_arrow_up_rounded
                         : Icons.keyboard_arrow_down_rounded,
                     color: AppConstants.textHint,
-                    size: 20,
                   ),
                 ],
               ),
             ),
           ),
           if (isOpen) ...[
-            const Divider(height: 1, color: AppConstants.border),
+            const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.all(14),
               child: content,
@@ -284,8 +475,464 @@ class _DetailViewState extends State<_DetailView> {
     );
   }
 
+  Widget _buildPersonalInfo() {
+    return Column(
+      children: [
+        _infoRow('Full Name', customer.fullName),
+        _infoRow('Gender', customer.gender),
+        _infoRow('Date of Birth', customer.dateOfBirth),
+        _infoRow('NIDA Number', customer.nidaNumber),
+        _infoRow('Branch', customer.branch?['name']?.toString()),
+        _infoRow('Application Source', customer.applicationSource),
+        _infoRow('Registered At', customer.registeredAt),
+      ],
+    );
+  }
+
+  Widget _buildIdentityAndContact() {
+    return Column(
+      children: [
+        _infoRow('Phone', customer.phone),
+        _infoRow('Alternative Phone', customer.altPhone),
+        _infoRow('Email', customer.email),
+        _infoRow('Address', customer.address),
+        _infoRow('Landmark', customer.landmark),
+        _infoRow('Region', customer.region),
+        _infoRow('District', customer.district),
+        if (customer.latitude != null && customer.longitude != null)
+          _infoRow(
+            'GPS',
+            '${customer.latitude?.toStringAsFixed(6)}, ${customer.longitude?.toStringAsFixed(6)}',
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDeviceInfo() {
+    final device = customer.device;
+    final accessories = (device['accessories'] as List<dynamic>? ?? []);
+    final scanMetadata = device['scan_metadata'] as Map<String, dynamic>?;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _infoRow('Brand', device['brand_name']?.toString()),
+        _infoRow('Specs', device['specs']?.toString()),
+        _infoRow('IMEI 1', device['imei_1']?.toString()),
+        _infoRow('IMEI 2', device['imei_2']?.toString()),
+        _infoRow('Serial Number', device['serial_number']?.toString()),
+        _infoRow('Cash Price', device['cash_price']?.toString()),
+        _infoRow('Deposit', device['deposit_amount']?.toString()),
+        _infoRow('Repayment', device['preferred_repayment']?.toString()),
+        if (accessories.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          const Text(
+            'Accessories / Offers',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppConstants.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: accessories
+                .map(
+                  (item) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppConstants.primarySurface,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '${item['name'] ?? 'Accessory'} • ${item['offer_type'] ?? 'free'}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppConstants.primary,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+        _infoRow('Store Notes', device['store_offer_notes']?.toString()),
+        if (scanMetadata != null) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppConstants.borderLight,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Scan Metadata',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppConstants.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _infoRow(
+                    'Selected IMEI', scanMetadata['selected_imei']?.toString()),
+                _infoRow(
+                  'Selected Serial',
+                  scanMetadata['selected_serial']?.toString(),
+                ),
+                _infoRow(
+                  'Confidence',
+                  scanMetadata['confidence']?.toString(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildIncomeInfo() {
+    final income = customer.income;
+
+    return Column(
+      children: [
+        _infoRow('Occupation', income['occupation']?.toString()),
+        _infoRow('Employer', income['employer']?.toString()),
+        _infoRow('Work Location', income['work_location']?.toString()),
+        _infoRow('Monthly Income', income['monthly_income']?.toString()),
+        _infoRow('Monthly Expenses', income['monthly_expenses']?.toString()),
+        _infoRow('Income Cycle', income['income_payment_cycle']?.toString()),
+        _infoRow('Duration at Work', income['duration_at_work']?.toString()),
+      ],
+    );
+  }
+
+  Widget _buildNokInfo() {
+    final nok = customer.nok;
+
+    return Column(
+      children: [
+        _infoRow('Primary NOK', nok['nok_name']?.toString()),
+        _infoRow(
+            'NOK Phone',
+            nok['nok_phone_display']?.toString() ??
+                nok['nok_phone']?.toString()),
+        _infoRow('Relationship', nok['nok_relationship']?.toString()),
+        _infoRow('Second NOK', nok['nok2_name']?.toString()),
+        _infoRow(
+            'NOK 2 Phone',
+            nok['nok2_phone_display']?.toString() ??
+                nok['nok2_phone']?.toString()),
+        _infoRow('Second Relationship', nok['nok2_relationship']?.toString()),
+      ],
+    );
+  }
+
+  Widget _buildPaymentAgreement() {
+    final payment = customer.payment;
+    final agreement = customer.agreement;
+    final paymentSuccess = payment?.isCompleted == true;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _statusTile(
+          title: paymentSuccess ? 'Deposit Paid' : 'Payment Pending',
+          subtitle: paymentSuccess
+              ? 'Customer payment succeeded and is attached to this application.'
+              : 'Payment is still pending or has not started.',
+          color: paymentSuccess ? AppConstants.success : AppConstants.warning,
+          icon: paymentSuccess
+              ? Icons.check_circle_outline
+              : Icons.hourglass_top_rounded,
+        ),
+        const SizedBox(height: 12),
+        _infoRow('Payment Status', payment?.status),
+        _infoRow('Gateway Status', payment?.paymentStatus),
+        _infoRow('Reference', payment?.reference),
+        _infoRow('Order ID', payment?.orderId),
+        _infoRow('Trans ID', payment?.transId),
+        _infoRow('Amount', payment?.amount?.toString()),
+        _infoRow('Phone', payment?.phone),
+        _infoRow('Paid At', payment?.paidAt),
+        const Divider(height: 24),
+        _statusTile(
+          title: agreement?.accepted == true
+              ? 'Agreement Accepted'
+              : 'Agreement Not Accepted',
+          subtitle: agreement?.activeDocument != null
+              ? agreement!.activeDocument!.title
+              : 'Admin has not uploaded an active customer agreement yet.',
+          color: agreement?.accepted == true
+              ? AppConstants.success
+              : AppConstants.info,
+          icon: Icons.picture_as_pdf_outlined,
+        ),
+        const SizedBox(height: 12),
+        _infoRow('Presented At', agreement?.presentedAt),
+        _infoRow('Decision At', agreement?.decisionAt),
+        _infoRow('Handover Notes', agreement?.handoverNotes),
+        if (agreement?.activeDocument?.url != null) ...[
+          const SizedBox(height: 8),
+          AppButton(
+            label: 'Copy Agreement Link',
+            outlined: true,
+            icon: Icons.copy_rounded,
+            onPressed: () async {
+              await Clipboard.setData(
+                ClipboardData(text: agreement!.activeDocument!.url),
+              );
+              if (!mounted) {
+                return;
+              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Agreement link copied.'),
+                  backgroundColor: AppConstants.success,
+                ),
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPhotos() {
+    final entries = customer.photos.entries
+        .where((entry) => entry.value != null && entry.value!.isNotEmpty)
+        .toList();
+
+    if (entries.isEmpty) {
+      return const Text(
+        'No photos or files uploaded yet.',
+        style: TextStyle(
+          fontSize: 12,
+          color: AppConstants.textSecondary,
+        ),
+      );
+    }
+
+    final labels = {
+      'imei': 'IMEI Sticker',
+      'device_box': 'Device Box',
+      'device': 'Device',
+      'id_front': 'ID Front',
+      'id_back': 'ID Back',
+      'headshot': 'Headshot',
+      'client_fo': 'Customer + FO',
+      'business': 'Business Photo',
+      'customer_signature': 'Customer Signature',
+      'fo_signature': 'FO Signature',
+      'asset_handover_list': 'Handover Checklist',
+    };
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      childAspectRatio: 1.05,
+      children: entries.map((entry) {
+        final url = entry.value!;
+        final isPdf = url.toLowerCase().contains('.pdf');
+
+        return Container(
+          decoration: BoxDecoration(
+            color: AppConstants.borderLight,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppConstants.border),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () async {
+              await Clipboard.setData(ClipboardData(text: url));
+              if (!mounted) {
+                return;
+              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('File link copied.'),
+                  backgroundColor: AppConstants.success,
+                ),
+              );
+            },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(13),
+                    ),
+                    child: isPdf
+                        ? Container(
+                            color: const Color(0xFFFFF7ED),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.picture_as_pdf_outlined,
+                              size: 44,
+                              color: AppConstants.primary,
+                            ),
+                          )
+                        : Image.network(
+                            url,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: AppConstants.borderLight,
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.broken_image_outlined,
+                                color: AppConstants.textHint,
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Text(
+                    labels[entry.key] ?? entry.key,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppConstants.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildVerification(Map<String, dynamic> verification) {
+    return Column(
+      children: [
+        _infoRow('Status', verification['status']?.toString()),
+        _infoRow('Stage', verification['stage_label']?.toString()),
+        _infoRow('Auto Check', verification['auto_check_status']?.toString()),
+        _infoRow('Reviewed By', verification['reviewed_by']?.toString()),
+        _infoRow('Reviewed At', verification['reviewed_at']?.toString()),
+        _infoRow('Submitted At', verification['submitted_at']?.toString()),
+        _infoRow(
+            'Rejection Reason', verification['rejection_reason']?.toString()),
+        _infoRow('Notes', verification['notes']?.toString()),
+      ],
+    );
+  }
+
+  Widget _buildRelease() {
+    final release = customer.release;
+    final canRelease = customer.canReleaseAsset;
+    final isReleased = release?.status == 'released';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _statusTile(
+          title: isReleased
+              ? 'Asset Released'
+              : canRelease
+                  ? 'Ready for Asset Release'
+                  : 'Waiting for Approval or Final Requirements',
+          subtitle: isReleased
+              ? 'This device has already been handed to the customer.'
+              : canRelease
+                  ? 'All requirements are met. The officer can now release the linked asset.'
+                  : 'Payment, agreement, signatures, handover, and approved KYC must all be in place.',
+          color: isReleased
+              ? AppConstants.success
+              : canRelease
+                  ? AppConstants.primary
+                  : AppConstants.warning,
+          icon: Icons.inventory_2_outlined,
+        ),
+        const SizedBox(height: 12),
+        _infoRow('Release Status', release?.status),
+        _infoRow('Released At', release?.releasedAt),
+        _infoRow('Released By', release?.releasedBy),
+        _infoRow('Inventory Unit', release?.inventoryUnitId),
+        _infoRow('Inventory Status', release?.inventoryUnitStatus),
+        if (canRelease && !isReleased) ...[
+          const SizedBox(height: 8),
+          AppButton(
+            label: 'Release Asset Now',
+            icon: Icons.inventory_2_outlined,
+            isLoading: _releasing,
+            onPressed: _releaseAsset,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _statusTile({
+    required String title,
+    required String subtitle,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.16)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.45,
+                    color: AppConstants.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _infoRow(String label, String? value) {
-    if (value == null || value.isEmpty) return const SizedBox.shrink();
+    if (value == null || value.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -296,180 +943,24 @@ class _DetailViewState extends State<_DetailView> {
             child: Text(
               label,
               style: const TextStyle(
-                  fontSize: 12,
-                  color: AppConstants.textSecondary,
-                  fontWeight: FontWeight.w500),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppConstants.textSecondary,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               value,
               style: const TextStyle(
-                  fontSize: 13,
-                  color: AppConstants.textPrimary,
-                  fontWeight: FontWeight.w500),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppConstants.textPrimary,
+              ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPersonalInfo(c) => Column(
-        children: [
-          _infoRow('Full Name', c.fullName),
-          _infoRow('Gender', c.gender),
-          _infoRow('Date of Birth', c.dateOfBirth),
-          _infoRow('Branch', c.branch?['name']),
-          _infoRow('Registered', c.registeredAt),
-          _infoRow('Source', c.applicationSource),
-        ],
-      );
-
-  Widget _buildIdentityInfo(c) => Column(
-        children: [
-          _infoRow('NIDA Number', c.nidaNumber),
-          _infoRow('ID Type', c.idType),
-          _infoRow('Email', c.email),
-        ],
-      );
-
-  Widget _buildDeviceInfo(c) {
-    final d = c.device as Map<String, dynamic>;
-    return Column(
-      children: [
-        _infoRow('Device Specs', d['specs']?.toString()),
-        _infoRow('IMEI 1', d['imei_1']?.toString()),
-        _infoRow('IMEI 2', d['imei_2']?.toString()),
-        _infoRow('Serial Number', d['serial_number']?.toString()),
-        _infoRow('Cash Price', d['cash_price']?.toString()),
-        _infoRow('Deposit', d['deposit_amount']?.toString()),
-        _infoRow('Repayment', d['preferred_repayment']?.toString()),
-      ],
-    );
-  }
-
-  Widget _buildContactInfo(c) => Column(
-        children: [
-          _infoRow('Phone', c.phone),
-          _infoRow('Alt Phone', c.altPhone),
-          _infoRow('Region', c.region),
-          _infoRow('District', c.district),
-          _infoRow('Address', c.address),
-          _infoRow('Landmark', c.landmark),
-          if (c.latitude != null)
-            _infoRow('GPS',
-                '${c.latitude?.toStringAsFixed(6)}, ${c.longitude?.toStringAsFixed(6)}'),
-        ],
-      );
-
-  Widget _buildIncomeInfo(c) {
-    final i = c.income as Map<String, dynamic>;
-    return Column(
-      children: [
-        _infoRow('Occupation', i['occupation']?.toString()),
-        _infoRow('Employer', i['employer']?.toString()),
-        _infoRow('Monthly Income', i['monthly_income']?.toString()),
-        _infoRow('Monthly Expenses', i['monthly_expenses']?.toString()),
-        _infoRow('Payment Cycle', i['income_payment_cycle']?.toString()),
-        _infoRow('Duration at Work', i['duration_at_work']?.toString()),
-      ],
-    );
-  }
-
-  Widget _buildNokInfo(c) {
-    final n = c.nok as Map<String, dynamic>;
-    return Column(
-      children: [
-        _infoRow('Name', n['nok_name']?.toString()),
-        _infoRow('Phone', n['nok_phone']?.toString()),
-        _infoRow('Relationship', n['nok_relationship']?.toString()),
-        if (n['nok2_name'] != null) ...[
-          const Divider(height: 20, color: AppConstants.border),
-          _infoRow('NOK 2 Name', n['nok2_name']?.toString()),
-          _infoRow('NOK 2 Phone', n['nok2_phone']?.toString()),
-          _infoRow('NOK 2 Relationship', n['nok2_relationship']?.toString()),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildPhotos(c) {
-    final photos = c.photos as Map<String, String?>;
-    final photoEntries = photos.entries
-        .where((e) => e.value != null && e.value!.isNotEmpty)
-        .toList();
-
-    if (photoEntries.isEmpty) {
-      return const Text('No photos uploaded',
-          style: TextStyle(color: AppConstants.textHint, fontSize: 13));
-    }
-
-    final labels = {
-      'imei': 'IMEI',
-      'device_box': 'Device Box',
-      'device': 'Device',
-      'id_front': 'ID Front',
-      'id_back': 'ID Back',
-      'headshot': 'Headshot',
-      'client_fo': 'Client + FO',
-      'business': 'Business',
-    };
-
-    return GridView.count(
-      crossAxisCount: 3,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 8,
-      mainAxisSpacing: 8,
-      childAspectRatio: 1,
-      children: photoEntries
-          .map((e) => Column(
-                children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        e.value!,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: AppConstants.borderLight,
-                          child: const Icon(Icons.broken_image_outlined,
-                              color: AppConstants.textHint),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    labels[e.key] ?? e.key,
-                    style: const TextStyle(
-                        fontSize: 9,
-                        color: AppConstants.textSecondary,
-                        fontWeight: FontWeight.w500),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ))
-          .toList(),
-    );
-  }
-
-  Widget _buildVerification(c) {
-    final v = c.verification as Map<String, dynamic>;
-    return Column(
-      children: [
-        _infoRow('Status', v['status']?.toString()),
-        _infoRow('Stage', v['stage_label']?.toString()),
-        _infoRow('Auto Check', v['auto_check_status']?.toString()),
-        _infoRow('Reviewed By', v['reviewed_by']?.toString()),
-        _infoRow('Reviewed At', v['reviewed_at']?.toString()),
-        _infoRow('Submitted At', v['submitted_at']?.toString()),
-        if (v['rejection_reason'] != null)
-          _infoRow('Rejection Reason', v['rejection_reason']?.toString()),
-        if (v['notes'] != null) _infoRow('Notes', v['notes']?.toString()),
-      ],
     );
   }
 }

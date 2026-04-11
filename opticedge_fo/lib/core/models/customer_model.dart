@@ -1,3 +1,5 @@
+import 'kyc_flow_model.dart';
+
 class CustomerListItem {
   final String id;
   final String fullName;
@@ -59,12 +61,17 @@ class CustomerDetail {
   final Map<String, dynamic> income;
   final Map<String, dynamic> nok;
   final Map<String, dynamic> consent;
+  final Map<String, dynamic> phoneMetadata;
   final Map<String, String?> photos;
   final String? foNotes;
   final String? applicationSource;
   final String kycStatus;
   final String registeredAt;
   final Map<String, dynamic>? verification;
+  final KycPaymentContext? payment;
+  final KycAgreementContext? agreement;
+  final KycReleaseContext? release;
+  final bool canReleaseAsset;
 
   const CustomerDetail({
     required this.id,
@@ -90,18 +97,22 @@ class CustomerDetail {
     this.income = const {},
     this.nok = const {},
     this.consent = const {},
+    this.phoneMetadata = const {},
     this.photos = const {},
     this.foNotes,
     this.applicationSource,
     this.kycStatus = 'draft',
     required this.registeredAt,
     this.verification,
+    this.payment,
+    this.agreement,
+    this.release,
+    this.canReleaseAsset = false,
   });
 
   factory CustomerDetail.fromJson(Map<String, dynamic> json) {
     final photosRaw = json['photos'] as Map<String, dynamic>? ?? {};
-    final photos = photosRaw.map(
-        (k, v) => MapEntry(k, v?.toString()));
+    final photos = photosRaw.map((k, v) => MapEntry(k, v?.toString()));
     return CustomerDetail(
       id: json['id']?.toString() ?? '',
       fullName: json['full_name']?.toString() ?? '',
@@ -126,12 +137,25 @@ class CustomerDetail {
       income: json['income'] as Map<String, dynamic>? ?? {},
       nok: json['nok'] as Map<String, dynamic>? ?? {},
       consent: json['consent'] as Map<String, dynamic>? ?? {},
+      phoneMetadata: json['phone_metadata'] as Map<String, dynamic>? ?? {},
       photos: photos,
       foNotes: json['fo_notes']?.toString(),
       applicationSource: json['application_source']?.toString(),
       kycStatus: json['kyc_status']?.toString() ?? 'draft',
       registeredAt: json['registered_at']?.toString() ?? '',
       verification: json['verification'] as Map<String, dynamic>?,
+      payment: json['payment'] is Map<String, dynamic>
+          ? KycPaymentContext.fromJson(json['payment'] as Map<String, dynamic>)
+          : null,
+      agreement: json['agreement'] is Map<String, dynamic>
+          ? KycAgreementContext.fromJson(
+              json['agreement'] as Map<String, dynamic>,
+            )
+          : null,
+      release: json['release'] is Map<String, dynamic>
+          ? KycReleaseContext.fromJson(json['release'] as Map<String, dynamic>)
+          : null,
+      canReleaseAsset: json['can_release_asset'] == true,
     );
   }
 }

@@ -6,18 +6,24 @@ use App\Models\Customer;
 use App\Models\InventoryUnit;
 use App\Models\Permission;
 use App\Models\PhoneModel;
+use App\Models\SystemDocument;
 use App\Models\User;
 use App\Models\Verification;
+use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\PermissionRegistrar;
 
 beforeEach(function () {
     app()[PermissionRegistrar::class]->forgetCachedPermissions();
     Permission::firstOrCreate(['name' => 'loans.create', 'guard_name' => 'web']);
+    Permission::firstOrCreate(['name' => 'loans.view', 'guard_name' => 'web']);
     $this->branch = Branch::factory()->create();
     $this->agent = User::factory()->create(['branch_id' => $this->branch->id]);
-    $this->agent->givePermissionTo('loans.create');
+    $this->agent->givePermissionTo(['loans.create', 'loans.view']);
     $this->brand = Brand::factory()->create(['name' => 'Samsung']);
     $this->phoneModel = PhoneModel::factory()->create([
         'brand_id' => $this->brand->id,
@@ -32,6 +38,10 @@ beforeEach(function () {
         'imei_1' => '123456789012345',
         'serial_number' => 'SN-GALAXY-001',
     ]);
+    Config::set('services.selcom.base_url', 'https://apigw.selcommobile.com/v1');
+    Config::set('services.selcom.vendor', 'TILL61163918');
+    Config::set('services.selcom.api_key', 'TILL61163918-cd74f96661ab40dc986bfc87a448acd8');
+    Config::set('services.selcom.api_secret', 'cfc165-ca2991-472f84-edd218-1fafe1-65');
     Sanctum::actingAs($this->agent);
 });
 
@@ -253,12 +263,72 @@ it('step6 rejects missing consent', function () {
         ->assertJsonValidationErrors(['terms_accepted']);
 });
 
+it('payment request sends a selcom prompt for the application draft', function () {
+    Http::fake([
+        'https://apigw.selcommobile.com/v1/checkout/create-order-minimal' => Http::response([
+            'result' => 'SUCCESS',
+            'resultcode' => '000',
+            'reference' => 'SEL-REF-API-001',
+            'data' => [[
+                'buyer_uuid' => 'buyer-001',
+                'payment_token' => 'token-001',
+                'payment_gateway_url' => 'https://selcom.test/pay/token-001',
+            ]],
+        ]),
+        'https://apigw.selcommobile.com/v1/checkout/wallet-payment' => Http::response([
+            'result' => 'PENDING',
+            'resultcode' => '111',
+            'payment_status' => 'PENDING',
+            'reference' => 'SEL-REF-API-001',
+            'channel' => 'MPESA',
+        ]),
+    ]);
+
+    $customer = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'application_draft_reference' => 'draft-api-001',
+        'first_name' => 'Amina',
+        'last_name' => 'Juma',
+        'phone' => '+255712345678',
+        'deposit_amount' => 50000,
+    ]);
+
+    $response = $this->postJson("/api/v1/kyc/application/{$customer->id}/payment/request", [
+        'payment_phone' => '0712345678',
+        'payment_phone_country' => 'TZ',
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('data.payment.status', 'pending')
+        ->assertJsonPath('data.payment.phone', '255712345678');
+
+    expect($customer->fresh()->deposit_payment_status)->toBe('pending')
+        ->and($customer->fresh()->deposit_payment_reference)->toBe('SEL-REF-API-001');
+
+    Http::assertSent(fn (Request $request) => str_contains($request->url(), '/checkout/create-order-minimal'));
+    Http::assertSent(fn (Request $request) => str_contains($request->url(), '/checkout/wallet-payment'));
+});
+
 // ─── Step 7: Submit ───────────────────────────────────────────────────────────
 
-it('step7 submits application and runs auto-checks', function () {
+it('step7 submits application with payment, agreement and signatures', function () {
+    $agreement = SystemDocument::factory()->create([
+        'key' => 'kyc_customer_agreement',
+        'disk' => 'public',
+        'path' => 'agreements/mobile-agreement.pdf',
+        'is_active' => true,
+        'uploaded_by' => $this->agent->id,
+    ]);
+
     $customer = Customer::factory()->create([
         'registered_by' => $this->agent->id,
         'branch_id' => $this->branch->id,
+        'application_draft_reference' => 'draft-api-002',
+        'first_name' => 'Amina',
+        'last_name' => 'Juma',
+        'phone' => '+255712345678',
+        'nida_number' => '11112222333344445555',
+        'monthly_income' => 650000,
         'nok_name' => 'Jane Doe',
         'nok_phone' => '0712000000',
         'nok_relationship' => 'parent',
@@ -268,15 +338,40 @@ it('step7 submits application and runs auto-checks', function () {
         'consent_timestamp' => now(),
     ]);
 
+    \App\Models\SelcomPaymentRequest::factory()->create([
+        'customer_id' => $customer->id,
+        'initiated_by' => $this->agent->id,
+        'draft_reference' => 'draft-api-002',
+        'status' => 'completed',
+        'payment_status' => 'COMPLETED',
+        'result' => 'SUCCESS',
+        'resultcode' => '000',
+        'selcom_reference' => 'SEL-PAID-002',
+        'amount' => 50000,
+        'paid_at' => now(),
+    ]);
+
     $response = $this->postJson("/api/v1/kyc/application/{$customer->id}/step7", [
         'fo_notes' => 'Customer seems genuine',
         'application_source' => 'walk_in',
+        'agreement_decision' => 'yes',
+        'customer_signature' => apiKycSignatureDataUrl(),
+        'fo_signature' => apiKycSignatureDataUrl(),
+        'asset_handover_list' => UploadedFile::fake()->create('handover.pdf', 80, 'application/pdf'),
+        'asset_handover_notes' => 'Phone, charger and free accessories handed over.',
     ]);
 
     $response->assertOk()
-        ->assertJsonStructure(['data' => ['customer_id', 'verification_id', 'auto_check_status', 'auto_check_results']]);
+        ->assertJsonStructure(['data' => ['customer_id', 'verification_id', 'auto_check_status', 'auto_check_results', 'payment', 'agreement', 'release']]);
 
-    expect(Verification::where('customer_id', $customer->id)->exists())->toBeTrue();
+    expect(Verification::where('customer_id', $customer->id)->exists())->toBeTrue()
+        ->and($customer->fresh()->agreement_document_id)->toBe($agreement->id)
+        ->and($customer->fresh()->agreement_accepted)->toBeTrue()
+        ->and($customer->fresh()->deposit_payment_status)->toBe('completed')
+        ->and($customer->fresh()->asset_release_status)->toBe('pending')
+        ->and($customer->fresh()->customer_signature_path)->not->toBeNull()
+        ->and($customer->fresh()->fo_signature_path)->not->toBeNull()
+        ->and($customer->fresh()->asset_handover_list_path)->not->toBeNull();
 });
 
 it('step7 blocks submission when consent is missing', function () {
@@ -288,16 +383,132 @@ it('step7 blocks submission when consent is missing', function () {
         'terms_accepted' => false,
     ]);
 
-    $this->postJson("/api/v1/kyc/application/{$customer->id}/step7", [])
+    $this->postJson("/api/v1/kyc/application/{$customer->id}/step7", [
+        'agreement_decision' => 'yes',
+        'customer_signature' => apiKycSignatureDataUrl(),
+        'fo_signature' => apiKycSignatureDataUrl(),
+        'asset_handover_list' => UploadedFile::fake()->create('handover.pdf', 80, 'application/pdf'),
+    ])
         ->assertUnprocessable();
 });
 
 // ─── Status ───────────────────────────────────────────────────────────────────
 
-it('applicationStatus returns kyc state', function () {
-    $customer = Customer::factory()->create(['registered_by' => $this->agent->id]);
+it('applicationStatus returns payment, agreement and release context', function () {
+    $agreement = SystemDocument::factory()->create([
+        'key' => 'kyc_customer_agreement',
+        'disk' => 'public',
+        'path' => 'agreements/status-agreement.pdf',
+        'is_active' => true,
+        'uploaded_by' => $this->agent->id,
+    ]);
+
+    $customer = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'application_draft_reference' => 'draft-api-003',
+        'agreement_document_id' => $agreement->id,
+        'agreement_accepted' => true,
+        'deposit_payment_status' => 'completed',
+        'asset_release_status' => 'pending',
+    ]);
+
+    \App\Models\SelcomPaymentRequest::factory()->create([
+        'customer_id' => $customer->id,
+        'initiated_by' => $this->agent->id,
+        'draft_reference' => 'draft-api-003',
+        'status' => 'completed',
+        'payment_status' => 'COMPLETED',
+        'selcom_reference' => 'SEL-STATUS-003',
+        'amount' => 60000,
+        'paid_at' => now(),
+    ]);
 
     $this->getJson("/api/v1/kyc/application/{$customer->id}/status")
         ->assertOk()
-        ->assertJsonStructure(['data' => ['customer_id', 'kyc_status', 'kyc_stage']]);
+        ->assertJsonPath('data.payment.status', 'completed')
+        ->assertJsonPath('data.agreement.accepted', true)
+        ->assertJsonPath('data.release.status', 'pending');
 });
+
+it('customer detail includes payment, agreement and release data', function () {
+    $agreement = SystemDocument::factory()->create([
+        'key' => 'kyc_customer_agreement',
+        'disk' => 'public',
+        'path' => 'agreements/detail-agreement.pdf',
+        'is_active' => true,
+        'uploaded_by' => $this->agent->id,
+    ]);
+
+    $customer = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'application_draft_reference' => 'draft-api-004',
+        'agreement_document_id' => $agreement->id,
+        'agreement_accepted' => true,
+        'deposit_payment_status' => 'completed',
+        'asset_release_status' => 'pending',
+    ]);
+
+    \App\Models\SelcomPaymentRequest::factory()->create([
+        'customer_id' => $customer->id,
+        'initiated_by' => $this->agent->id,
+        'draft_reference' => 'draft-api-004',
+        'status' => 'completed',
+        'payment_status' => 'COMPLETED',
+        'selcom_reference' => 'SEL-DETAIL-004',
+        'amount' => 60000,
+        'paid_at' => now(),
+    ]);
+
+    $this->getJson("/api/v1/kyc/customers/{$customer->id}")
+        ->assertOk()
+        ->assertJsonPath('data.payment.status', 'completed')
+        ->assertJsonPath('data.agreement.accepted', true)
+        ->assertJsonPath('data.release.status', 'pending');
+});
+
+it('release asset marks the stock unit as assigned', function () {
+    $agreement = SystemDocument::factory()->create([
+        'key' => 'kyc_customer_agreement',
+        'disk' => 'public',
+        'path' => 'agreements/release-agreement.pdf',
+        'is_active' => true,
+        'uploaded_by' => $this->agent->id,
+    ]);
+
+    Storage::disk('public')->put('kyc/customer-signatures/api-customer.png', base64_decode(apiKycRawSignature(), true));
+    Storage::disk('public')->put('kyc/fo-signatures/api-fo.png', base64_decode(apiKycRawSignature(), true));
+    Storage::disk('public')->put('kyc/handover/api-release.pdf', 'handover checklist');
+
+    $customer = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'branch_id' => $this->branch->id,
+        'phone_model_id' => $this->phoneModel->id,
+        'inventory_unit_id' => $this->inventoryUnit->id,
+        'agreement_document_id' => $agreement->id,
+        'agreement_accepted' => true,
+        'customer_signature_path' => 'kyc/customer-signatures/api-customer.png',
+        'fo_signature_path' => 'kyc/fo-signatures/api-fo.png',
+        'asset_handover_list_path' => 'kyc/handover/api-release.pdf',
+        'deposit_payment_status' => 'completed',
+        'asset_release_status' => 'pending',
+        'kyc_status' => 'approved',
+    ]);
+
+    $response = $this->postJson("/api/v1/kyc/customers/{$customer->id}/release-asset");
+
+    $response->assertOk()
+        ->assertJsonPath('data.release.status', 'released');
+
+    expect($customer->fresh()->asset_release_status)->toBe('released')
+        ->and($this->inventoryUnit->fresh()->status)->toBe('assigned');
+});
+
+function apiKycSignatureDataUrl(): string
+{
+    return 'data:image/png;base64,'.apiKycRawSignature();
+}
+
+function apiKycRawSignature(): string
+{
+    return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9sWwaP8AAAAASUVORK5CYII=';
+}

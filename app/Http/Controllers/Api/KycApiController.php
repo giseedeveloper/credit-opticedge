@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Customer;
+use App\Models\SelcomPaymentRequest;
+use App\Models\SystemDocument;
 use App\Models\Verification;
 use App\Services\ApplicationAutoCheckService;
 use App\Services\DeviceIdentifierScanService;
@@ -12,10 +14,12 @@ use App\Services\IMEITrackingService;
 use App\Services\KycAccessoryOfferService;
 use App\Services\KycDeviceCatalogService;
 use App\Services\KycPhoneService;
+use App\Services\SelcomCheckoutService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -144,6 +148,7 @@ class KycApiController extends Controller
 
         $draft = Customer::create([
             'registered_by' => auth()->id(),
+            'application_draft_reference' => (string) Str::uuid(),
             'phone_model_id' => $deviceSelection['phone_model_id'],
             'inventory_unit_id' => $deviceSelection['inventory_unit_id'],
             'device_specs' => $deviceSelection['device_specs'],
@@ -345,6 +350,94 @@ class KycApiController extends Controller
         return $this->successResponse(['customer_id' => $customer->id, 'step' => 6], 'Step 6 (Consent) recorded.');
     }
 
+    public function paymentRequest(
+        Request $request,
+        string $customerId,
+        KycPhoneService $phoneService,
+        SelcomCheckoutService $selcom
+    ): JsonResponse {
+        $customer = $this->findAgentCustomerOrFail($customerId);
+
+        $validated = $request->validate([
+            'payment_phone' => ['required', 'string', 'min:7', 'max:20'],
+            'payment_phone_country' => ['required', 'string', 'size:2'],
+        ]);
+
+        if ((float) ($customer->deposit_amount ?? 0) <= 0) {
+            return $this->errorResponse('A valid deposit amount is required before sending a payment prompt.', 422);
+        }
+
+        if (! $customer->application_draft_reference) {
+            $customer->update([
+                'application_draft_reference' => (string) Str::uuid(),
+            ]);
+            $customer->refresh();
+        }
+
+        $paymentPhone = $phoneService->normalizeForField(
+            'payment_phone',
+            'payment_phone_country',
+            $validated['payment_phone'],
+            $validated['payment_phone_country']
+        );
+
+        $latestCompletedPayment = $selcom->latestCompletedDraftPayment($customer->application_draft_reference);
+
+        if ($latestCompletedPayment) {
+            $selcom->attachToCustomer($latestCompletedPayment, $customer);
+
+            return $this->successResponse([
+                'payment' => $this->serializePaymentSummary($latestCompletedPayment->fresh()),
+                'agreement' => $this->serializeAgreementSummary($this->activeAgreementDocument(), $customer->fresh()),
+                'release' => $this->serializeReleaseSummary($customer->fresh()),
+            ], 'This application already has a successful deposit payment.');
+        }
+
+        $payment = $selcom->createDraftPayment(
+            $customer->application_draft_reference,
+            $paymentPhone['e164'],
+            (float) $customer->deposit_amount,
+            auth()->id()
+        );
+
+        $payment = $selcom->initiateWalletPush($payment, [
+            'name' => $customer->full_name !== '' ? $customer->full_name : 'OpticEdge Customer',
+            'phone' => $paymentPhone['e164'],
+            'email' => $customer->email ?: null,
+        ], route('api.payments.selcom.webhook'));
+
+        $payment = $selcom->attachToCustomer($payment, $customer->fresh());
+
+        return $this->successResponse([
+            'payment' => $this->serializePaymentSummary($payment),
+            'agreement' => $this->serializeAgreementSummary($this->activeAgreementDocument(), $customer->fresh()),
+            'release' => $this->serializeReleaseSummary($customer->fresh()),
+        ], 'Payment prompt sent successfully.');
+    }
+
+    public function paymentStatus(
+        string $customerId,
+        SelcomCheckoutService $selcom
+    ): JsonResponse {
+        $customer = $this->findAgentCustomerOrFail($customerId);
+        $payment = $this->latestDraftPaymentFor($customer);
+
+        if (! $payment) {
+            return $this->errorResponse('No payment prompt has been started for this application yet.', 404);
+        }
+
+        $payment = $selcom->syncPaymentStatus($payment);
+        $payment = $selcom->attachToCustomer($payment, $customer->fresh());
+
+        return $this->successResponse([
+            'payment' => $this->serializePaymentSummary($payment),
+            'agreement' => $this->serializeAgreementSummary($this->activeAgreementDocument(), $customer->fresh()),
+            'release' => $this->serializeReleaseSummary($customer->fresh()),
+        ], $payment->isCompleted()
+            ? 'Deposit payment confirmed successfully.'
+            : 'Payment status refreshed.');
+    }
+
     // ──────────────────────────────────────────────────────────────
     // STEP 7 — Submit
     // POST /api/v1/kyc/application/{customer_id}/step7
@@ -352,16 +445,21 @@ class KycApiController extends Controller
     public function step7Submit(
         Request $request,
         string $customerId,
-        ApplicationAutoCheckService $checker
+        ApplicationAutoCheckService $checker,
+        SelcomCheckoutService $selcom
     ): JsonResponse {
         $customer = $this->findAgentCustomerOrFail($customerId);
 
         $validated = $request->validate([
             'fo_notes' => ['nullable', 'string', 'max:1000'],
             'application_source' => ['nullable', 'in:walk_in,referral,vendor,social_media,agent'],
+            'agreement_decision' => ['required', 'in:yes,no'],
+            'customer_signature' => ['required', 'string'],
+            'fo_signature' => ['required', 'string'],
+            'asset_handover_list' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'asset_handover_notes' => ['nullable', 'string', 'max:500'],
         ]);
 
-        // Guard: required fields must already be present
         $missing = [];
         if (! $customer->nida_number) {
             $missing[] = 'nida_number';
@@ -375,14 +473,51 @@ class KycApiController extends Controller
         if (! $customer->terms_accepted) {
             $missing[] = 'consent';
         }
+        if (! $customer->branch_id) {
+            $missing[] = 'branch_id';
+        }
+        if (! $customer->monthly_income) {
+            $missing[] = 'monthly_income';
+        }
 
         if (! empty($missing)) {
             return $this->errorResponse('Complete earlier steps before submitting. Missing: '.implode(', ', $missing), 422);
         }
 
+        $successfulPayment = $customer->application_draft_reference
+            ? $selcom->latestCompletedDraftPayment($customer->application_draft_reference)
+            : null;
+
+        if (! $successfulPayment) {
+            return $this->errorResponse('A successful deposit payment is required before final submission.', 422);
+        }
+
+        if ($validated['agreement_decision'] !== 'yes') {
+            return $this->errorResponse('Customer must accept the agreement before final submission.', 422);
+        }
+
+        $activeAgreement = $this->activeAgreementDocument();
+
+        if (! $activeAgreement) {
+            return $this->errorResponse('No active agreement PDF is available yet. Please contact admin.', 422);
+        }
+
         $customer->update([
             'fo_notes' => $validated['fo_notes'] ?? null,
             'application_source' => $validated['application_source'] ?? null,
+            'agreement_document_id' => $activeAgreement->id,
+            'agreement_accepted' => true,
+            'agreement_presented_at' => now(),
+            'agreement_decision_at' => now(),
+            'customer_signature_path' => $this->storeSignatureDataUrl($validated['customer_signature'], 'customer-signatures'),
+            'fo_signature_path' => $this->storeSignatureDataUrl($validated['fo_signature'], 'fo-signatures'),
+            'asset_handover_list_path' => $this->storeFile($request, 'asset_handover_list', 'handover'),
+            'asset_handover_notes' => $validated['asset_handover_notes'] ?? null,
+            'deposit_payment_status' => $successfulPayment->status,
+            'deposit_payment_amount' => $successfulPayment->amount,
+            'deposit_payment_reference' => $successfulPayment->selcom_reference ?: $successfulPayment->transid,
+            'deposit_paid_at' => $successfulPayment->paid_at,
+            'asset_release_status' => 'pending',
             'kyc_status' => 'pending',
             'kyc_stage' => 1,
         ]);
@@ -397,6 +532,8 @@ class KycApiController extends Controller
             ]
         );
 
+        $selcom->attachToCustomer($successfulPayment, $customer->fresh());
+
         $result = $checker->run($customer, $verification);
 
         activity('kyc')
@@ -410,6 +547,9 @@ class KycApiController extends Controller
             'verification_id' => $verification->id,
             'auto_check_status' => $result['status'],
             'auto_check_results' => $result['checks'],
+            'payment' => $this->serializePaymentSummary($successfulPayment->fresh()),
+            'agreement' => $this->serializeAgreementSummary($activeAgreement, $customer->fresh()),
+            'release' => $this->serializeReleaseSummary($customer->fresh()),
         ], 'Application submitted successfully.');
     }
 
@@ -419,7 +559,9 @@ class KycApiController extends Controller
     // ──────────────────────────────────────────────────────────────
     public function applicationStatus(string $customerId): JsonResponse
     {
-        $customer = $this->findAgentCustomerOrFail($customerId, ['latestVerification']);
+        $customer = $this->findAgentCustomerOrFail($customerId, ['latestVerification', 'agreementDocument', 'assetReleasedBy']);
+        $activeAgreement = $this->activeAgreementDocument();
+        $latestPayment = $this->latestDraftPaymentFor($customer);
 
         return $this->successResponse([
             'customer_id' => $customer->id,
@@ -427,6 +569,11 @@ class KycApiController extends Controller
             'kyc_stage' => $customer->kyc_stage,
             'auto_check_status' => $customer->latestVerification?->auto_check_status,
             'auto_check_results' => $customer->latestVerification?->auto_check_results,
+            'payment' => $this->serializePaymentSummary($latestPayment),
+            'agreement' => $this->serializeAgreementSummary($activeAgreement, $customer),
+            'release' => $this->serializeReleaseSummary($customer),
+            'can_submit' => $latestPayment?->isCompleted() === true
+                && $activeAgreement !== null,
         ], 'Application status retrieved.');
     }
 
@@ -527,10 +674,14 @@ class KycApiController extends Controller
             'branch',
             'phoneModel.brand',
             'inventoryUnit',
+            'agreementDocument',
+            'assetReleasedBy',
         ])->where('registered_by', auth()->id())
             ->findOrFail($customerId);
 
         $v = $customer->latestVerification;
+        $activeAgreement = $this->activeAgreementDocument();
+        $latestPayment = $this->latestDraftPaymentFor($customer);
 
         return $this->successResponse([
             'id' => $customer->id,
@@ -595,6 +746,9 @@ class KycApiController extends Controller
                 'call_consent_accepted' => $customer->call_consent_accepted,
                 'consent_timestamp' => $customer->consent_timestamp?->toDateTimeString(),
             ],
+            'payment' => $this->serializePaymentSummary($latestPayment),
+            'agreement' => $this->serializeAgreementSummary($activeAgreement, $customer),
+            'release' => $this->serializeReleaseSummary($customer),
             'photos' => [
                 'imei' => $this->photoUrl($customer->imei_photo_path),
                 'device_box' => $this->photoUrl($customer->device_box_photo_path),
@@ -604,11 +758,15 @@ class KycApiController extends Controller
                 'headshot' => $this->photoUrl($customer->headshot_photo_path),
                 'client_fo' => $this->photoUrl($customer->client_fo_photo_path),
                 'business' => $this->photoUrl($customer->business_photo_path),
+                'customer_signature' => $this->photoUrl($customer->customer_signature_path),
+                'fo_signature' => $this->photoUrl($customer->fo_signature_path),
+                'asset_handover_list' => $this->photoUrl($customer->asset_handover_list_path),
             ],
             'fo_notes' => $customer->fo_notes,
             'application_source' => $customer->application_source,
             'kyc_status' => $customer->kyc_status,
             'registered_at' => $customer->created_at->toDateTimeString(),
+            'can_release_asset' => $customer->isReadyForAssetRelease(),
             'verification' => $v ? [
                 'id' => $v->id,
                 'status' => $v->status,
@@ -625,6 +783,66 @@ class KycApiController extends Controller
                 'submitted_at' => $v->created_at->toDateTimeString(),
             ] : null,
         ], 'Customer detail retrieved.');
+    }
+
+    public function releaseAsset(string $customerId): JsonResponse
+    {
+        $customer = $this->findAgentCustomerOrFail($customerId, ['inventoryUnit', 'assetReleasedBy', 'agreementDocument']);
+
+        if (! $customer->hasApprovedKyc()) {
+            return $this->errorResponse('Approve the KYC application before releasing the asset.', 422);
+        }
+
+        if (! $customer->hasSuccessfulDepositPayment()) {
+            return $this->errorResponse('Successful deposit payment is required before releasing the asset.', 422);
+        }
+
+        if (! $customer->hasAcceptedAgreement()) {
+            return $this->errorResponse('Agreement acceptance is required before release.', 422);
+        }
+
+        if (! $customer->hasCapturedSignatures()) {
+            return $this->errorResponse('Customer and FO signatures must be captured before release.', 422);
+        }
+
+        if (! $customer->hasAssetHandoverRecord()) {
+            return $this->errorResponse('Asset handover checklist is required before release.', 422);
+        }
+
+        if ($customer->isAssetReleased()) {
+            return $this->successResponse([
+                'customer_id' => $customer->id,
+                'release' => $this->serializeReleaseSummary($customer),
+            ], 'This asset was already released.');
+        }
+
+        if (! $customer->inventoryUnit) {
+            return $this->errorResponse('No linked stock unit was found for this application.', 422);
+        }
+
+        $customer->update([
+            'asset_release_status' => 'released',
+            'asset_released_at' => now(),
+            'asset_released_by' => auth()->id(),
+        ]);
+
+        if ($customer->inventoryUnit->status !== 'sold') {
+            $customer->inventoryUnit->update(['status' => 'assigned']);
+        }
+
+        activity('kyc')
+            ->performedOn($customer)
+            ->causedBy(auth()->user())
+            ->withProperties([
+                'inventory_unit_id' => $customer->inventory_unit_id,
+                'asset_release_status' => 'released',
+            ])
+            ->log("API asset released for {$customer->full_name}");
+
+        return $this->successResponse([
+            'customer_id' => $customer->id,
+            'release' => $this->serializeReleaseSummary($customer->fresh()),
+        ], 'Asset released successfully.');
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -778,6 +996,120 @@ class KycApiController extends Controller
         }
 
         return $normalizedItems;
+    }
+
+    private function activeAgreementDocument(): ?SystemDocument
+    {
+        return SystemDocument::query()
+            ->where('key', 'kyc_customer_agreement')
+            ->where('is_active', true)
+            ->latest()
+            ->first();
+    }
+
+    private function latestDraftPaymentFor(Customer $customer): ?SelcomPaymentRequest
+    {
+        return SelcomPaymentRequest::query()
+            ->when($customer->application_draft_reference, function ($query) use ($customer): void {
+                $query->where('draft_reference', $customer->application_draft_reference);
+            }, function ($query) use ($customer): void {
+                $query->where('customer_id', $customer->id);
+            })
+            ->latest('paid_at')
+            ->latest()
+            ->first();
+    }
+
+    private function storeSignatureDataUrl(?string $dataUrl, string $directory): ?string
+    {
+        if (! is_string($dataUrl) || $dataUrl === '') {
+            return null;
+        }
+
+        if (! preg_match('/^data:image\/png;base64,(.+)$/', $dataUrl, $matches)) {
+            throw ValidationException::withMessages([
+                'signature' => 'Signature format is invalid. Please sign again.',
+            ]);
+        }
+
+        $binary = base64_decode($matches[1], true);
+
+        if ($binary === false) {
+            throw ValidationException::withMessages([
+                'signature' => 'Signature image could not be decoded. Please sign again.',
+            ]);
+        }
+
+        $path = "kyc/{$directory}/".Str::uuid().'.png';
+        Storage::disk('public')->put($path, $binary);
+
+        return $path;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function serializePaymentSummary(?SelcomPaymentRequest $payment): ?array
+    {
+        if (! $payment) {
+            return null;
+        }
+
+        return [
+            'id' => $payment->id,
+            'status' => $payment->status,
+            'payment_status' => $payment->payment_status,
+            'result' => $payment->result,
+            'resultcode' => $payment->resultcode,
+            'amount' => $payment->amount,
+            'phone' => $payment->phone,
+            'reference' => $payment->selcom_reference ?: $payment->transid,
+            'order_id' => $payment->order_id,
+            'transid' => $payment->transid,
+            'payment_gateway_url' => $payment->payment_gateway_url,
+            'paid_at' => $payment->paid_at?->toDateTimeString(),
+            'updated_at' => $payment->updated_at?->toDateTimeString(),
+            'is_completed' => $payment->isCompleted(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeAgreementSummary(?SystemDocument $document, Customer $customer): array
+    {
+        return [
+            'active_document' => $document ? [
+                'id' => $document->id,
+                'title' => $document->title,
+                'mime_type' => $document->mime_type,
+                'url' => Storage::disk($document->disk)->url($document->path),
+                'uploaded_at' => $document->created_at?->toDateTimeString(),
+                'original_name' => $document->metadata['original_name'] ?? $document->title,
+            ] : null,
+            'accepted' => $customer->agreement_accepted,
+            'presented_at' => $customer->agreement_presented_at?->toDateTimeString(),
+            'decision_at' => $customer->agreement_decision_at?->toDateTimeString(),
+            'customer_signature_url' => $this->photoUrl($customer->customer_signature_path),
+            'fo_signature_url' => $this->photoUrl($customer->fo_signature_path),
+            'handover_list_url' => $this->photoUrl($customer->asset_handover_list_path),
+            'handover_notes' => $customer->asset_handover_notes,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeReleaseSummary(Customer $customer): array
+    {
+        return [
+            'status' => $customer->asset_release_status,
+            'released_at' => $customer->asset_released_at?->toDateTimeString(),
+            'released_by' => $customer->assetReleasedBy?->name,
+            'can_release_asset' => $customer->isReadyForAssetRelease(),
+            'inventory_unit_id' => $customer->inventory_unit_id,
+            'inventory_unit_status' => $customer->inventoryUnit?->status,
+        ];
     }
 
     private function photoUrl(?string $path): ?string

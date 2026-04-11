@@ -128,7 +128,12 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                 _toStep(state.currentStep - 1);
               } else {
                 final shouldExit = await _showExitDialog();
-                if (shouldExit && mounted) context.pop();
+                if (!context.mounted) {
+                  return;
+                }
+                if (shouldExit) {
+                  context.pop();
+                }
               }
             },
           ),

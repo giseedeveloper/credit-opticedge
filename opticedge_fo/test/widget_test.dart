@@ -1,21 +1,23 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:opticedge_fo/main.dart';
+import 'package:opticedge_fo/widgets/kyc/signature_pad.dart';
 
 void main() {
-  testWidgets('App smoke test — renders without crashing',
+  testWidgets('Signature pad renders its capture prompt',
       (WidgetTester tester) async {
+    final controller = SignaturePadController();
+
     await tester.pumpWidget(
-      const ProviderScope(child: OpticedgeFOApp()),
+      MaterialApp(
+        home: Scaffold(
+          body: SignaturePad(
+            controller: controller,
+          ),
+        ),
+      ),
     );
-    await tester.pump();
+
+    expect(find.text('Sign here with your finger'), findsOneWidget);
+    expect(find.byType(SignaturePad), findsOneWidget);
   });
 }

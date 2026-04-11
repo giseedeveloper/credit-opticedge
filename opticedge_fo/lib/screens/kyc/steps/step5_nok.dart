@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/constants.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/kyc/phone_number_field.dart';
 
 class Step5NokScreen extends ConsumerStatefulWidget {
   const Step5NokScreen({super.key});
@@ -15,10 +16,17 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
   late TextEditingController _nokName, _nokPhone, _nokRel;
   late TextEditingController _nok2Name, _nok2Phone, _nok2Rel;
   bool _showNok2 = false;
+  String _nokPhoneCountry = 'TZ';
+  String _nok2PhoneCountry = 'TZ';
 
   final _relationships = [
-    'Spouse', 'Parent', 'Sibling', 'Child',
-    'Friend', 'Relative', 'Colleague',
+    'Spouse',
+    'Parent',
+    'Sibling',
+    'Child',
+    'Friend',
+    'Relative',
+    'Colleague',
   ];
 
   @override
@@ -32,13 +40,19 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
     _nok2Phone = TextEditingController(text: s.nok2Phone);
     _nok2Rel = TextEditingController(text: s.nok2Relationship);
     _showNok2 = s.nok2Name.isNotEmpty;
+    _nokPhoneCountry = s.nokPhoneCountry;
+    _nok2PhoneCountry = s.nok2PhoneCountry;
   }
 
   @override
   void dispose() {
     for (final c in [
-      _nokName, _nokPhone, _nokRel,
-      _nok2Name, _nok2Phone, _nok2Rel
+      _nokName,
+      _nokPhone,
+      _nokRel,
+      _nok2Name,
+      _nok2Phone,
+      _nok2Rel
     ]) {
       c.dispose();
     }
@@ -49,9 +63,11 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
     ref.read(kycProvider.notifier).update((s) => s.copyWith(
           nokName: _nokName.text.trim(),
           nokPhone: _nokPhone.text.trim(),
+          nokPhoneCountry: _nokPhoneCountry,
           nokRelationship: _nokRel.text.trim(),
           nok2Name: _nok2Name.text.trim(),
           nok2Phone: _nok2Phone.text.trim(),
+          nok2PhoneCountry: _nok2PhoneCountry,
           nok2Relationship: _nok2Rel.text.trim(),
         ));
   }
@@ -65,6 +81,8 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(kycProvider);
+    final countriesAsync = ref.watch(phoneCountriesProvider);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Form(
@@ -73,19 +91,68 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _sectionHeader('Next of Kin',
-                'Emergency contact and guarantor information'),
+                'Capture people the customer trusts and can easily reach.'),
             const SizedBox(height: 20),
-
-            _nokCard(
-              title: 'Primary Next of Kin',
-              nameCtrl: _nokName,
-              phoneCtrl: _nokPhone,
-              relCtrl: _nokRel,
-              required: true,
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppConstants.success.withValues(alpha: 0.15),
+                ),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.support_agent_outlined,
+                    color: AppConstants.success,
+                    size: 20,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Helpful script: “Tafadhali taja mtu wa karibu ambaye tunaweza kumfikia pale tutakapohitaji uthibitisho au mawasiliano ya haraka.”',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.5,
+                        color: AppConstants.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(height: 16),
+            countriesAsync.when(
+              loading: () => const LinearProgressIndicator(
+                color: AppConstants.primary,
+              ),
+              error: (_, __) => const Text(
+                'Failed to load phone countries',
+                style: TextStyle(color: AppConstants.error),
+              ),
+              data: (countries) => _nokCard(
+                title: 'Primary Next of Kin',
+                nameCtrl: _nokName,
+                phoneCtrl: _nokPhone,
+                relCtrl: _nokRel,
+                required: true,
+                countries: countries,
+                selectedCountry: _nokPhoneCountry,
+                onCountryChanged: (value) {
+                  if (value == null) {
+                    return;
+                  }
 
+                  setState(() {
+                    _nokPhoneCountry = value;
+                  });
+                },
+              ),
+            ),
             const SizedBox(height: 20),
-
             if (!_showNok2)
               OutlinedButton.icon(
                 onPressed: () => setState(() => _showNok2 = true),
@@ -93,31 +160,48 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
                 label: const Text('Add Second Next of Kin'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppConstants.primary,
-                  side: const BorderSide(
-                      color: AppConstants.primary, width: 1),
+                  side: const BorderSide(color: AppConstants.primary, width: 1),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 12, horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 ),
               ),
-
             if (_showNok2) ...[
-              _nokCard(
-                title: 'Second Next of Kin',
-                nameCtrl: _nok2Name,
-                phoneCtrl: _nok2Phone,
-                relCtrl: _nok2Rel,
-                required: false,
-                onRemove: () {
-                  setState(() => _showNok2 = false);
-                  _nok2Name.clear();
-                  _nok2Phone.clear();
-                  _nok2Rel.clear();
-                },
+              countriesAsync.when(
+                loading: () => const LinearProgressIndicator(
+                  color: AppConstants.primary,
+                ),
+                error: (_, __) => const Text(
+                  'Failed to load phone countries',
+                  style: TextStyle(color: AppConstants.error),
+                ),
+                data: (countries) => _nokCard(
+                  title: 'Second Next of Kin',
+                  nameCtrl: _nok2Name,
+                  phoneCtrl: _nok2Phone,
+                  relCtrl: _nok2Rel,
+                  required: false,
+                  countries: countries,
+                  selectedCountry: _nok2PhoneCountry,
+                  onCountryChanged: (value) {
+                    if (value == null) {
+                      return;
+                    }
+
+                    setState(() {
+                      _nok2PhoneCountry = value;
+                    });
+                  },
+                  onRemove: () {
+                    setState(() => _showNok2 = false);
+                    _nok2Name.clear();
+                    _nok2Phone.clear();
+                    _nok2Rel.clear();
+                  },
+                ),
               ),
             ],
-
             const SizedBox(height: 32),
             AppButton(
               label: 'Save & Continue',
@@ -138,6 +222,9 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
     required TextEditingController nameCtrl,
     required TextEditingController phoneCtrl,
     required TextEditingController relCtrl,
+    required List countries,
+    required String selectedCountry,
+    required ValueChanged<String?> onCountryChanged,
     required bool required,
     VoidCallback? onRemove,
   }) {
@@ -183,9 +270,17 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
           const SizedBox(height: 14),
           _field(nameCtrl, 'Full Name', required: required),
           const SizedBox(height: 12),
-          _field(phoneCtrl, 'Phone Number',
-              required: required,
-              keyboard: TextInputType.phone),
+          PhoneNumberField(
+            label: 'Phone Number',
+            required: required,
+            controller: phoneCtrl,
+            countries: countries.cast(),
+            selectedCountry: selectedCountry,
+            helperText: required
+                ? 'Choose a number that the next of kin answers quickly.'
+                : 'Add another trusted contact if available.',
+            onCountryChanged: onCountryChanged,
+          ),
           const SizedBox(height: 12),
           _label('Relationship', optional: !required),
           const SizedBox(height: 8),
@@ -199,17 +294,16 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
                   setState(() => relCtrl.text = r);
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: selected
                         ? AppConstants.primarySurface
                         : AppConstants.borderLight,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: selected
-                          ? AppConstants.primary
-                          : AppConstants.border,
+                      color:
+                          selected ? AppConstants.primary : AppConstants.border,
                       width: selected ? 1.5 : 1,
                     ),
                   ),
@@ -217,9 +311,7 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
                     r,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: selected
-                          ? FontWeight.w600
-                          : FontWeight.w400,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                       color: selected
                           ? AppConstants.primary
                           : AppConstants.textSecondary,
@@ -232,8 +324,8 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
           const SizedBox(height: 10),
           TextFormField(
             controller: relCtrl,
-            decoration: const InputDecoration(
-                hintText: 'Or type relationship...'),
+            decoration:
+                const InputDecoration(hintText: 'Or type relationship...'),
           ),
         ],
       ),
@@ -255,8 +347,7 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
         ],
       );
 
-  Widget _label(String text, {bool optional = false}) =>
-      Row(children: [
+  Widget _label(String text, {bool optional = false}) => Row(children: [
         Text(text,
             style: const TextStyle(
                 fontSize: 13,
@@ -279,8 +370,8 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
       ]);
 
   Widget _field(TextEditingController ctrl, String label,
-      {bool required = false,
-      TextInputType keyboard = TextInputType.text}) =>
+          {bool required = false,
+          TextInputType keyboard = TextInputType.text}) =>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _label(label, optional: !required),
         const SizedBox(height: 6),

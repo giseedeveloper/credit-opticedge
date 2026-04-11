@@ -46,6 +46,12 @@ Route::prefix('v1')->group(function () {
             Route::get('/customers/{id}', [KycApiController::class, 'customerDetail']);
         });
 
+        Route::prefix('kyc/customers')
+            ->middleware('permission:loans.create')
+            ->group(function () {
+                Route::post('/{id}/release-asset', [KycApiController::class, 'releaseAsset']);
+            });
+
         // KYC — Agent Registration Steps (requires loans.create permission)
         Route::prefix('kyc/application')
             ->middleware('permission:loans.create')
@@ -62,6 +68,8 @@ Route::prefix('v1')->group(function () {
                 Route::post('/{customer_id}/step4', [KycApiController::class, 'step4Income']);
                 Route::post('/{customer_id}/step5', [KycApiController::class, 'step5Nok']);
                 Route::post('/{customer_id}/step6', [KycApiController::class, 'step6Consent']);
+                Route::post('/{customer_id}/payment/request', [KycApiController::class, 'paymentRequest']);
+                Route::get('/{customer_id}/payment/status', [KycApiController::class, 'paymentStatus']);
                 Route::post('/{customer_id}/step7', [KycApiController::class, 'step7Submit']);
                 Route::get('/{customer_id}/status', [KycApiController::class, 'applicationStatus']);
             });

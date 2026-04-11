@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/constants.dart';
-import '../../../core/providers/customer_provider.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/kyc/phone_number_field.dart';
 
 class Step3ContactScreen extends ConsumerStatefulWidget {
   const Step3ContactScreen({super.key});
@@ -18,6 +18,8 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
   String? _selectedBranch;
   String? _selectedRegion;
   String? _selectedDistrict;
+  String _phoneCountry = 'TZ';
+  String _altPhoneCountry = 'TZ';
 
   final _regions = [
     'Dar es Salaam',
@@ -54,6 +56,8 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
     _selectedBranch = s.branchId.isNotEmpty ? s.branchId : null;
     _selectedRegion = s.region.isNotEmpty ? s.region : null;
     _selectedDistrict = s.district.isNotEmpty ? s.district : null;
+    _phoneCountry = s.phoneCountry;
+    _altPhoneCountry = s.altPhoneCountry;
   }
 
   @override
@@ -67,7 +71,9 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
   void _save() {
     ref.read(kycProvider.notifier).update((s) => s.copyWith(
           phone: _phone.text.trim(),
+          phoneCountry: _phoneCountry,
           altPhone: _altPhone.text.trim(),
+          altPhoneCountry: _altPhoneCountry,
           email: _email.text.trim(),
           branchId: _selectedBranch ?? '',
           address: _address.text.trim(),
@@ -93,6 +99,7 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(kycProvider);
     final branchesAsync = ref.watch(branchesProvider);
+    final countriesAsync = ref.watch(phoneCountriesProvider);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -102,29 +109,87 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _sectionHeader('Contact & Location',
-                'Phone numbers, branch, and address details'),
+                'Let us confirm the best numbers and branch for this customer.'),
             const SizedBox(height: 20),
-            _label('Phone Number'),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: _phone,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                hintText: '+255 7XX XXX XXX',
-                prefixIcon: Icon(Icons.phone_outlined, size: 18),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppConstants.primarySurface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppConstants.primary.withValues(alpha: 0.12),
+                ),
               ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.record_voice_over_outlined,
+                    color: AppConstants.primary,
+                    size: 20,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Helpful script: “Nisaidie namba unayotumia mara nyingi zaidi na branch utakayotembelea kwa urahisi. Hii itatusaidia kukutumia updates sahihi.”',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.5,
+                        color: AppConstants.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 14),
-            _label('Alternative Phone', optional: true),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: _altPhone,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                hintText: '+255 7XX XXX XXX',
-                prefixIcon: Icon(Icons.phone_outlined, size: 18),
+            countriesAsync.when(
+              loading: () => const LinearProgressIndicator(
+                color: AppConstants.primary,
+              ),
+              error: (_, __) => const Text(
+                'Failed to load phone countries',
+                style: TextStyle(color: AppConstants.error),
+              ),
+              data: (countries) => Column(
+                children: [
+                  PhoneNumberField(
+                    label: 'Primary Phone Number',
+                    required: true,
+                    controller: _phone,
+                    countries: countries,
+                    selectedCountry: _phoneCountry,
+                    helperText:
+                        'This becomes the main number for payment reminders and follow-up calls.',
+                    onCountryChanged: (value) {
+                      if (value == null) {
+                        return;
+                      }
+
+                      setState(() {
+                        _phoneCountry = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  PhoneNumberField(
+                    label: 'Alternative Phone',
+                    controller: _altPhone,
+                    countries: countries,
+                    selectedCountry: _altPhoneCountry,
+                    helperText:
+                        'Use a trusted backup number if the main line is sometimes unreachable.',
+                    onCountryChanged: (value) {
+                      if (value == null) {
+                        return;
+                      }
+
+                      setState(() {
+                        _altPhoneCountry = value;
+                      });
+                    },
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 14),
@@ -149,7 +214,7 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
               data: (branches) => DropdownButtonFormField<String>(
                 initialValue: _selectedBranch,
                 decoration: const InputDecoration(
-                  hintText: 'Select branch',
+                  hintText: 'Choose the branch serving this customer',
                   prefixIcon: Icon(Icons.location_city_outlined, size: 18),
                 ),
                 items: branches

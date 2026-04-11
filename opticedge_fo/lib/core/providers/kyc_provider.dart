@@ -1,10 +1,16 @@
+import 'dart:convert';
 import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-import '../api/api_client.dart';
+
 import '../../config/constants.dart';
+import '../api/api_client.dart';
+import '../models/dashboard_model.dart';
+import '../models/kyc_flow_model.dart';
+
+const _unset = Object();
 
 class KycDraftState {
   final String? customerId;
@@ -14,6 +20,10 @@ class KycDraftState {
   final bool stepSaved;
 
   // Step 1 — Device
+  final String brandId;
+  final String phoneModelId;
+  final String inventoryUnitId;
+  final String inventorySearch;
   final String deviceSpecs;
   final String imeiNumber;
   final String imei2;
@@ -21,6 +31,9 @@ class KycDraftState {
   final String cashPrice;
   final String depositAmount;
   final String preferredRepayment;
+  final bool includeScreenProtector;
+  final bool includePhoneCover;
+  final String storeOfferNotes;
   final File? imeiPhoto;
   final File? deviceBoxPhoto;
   final File? devicePhoto;
@@ -40,7 +53,9 @@ class KycDraftState {
 
   // Step 3 — Contact
   final String phone;
+  final String phoneCountry;
   final String altPhone;
+  final String altPhoneCountry;
   final String email;
   final String branchId;
   final String address;
@@ -61,9 +76,11 @@ class KycDraftState {
   // Step 5 — NOK
   final String nokName;
   final String nokPhone;
+  final String nokPhoneCountry;
   final String nokRelationship;
   final String nok2Name;
   final String nok2Phone;
+  final String nok2PhoneCountry;
   final String nok2Relationship;
 
   // Step 6 — Consent
@@ -71,9 +88,19 @@ class KycDraftState {
   final bool dataConsentAccepted;
   final bool callConsentAccepted;
 
-  // Step 7 — Submit
+  // Step 7 — Payment, agreement & submit
+  final String paymentPhone;
+  final String paymentPhoneCountry;
+  final String agreementDecision;
+  final String customerSignatureData;
+  final String foSignatureData;
+  final File? assetHandoverList;
+  final String assetHandoverNotes;
   final String foNotes;
   final String applicationSource;
+  final KycPaymentContext? paymentContext;
+  final KycAgreementContext? agreementContext;
+  final KycReleaseContext? releaseContext;
 
   const KycDraftState({
     this.customerId,
@@ -81,6 +108,10 @@ class KycDraftState {
     this.isSubmitting = false,
     this.error,
     this.stepSaved = false,
+    this.brandId = '',
+    this.phoneModelId = '',
+    this.inventoryUnitId = '',
+    this.inventorySearch = '',
     this.deviceSpecs = '',
     this.imeiNumber = '',
     this.imei2 = '',
@@ -88,6 +119,9 @@ class KycDraftState {
     this.cashPrice = '',
     this.depositAmount = '',
     this.preferredRepayment = 'weekly',
+    this.includeScreenProtector = false,
+    this.includePhoneCover = false,
+    this.storeOfferNotes = '',
     this.imeiPhoto,
     this.deviceBoxPhoto,
     this.devicePhoto,
@@ -103,7 +137,9 @@ class KycDraftState {
     this.headshotPhoto,
     this.clientFoPhoto,
     this.phone = '',
+    this.phoneCountry = 'TZ',
     this.altPhone = '',
+    this.altPhoneCountry = 'TZ',
     this.email = '',
     this.branchId = '',
     this.address = '',
@@ -120,23 +156,41 @@ class KycDraftState {
     this.businessPhoto,
     this.nokName = '',
     this.nokPhone = '',
+    this.nokPhoneCountry = 'TZ',
     this.nokRelationship = '',
     this.nok2Name = '',
     this.nok2Phone = '',
+    this.nok2PhoneCountry = 'TZ',
     this.nok2Relationship = '',
     this.termsAccepted = false,
     this.dataConsentAccepted = false,
     this.callConsentAccepted = false,
+    this.paymentPhone = '',
+    this.paymentPhoneCountry = 'TZ',
+    this.agreementDecision = '',
+    this.customerSignatureData = '',
+    this.foSignatureData = '',
+    this.assetHandoverList,
+    this.assetHandoverNotes = '',
     this.foNotes = '',
     this.applicationSource = 'walk_in',
+    this.paymentContext,
+    this.agreementContext,
+    this.releaseContext,
   });
 
+  bool get hasDraft => customerId != null && customerId!.isNotEmpty;
+
   KycDraftState copyWith({
-    String? customerId,
+    Object? customerId = _unset,
     int? currentStep,
     bool? isSubmitting,
-    String? error,
+    Object? error = _unset,
     bool? stepSaved,
+    String? brandId,
+    String? phoneModelId,
+    String? inventoryUnitId,
+    String? inventorySearch,
     String? deviceSpecs,
     String? imeiNumber,
     String? imei2,
@@ -144,9 +198,12 @@ class KycDraftState {
     String? cashPrice,
     String? depositAmount,
     String? preferredRepayment,
-    File? imeiPhoto,
-    File? deviceBoxPhoto,
-    File? devicePhoto,
+    bool? includeScreenProtector,
+    bool? includePhoneCover,
+    String? storeOfferNotes,
+    Object? imeiPhoto = _unset,
+    Object? deviceBoxPhoto = _unset,
+    Object? devicePhoto = _unset,
     String? firstName,
     String? middleName,
     String? lastName,
@@ -154,12 +211,14 @@ class KycDraftState {
     String? dateOfBirth,
     String? nidaNumber,
     String? idType,
-    File? idFrontPhoto,
-    File? idBackPhoto,
-    File? headshotPhoto,
-    File? clientFoPhoto,
+    Object? idFrontPhoto = _unset,
+    Object? idBackPhoto = _unset,
+    Object? headshotPhoto = _unset,
+    Object? clientFoPhoto = _unset,
     String? phone,
+    String? phoneCountry,
     String? altPhone,
+    String? altPhoneCountry,
     String? email,
     String? branchId,
     String? address,
@@ -173,126 +232,435 @@ class KycDraftState {
     String? monthlyExpenses,
     String? incomePaymentCycle,
     String? durationAtWork,
-    File? businessPhoto,
+    Object? businessPhoto = _unset,
     String? nokName,
     String? nokPhone,
+    String? nokPhoneCountry,
     String? nokRelationship,
     String? nok2Name,
     String? nok2Phone,
+    String? nok2PhoneCountry,
     String? nok2Relationship,
     bool? termsAccepted,
     bool? dataConsentAccepted,
     bool? callConsentAccepted,
+    String? paymentPhone,
+    String? paymentPhoneCountry,
+    String? agreementDecision,
+    String? customerSignatureData,
+    String? foSignatureData,
+    Object? assetHandoverList = _unset,
+    String? assetHandoverNotes,
     String? foNotes,
     String? applicationSource,
-  }) =>
-      KycDraftState(
-        customerId: customerId ?? this.customerId,
-        currentStep: currentStep ?? this.currentStep,
-        isSubmitting: isSubmitting ?? this.isSubmitting,
-        error: error,
-        stepSaved: stepSaved ?? this.stepSaved,
-        deviceSpecs: deviceSpecs ?? this.deviceSpecs,
-        imeiNumber: imeiNumber ?? this.imeiNumber,
-        imei2: imei2 ?? this.imei2,
-        serialNumber: serialNumber ?? this.serialNumber,
-        cashPrice: cashPrice ?? this.cashPrice,
-        depositAmount: depositAmount ?? this.depositAmount,
-        preferredRepayment: preferredRepayment ?? this.preferredRepayment,
-        imeiPhoto: imeiPhoto ?? this.imeiPhoto,
-        deviceBoxPhoto: deviceBoxPhoto ?? this.deviceBoxPhoto,
-        devicePhoto: devicePhoto ?? this.devicePhoto,
-        firstName: firstName ?? this.firstName,
-        middleName: middleName ?? this.middleName,
-        lastName: lastName ?? this.lastName,
-        gender: gender ?? this.gender,
-        dateOfBirth: dateOfBirth ?? this.dateOfBirth,
-        nidaNumber: nidaNumber ?? this.nidaNumber,
-        idType: idType ?? this.idType,
-        idFrontPhoto: idFrontPhoto ?? this.idFrontPhoto,
-        idBackPhoto: idBackPhoto ?? this.idBackPhoto,
-        headshotPhoto: headshotPhoto ?? this.headshotPhoto,
-        clientFoPhoto: clientFoPhoto ?? this.clientFoPhoto,
-        phone: phone ?? this.phone,
-        altPhone: altPhone ?? this.altPhone,
-        email: email ?? this.email,
-        branchId: branchId ?? this.branchId,
-        address: address ?? this.address,
-        landmark: landmark ?? this.landmark,
-        region: region ?? this.region,
-        district: district ?? this.district,
-        occupation: occupation ?? this.occupation,
-        employer: employer ?? this.employer,
-        workLocation: workLocation ?? this.workLocation,
-        monthlyIncome: monthlyIncome ?? this.monthlyIncome,
-        monthlyExpenses: monthlyExpenses ?? this.monthlyExpenses,
-        incomePaymentCycle: incomePaymentCycle ?? this.incomePaymentCycle,
-        durationAtWork: durationAtWork ?? this.durationAtWork,
-        businessPhoto: businessPhoto ?? this.businessPhoto,
-        nokName: nokName ?? this.nokName,
-        nokPhone: nokPhone ?? this.nokPhone,
-        nokRelationship: nokRelationship ?? this.nokRelationship,
-        nok2Name: nok2Name ?? this.nok2Name,
-        nok2Phone: nok2Phone ?? this.nok2Phone,
-        nok2Relationship: nok2Relationship ?? this.nok2Relationship,
-        termsAccepted: termsAccepted ?? this.termsAccepted,
-        dataConsentAccepted: dataConsentAccepted ?? this.dataConsentAccepted,
-        callConsentAccepted: callConsentAccepted ?? this.callConsentAccepted,
-        foNotes: foNotes ?? this.foNotes,
-        applicationSource: applicationSource ?? this.applicationSource,
-      );
+    Object? paymentContext = _unset,
+    Object? agreementContext = _unset,
+    Object? releaseContext = _unset,
+  }) {
+    return KycDraftState(
+      customerId: identical(customerId, _unset)
+          ? this.customerId
+          : customerId as String?,
+      currentStep: currentStep ?? this.currentStep,
+      isSubmitting: isSubmitting ?? this.isSubmitting,
+      error: identical(error, _unset) ? this.error : error as String?,
+      stepSaved: stepSaved ?? this.stepSaved,
+      brandId: brandId ?? this.brandId,
+      phoneModelId: phoneModelId ?? this.phoneModelId,
+      inventoryUnitId: inventoryUnitId ?? this.inventoryUnitId,
+      inventorySearch: inventorySearch ?? this.inventorySearch,
+      deviceSpecs: deviceSpecs ?? this.deviceSpecs,
+      imeiNumber: imeiNumber ?? this.imeiNumber,
+      imei2: imei2 ?? this.imei2,
+      serialNumber: serialNumber ?? this.serialNumber,
+      cashPrice: cashPrice ?? this.cashPrice,
+      depositAmount: depositAmount ?? this.depositAmount,
+      preferredRepayment: preferredRepayment ?? this.preferredRepayment,
+      includeScreenProtector:
+          includeScreenProtector ?? this.includeScreenProtector,
+      includePhoneCover: includePhoneCover ?? this.includePhoneCover,
+      storeOfferNotes: storeOfferNotes ?? this.storeOfferNotes,
+      imeiPhoto:
+          identical(imeiPhoto, _unset) ? this.imeiPhoto : imeiPhoto as File?,
+      deviceBoxPhoto: identical(deviceBoxPhoto, _unset)
+          ? this.deviceBoxPhoto
+          : deviceBoxPhoto as File?,
+      devicePhoto: identical(devicePhoto, _unset)
+          ? this.devicePhoto
+          : devicePhoto as File?,
+      firstName: firstName ?? this.firstName,
+      middleName: middleName ?? this.middleName,
+      lastName: lastName ?? this.lastName,
+      gender: gender ?? this.gender,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      nidaNumber: nidaNumber ?? this.nidaNumber,
+      idType: idType ?? this.idType,
+      idFrontPhoto: identical(idFrontPhoto, _unset)
+          ? this.idFrontPhoto
+          : idFrontPhoto as File?,
+      idBackPhoto: identical(idBackPhoto, _unset)
+          ? this.idBackPhoto
+          : idBackPhoto as File?,
+      headshotPhoto: identical(headshotPhoto, _unset)
+          ? this.headshotPhoto
+          : headshotPhoto as File?,
+      clientFoPhoto: identical(clientFoPhoto, _unset)
+          ? this.clientFoPhoto
+          : clientFoPhoto as File?,
+      phone: phone ?? this.phone,
+      phoneCountry: phoneCountry ?? this.phoneCountry,
+      altPhone: altPhone ?? this.altPhone,
+      altPhoneCountry: altPhoneCountry ?? this.altPhoneCountry,
+      email: email ?? this.email,
+      branchId: branchId ?? this.branchId,
+      address: address ?? this.address,
+      landmark: landmark ?? this.landmark,
+      region: region ?? this.region,
+      district: district ?? this.district,
+      occupation: occupation ?? this.occupation,
+      employer: employer ?? this.employer,
+      workLocation: workLocation ?? this.workLocation,
+      monthlyIncome: monthlyIncome ?? this.monthlyIncome,
+      monthlyExpenses: monthlyExpenses ?? this.monthlyExpenses,
+      incomePaymentCycle: incomePaymentCycle ?? this.incomePaymentCycle,
+      durationAtWork: durationAtWork ?? this.durationAtWork,
+      businessPhoto: identical(businessPhoto, _unset)
+          ? this.businessPhoto
+          : businessPhoto as File?,
+      nokName: nokName ?? this.nokName,
+      nokPhone: nokPhone ?? this.nokPhone,
+      nokPhoneCountry: nokPhoneCountry ?? this.nokPhoneCountry,
+      nokRelationship: nokRelationship ?? this.nokRelationship,
+      nok2Name: nok2Name ?? this.nok2Name,
+      nok2Phone: nok2Phone ?? this.nok2Phone,
+      nok2PhoneCountry: nok2PhoneCountry ?? this.nok2PhoneCountry,
+      nok2Relationship: nok2Relationship ?? this.nok2Relationship,
+      termsAccepted: termsAccepted ?? this.termsAccepted,
+      dataConsentAccepted: dataConsentAccepted ?? this.dataConsentAccepted,
+      callConsentAccepted: callConsentAccepted ?? this.callConsentAccepted,
+      paymentPhone: paymentPhone ?? this.paymentPhone,
+      paymentPhoneCountry: paymentPhoneCountry ?? this.paymentPhoneCountry,
+      agreementDecision: agreementDecision ?? this.agreementDecision,
+      customerSignatureData:
+          customerSignatureData ?? this.customerSignatureData,
+      foSignatureData: foSignatureData ?? this.foSignatureData,
+      assetHandoverList: identical(assetHandoverList, _unset)
+          ? this.assetHandoverList
+          : assetHandoverList as File?,
+      assetHandoverNotes: assetHandoverNotes ?? this.assetHandoverNotes,
+      foNotes: foNotes ?? this.foNotes,
+      applicationSource: applicationSource ?? this.applicationSource,
+      paymentContext: identical(paymentContext, _unset)
+          ? this.paymentContext
+          : paymentContext as KycPaymentContext?,
+      agreementContext: identical(agreementContext, _unset)
+          ? this.agreementContext
+          : agreementContext as KycAgreementContext?,
+      releaseContext: identical(releaseContext, _unset)
+          ? this.releaseContext
+          : releaseContext as KycReleaseContext?,
+    );
+  }
 }
 
 class KycNotifier extends StateNotifier<KycDraftState> {
   KycNotifier() : super(const KycDraftState());
 
-  void update(KycDraftState Function(KycDraftState) updater) {
+  void update(KycDraftState Function(KycDraftState current) updater) {
     state = updater(state);
+  }
+
+  void setPhoto(String slot, File? file) {
+    switch (slot) {
+      case 'imei':
+        state = state.copyWith(imeiPhoto: file);
+        break;
+      case 'device_box':
+        state = state.copyWith(deviceBoxPhoto: file);
+        break;
+      case 'device':
+        state = state.copyWith(devicePhoto: file);
+        break;
+      case 'id_front':
+        state = state.copyWith(idFrontPhoto: file);
+        break;
+      case 'id_back':
+        state = state.copyWith(idBackPhoto: file);
+        break;
+      case 'headshot':
+        state = state.copyWith(headshotPhoto: file);
+        break;
+      case 'client_fo':
+        state = state.copyWith(clientFoPhoto: file);
+        break;
+      case 'business':
+        state = state.copyWith(businessPhoto: file);
+        break;
+      case 'handover':
+        state = state.copyWith(assetHandoverList: file);
+        break;
+    }
+  }
+
+  void setSignature(String slot, String dataUrl) {
+    if (slot == 'customer') {
+      state = state.copyWith(customerSignatureData: dataUrl);
+      return;
+    }
+
+    if (slot == 'fo') {
+      state = state.copyWith(foSignatureData: dataUrl);
+    }
+  }
+
+  void clearSignature(String slot) {
+    if (slot == 'customer') {
+      state = state.copyWith(customerSignatureData: '');
+      return;
+    }
+
+    if (slot == 'fo') {
+      state = state.copyWith(foSignatureData: '');
+    }
+  }
+
+  void selectBrand(String brandId) {
+    state = state.copyWith(
+      brandId: brandId,
+      phoneModelId: '',
+      inventoryUnitId: '',
+      inventorySearch: '',
+      deviceSpecs: '',
+      imeiNumber: '',
+      imei2: '',
+      serialNumber: '',
+      cashPrice: '',
+    );
+  }
+
+  void selectModel(DeviceModelOption? model) {
+    if (model == null) {
+      state = state.copyWith(
+        phoneModelId: '',
+        inventoryUnitId: '',
+        deviceSpecs: '',
+        cashPrice: '',
+        imeiNumber: '',
+        imei2: '',
+        serialNumber: '',
+      );
+      return;
+    }
+
+    state = state.copyWith(
+      brandId: model.brandId,
+      phoneModelId: model.id,
+      inventoryUnitId: '',
+      deviceSpecs: model.deviceSpecs,
+      cashPrice: model.retailPrice?.toString() ?? '',
+      imeiNumber: '',
+      imei2: '',
+      serialNumber: '',
+    );
+  }
+
+  void selectInventoryUnit(InventoryUnitOption? unit) {
+    if (unit == null) {
+      state = state.copyWith(
+        inventoryUnitId: '',
+        imeiNumber: '',
+        imei2: '',
+        serialNumber: '',
+      );
+      return;
+    }
+
+    state = state.copyWith(
+      inventoryUnitId: unit.id,
+      deviceSpecs: unit.deviceSpecs,
+      cashPrice: unit.recommendedCashPrice?.toString() ?? state.cashPrice,
+      imeiNumber: unit.imei1,
+      imei2: unit.imei2 ?? '',
+      serialNumber: unit.serialNumber ?? '',
+    );
+  }
+
+  Future<void> loadFinalContext() async {
+    if (!state.hasDraft) {
+      return;
+    }
+
+    try {
+      final res = await ApiClient.instance
+          .get('/kyc/application/${state.customerId}/status');
+      final data = res.data['data'] as Map<String, dynamic>;
+      final payment = data['payment'] is Map<String, dynamic>
+          ? KycPaymentContext.fromJson(data['payment'] as Map<String, dynamic>)
+          : null;
+      final agreement = data['agreement'] is Map<String, dynamic>
+          ? KycAgreementContext.fromJson(
+              data['agreement'] as Map<String, dynamic>)
+          : null;
+      final release = data['release'] is Map<String, dynamic>
+          ? KycReleaseContext.fromJson(data['release'] as Map<String, dynamic>)
+          : null;
+
+      state = state.copyWith(
+        paymentContext: payment,
+        agreementContext: agreement,
+        releaseContext: release,
+        paymentPhone: payment?.phone?.isNotEmpty == true
+            ? _normalizeDisplayPhone(payment!.phone!)
+            : (state.paymentPhone.isNotEmpty
+                ? state.paymentPhone
+                : state.phone),
+      );
+    } catch (_) {
+      // We keep the wizard usable even if the context refresh fails.
+    }
+  }
+
+  Future<bool> requestPaymentPrompt() async {
+    if (!state.hasDraft) {
+      return false;
+    }
+
+    state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+
+    try {
+      final res = await ApiClient.instance
+          .post('/kyc/application/${state.customerId}/payment/request', data: {
+        'payment_phone':
+            state.paymentPhone.isNotEmpty ? state.paymentPhone : state.phone,
+        'payment_phone_country': state.paymentPhoneCountry,
+      });
+      final data = res.data['data'] as Map<String, dynamic>;
+      state = state.copyWith(
+        isSubmitting: false,
+        paymentContext:
+            KycPaymentContext.fromJson(data['payment'] as Map<String, dynamic>),
+        agreementContext: KycAgreementContext.fromJson(
+            data['agreement'] as Map<String, dynamic>),
+        releaseContext:
+            KycReleaseContext.fromJson(data['release'] as Map<String, dynamic>),
+      );
+      return true;
+    } catch (error) {
+      state = state.copyWith(
+        isSubmitting: false,
+        error: ApiClient.instance.parseError(error),
+      );
+      return false;
+    }
+  }
+
+  Future<bool> refreshPaymentStatus() async {
+    if (!state.hasDraft) {
+      return false;
+    }
+
+    state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+
+    try {
+      final res = await ApiClient.instance
+          .get('/kyc/application/${state.customerId}/payment/status');
+      final data = res.data['data'] as Map<String, dynamic>;
+      state = state.copyWith(
+        isSubmitting: false,
+        paymentContext:
+            KycPaymentContext.fromJson(data['payment'] as Map<String, dynamic>),
+        agreementContext: KycAgreementContext.fromJson(
+            data['agreement'] as Map<String, dynamic>),
+        releaseContext:
+            KycReleaseContext.fromJson(data['release'] as Map<String, dynamic>),
+      );
+      return true;
+    } catch (error) {
+      state = state.copyWith(
+        isSubmitting: false,
+        error: ApiClient.instance.parseError(error),
+      );
+      return false;
+    }
   }
 
   Future<bool> submitStep1() async {
     state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+
     try {
+      final accessories = <Map<String, dynamic>>[];
+      if (state.includeScreenProtector) {
+        accessories.add({
+          'code': 'screen_protector',
+          'name': 'Screen Protector',
+          'quantity': 1,
+          'offer_type': 'free',
+        });
+      }
+      if (state.includePhoneCover) {
+        accessories.add({
+          'code': 'phone_cover',
+          'name': 'Phone Cover',
+          'quantity': 1,
+          'offer_type': 'free',
+        });
+      }
+
       final form = FormData.fromMap({
-        'device_specs': state.deviceSpecs,
-        'imei_number': state.imeiNumber,
+        if (state.brandId.isNotEmpty) 'brand_id': state.brandId,
+        if (state.phoneModelId.isNotEmpty) 'phone_model_id': state.phoneModelId,
+        if (state.inventoryUnitId.isNotEmpty)
+          'inventory_unit_id': state.inventoryUnitId,
+        if (state.deviceSpecs.isNotEmpty) 'device_specs': state.deviceSpecs,
+        if (state.imeiNumber.isNotEmpty) 'imei_number': state.imeiNumber,
         if (state.imei2.isNotEmpty) 'imei_2': state.imei2,
         if (state.serialNumber.isNotEmpty) 'serial_number': state.serialNumber,
-        'cash_price': state.cashPrice,
+        if (state.cashPrice.isNotEmpty) 'cash_price': state.cashPrice,
         'deposit_amount': state.depositAmount,
-        'preferred_repayment': state.preferredRepayment,
+        'preferred_repayment': _repaymentForApi(state.preferredRepayment),
+        if (accessories.isNotEmpty) 'accessories': accessories,
+        if (state.storeOfferNotes.isNotEmpty)
+          'store_offer_notes': state.storeOfferNotes,
         if (state.imeiPhoto != null)
-          'imei_photo': await MultipartFile.fromFile(state.imeiPhoto!.path,
-              filename: 'imei.jpg'),
+          'imei_photo': await MultipartFile.fromFile(
+            state.imeiPhoto!.path,
+            filename: 'imei.jpg',
+          ),
         if (state.deviceBoxPhoto != null)
           'device_box_photo': await MultipartFile.fromFile(
-              state.deviceBoxPhoto!.path,
-              filename: 'box.jpg'),
+            state.deviceBoxPhoto!.path,
+            filename: 'box.jpg',
+          ),
         if (state.devicePhoto != null)
-          'device_photo': await MultipartFile.fromFile(state.devicePhoto!.path,
-              filename: 'device.jpg'),
+          'device_photo': await MultipartFile.fromFile(
+            state.devicePhoto!.path,
+            filename: 'device.jpg',
+          ),
       });
-      final res = await ApiClient.instance.postForm(
-          '/kyc/application/step1', form);
-      final customerId =
-          res.data['data']['customer_id']?.toString() ?? '';
+
+      final res =
+          await ApiClient.instance.postForm('/kyc/application/step1', form);
+      final customerId = res.data['data']['customer_id']?.toString() ?? '';
       state = state.copyWith(
-          customerId: customerId,
-          isSubmitting: false,
-          stepSaved: true,
-          currentStep: 2);
+        customerId: customerId,
+        isSubmitting: false,
+        stepSaved: true,
+        currentStep: 2,
+      );
       await _saveDraft();
       return true;
-    } catch (e) {
+    } catch (error) {
       state = state.copyWith(
-          isSubmitting: false,
-          error: ApiClient.instance.parseError(e));
+        isSubmitting: false,
+        error: ApiClient.instance.parseError(error),
+      );
       return false;
     }
   }
 
   Future<bool> submitStep2() async {
     state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+
     try {
       final id = state.customerId!;
       final form = FormData.fromMap({
@@ -305,42 +673,52 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         'id_type': state.idType,
         if (state.idFrontPhoto != null)
           'id_front_photo': await MultipartFile.fromFile(
-              state.idFrontPhoto!.path,
-              filename: 'id_front.jpg'),
+            state.idFrontPhoto!.path,
+            filename: 'id_front.jpg',
+          ),
         if (state.idBackPhoto != null)
           'id_back_photo': await MultipartFile.fromFile(
-              state.idBackPhoto!.path,
-              filename: 'id_back.jpg'),
+            state.idBackPhoto!.path,
+            filename: 'id_back.jpg',
+          ),
         if (state.headshotPhoto != null)
           'headshot_photo': await MultipartFile.fromFile(
-              state.headshotPhoto!.path,
-              filename: 'headshot.jpg'),
+            state.headshotPhoto!.path,
+            filename: 'headshot.jpg',
+          ),
         if (state.clientFoPhoto != null)
           'client_fo_photo': await MultipartFile.fromFile(
-              state.clientFoPhoto!.path,
-              filename: 'client_fo.jpg'),
+            state.clientFoPhoto!.path,
+            filename: 'client_fo.jpg',
+          ),
       });
-      await ApiClient.instance
-          .postForm('/kyc/application/$id/step2', form);
+      await ApiClient.instance.postForm('/kyc/application/$id/step2', form);
       state = state.copyWith(
-          isSubmitting: false, stepSaved: true, currentStep: 3);
+        isSubmitting: false,
+        stepSaved: true,
+        currentStep: 3,
+      );
       await _saveDraft();
       return true;
-    } catch (e) {
+    } catch (error) {
       state = state.copyWith(
-          isSubmitting: false,
-          error: ApiClient.instance.parseError(e));
+        isSubmitting: false,
+        error: ApiClient.instance.parseError(error),
+      );
       return false;
     }
   }
 
   Future<bool> submitStep3() async {
     state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+
     try {
       final id = state.customerId!;
       await ApiClient.instance.post('/kyc/application/$id/step3', data: {
         'phone': state.phone,
+        'phone_country': state.phoneCountry,
         if (state.altPhone.isNotEmpty) 'alt_phone': state.altPhone,
+        'alt_phone_country': state.altPhoneCountry,
         if (state.email.isNotEmpty) 'email': state.email,
         'branch_id': state.branchId,
         if (state.address.isNotEmpty) 'address': state.address,
@@ -349,19 +727,25 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         if (state.district.isNotEmpty) 'district': state.district,
       });
       state = state.copyWith(
-          isSubmitting: false, stepSaved: true, currentStep: 4);
+        isSubmitting: false,
+        stepSaved: true,
+        currentStep: 4,
+        paymentPhone: state.phone,
+      );
       await _saveDraft();
       return true;
-    } catch (e) {
+    } catch (error) {
       state = state.copyWith(
-          isSubmitting: false,
-          error: ApiClient.instance.parseError(e));
+        isSubmitting: false,
+        error: ApiClient.instance.parseError(error),
+      );
       return false;
     }
   }
 
   Future<bool> submitStep4() async {
     state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+
     try {
       final id = state.customerId!;
       final form = FormData.fromMap({
@@ -376,50 +760,62 @@ class KycNotifier extends StateNotifier<KycDraftState> {
           'duration_at_work': state.durationAtWork,
         if (state.businessPhoto != null)
           'business_photo': await MultipartFile.fromFile(
-              state.businessPhoto!.path,
-              filename: 'business.jpg'),
+            state.businessPhoto!.path,
+            filename: 'business.jpg',
+          ),
       });
-      await ApiClient.instance
-          .postForm('/kyc/application/$id/step4', form);
+      await ApiClient.instance.postForm('/kyc/application/$id/step4', form);
       state = state.copyWith(
-          isSubmitting: false, stepSaved: true, currentStep: 5);
+        isSubmitting: false,
+        stepSaved: true,
+        currentStep: 5,
+      );
       await _saveDraft();
       return true;
-    } catch (e) {
+    } catch (error) {
       state = state.copyWith(
-          isSubmitting: false,
-          error: ApiClient.instance.parseError(e));
+        isSubmitting: false,
+        error: ApiClient.instance.parseError(error),
+      );
       return false;
     }
   }
 
   Future<bool> submitStep5() async {
     state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+
     try {
       final id = state.customerId!;
       await ApiClient.instance.post('/kyc/application/$id/step5', data: {
         'nok_name': state.nokName,
         'nok_phone': state.nokPhone,
+        'nok_phone_country': state.nokPhoneCountry,
         'nok_relationship': state.nokRelationship,
         if (state.nok2Name.isNotEmpty) 'nok2_name': state.nok2Name,
         if (state.nok2Phone.isNotEmpty) 'nok2_phone': state.nok2Phone,
+        'nok2_phone_country': state.nok2PhoneCountry,
         if (state.nok2Relationship.isNotEmpty)
           'nok2_relationship': state.nok2Relationship,
       });
       state = state.copyWith(
-          isSubmitting: false, stepSaved: true, currentStep: 6);
+        isSubmitting: false,
+        stepSaved: true,
+        currentStep: 6,
+      );
       await _saveDraft();
       return true;
-    } catch (e) {
+    } catch (error) {
       state = state.copyWith(
-          isSubmitting: false,
-          error: ApiClient.instance.parseError(e));
+        isSubmitting: false,
+        error: ApiClient.instance.parseError(error),
+      );
       return false;
     }
   }
 
   Future<bool> submitStep6() async {
     state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+
     try {
       final id = state.customerId!;
       await ApiClient.instance.post('/kyc/application/$id/step6', data: {
@@ -428,33 +824,69 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         'call_consent_accepted': state.callConsentAccepted ? '1' : '0',
       });
       state = state.copyWith(
-          isSubmitting: false, stepSaved: true, currentStep: 7);
+        isSubmitting: false,
+        stepSaved: true,
+        currentStep: 7,
+        paymentPhone: state.phone,
+      );
+      await loadFinalContext();
       await _saveDraft();
       return true;
-    } catch (e) {
+    } catch (error) {
       state = state.copyWith(
-          isSubmitting: false,
-          error: ApiClient.instance.parseError(e));
+        isSubmitting: false,
+        error: ApiClient.instance.parseError(error),
+      );
       return false;
     }
   }
 
   Future<Map<String, dynamic>?> submitStep7() async {
     state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+
     try {
       final id = state.customerId!;
-      final res =
-          await ApiClient.instance.post('/kyc/application/$id/step7', data: {
+      final form = FormData.fromMap({
         if (state.foNotes.isNotEmpty) 'fo_notes': state.foNotes,
         'application_source': state.applicationSource,
+        'agreement_decision': state.agreementDecision,
+        'customer_signature': state.customerSignatureData,
+        'fo_signature': state.foSignatureData,
+        'asset_handover_list': await MultipartFile.fromFile(
+          state.assetHandoverList!.path,
+          filename: 'handover.${state.assetHandoverList!.path.split('.').last}',
+        ),
+        if (state.assetHandoverNotes.isNotEmpty)
+          'asset_handover_notes': state.assetHandoverNotes,
       });
-      state = state.copyWith(isSubmitting: false, stepSaved: true);
+
+      final res = await ApiClient.instance.postForm(
+        '/kyc/application/$id/step7',
+        form,
+      );
+      state = state.copyWith(
+        isSubmitting: false,
+        stepSaved: true,
+        paymentContext: res.data['data']['payment'] is Map<String, dynamic>
+            ? KycPaymentContext.fromJson(
+                res.data['data']['payment'] as Map<String, dynamic>)
+            : state.paymentContext,
+        agreementContext: res.data['data']['agreement'] is Map<String, dynamic>
+            ? KycAgreementContext.fromJson(
+                res.data['data']['agreement'] as Map<String, dynamic>)
+            : state.agreementContext,
+        releaseContext: res.data['data']['release'] is Map<String, dynamic>
+            ? KycReleaseContext.fromJson(
+                res.data['data']['release'] as Map<String, dynamic>)
+            : state.releaseContext,
+      );
       await _clearDraft();
       return res.data['data'] as Map<String, dynamic>;
-    } catch (e) {
+    } catch (error) {
       state = state.copyWith(
-          isSubmitting: false,
-          error: ApiClient.instance.parseError(e));
+        isSubmitting: false,
+        error: ApiClient.instance.parseError(error),
+      );
       return null;
     }
   }
@@ -462,11 +894,19 @@ class KycNotifier extends StateNotifier<KycDraftState> {
   Future<void> _saveDraft() async {
     final prefs = await SharedPreferences.getInstance();
     final key = '${AppConstants.draftPrefix}${state.customerId}';
-    await prefs.setString(key, jsonEncode({'customer_id': state.customerId, 'step': state.currentStep}));
+    await prefs.setString(
+      key,
+      jsonEncode({
+        'customer_id': state.customerId,
+        'step': state.currentStep,
+      }),
+    );
   }
 
   Future<void> _clearDraft() async {
-    if (state.customerId == null) return;
+    if (state.customerId == null) {
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('${AppConstants.draftPrefix}${state.customerId}');
   }
@@ -474,7 +914,88 @@ class KycNotifier extends StateNotifier<KycDraftState> {
   void reset() {
     state = const KycDraftState();
   }
+
+  String _repaymentForApi(String raw) {
+    switch (raw) {
+      case 'bi-weekly':
+        return 'biweekly';
+      case 'weekly':
+      case 'monthly':
+        return raw;
+      default:
+        return 'weekly';
+    }
+  }
+
+  String _normalizeDisplayPhone(String raw) {
+    if (raw.startsWith('255') && raw.length >= 12) {
+      return '+${raw.substring(0, 3)} ${raw.substring(3, 6)} ${raw.substring(6, 9)} ${raw.substring(9)}';
+    }
+    return raw;
+  }
 }
+
+final phoneCountriesProvider =
+    FutureProvider<List<PhoneCountryOption>>((ref) async {
+  final res = await ApiClient.instance.get('/kyc/application/phone-countries');
+  final data = res.data['data'] as List<dynamic>;
+  return data
+      .map((item) => PhoneCountryOption.fromJson(item as Map<String, dynamic>))
+      .toList();
+});
+
+final deviceBrandsProvider =
+    FutureProvider<List<DeviceBrandOption>>((ref) async {
+  final res = await ApiClient.instance.get('/kyc/application/device/brands');
+  final data = res.data['data'] as List<dynamic>;
+  return data
+      .map((item) => DeviceBrandOption.fromJson(item as Map<String, dynamic>))
+      .toList();
+});
+
+final deviceModelsProvider =
+    FutureProvider.family<List<DeviceModelOption>, String>(
+        (ref, brandId) async {
+  if (brandId.isEmpty) {
+    return [];
+  }
+
+  final res = await ApiClient.instance.get(
+    '/kyc/application/device/models',
+    queryParameters: {'brand_id': brandId},
+  );
+  final data = res.data['data'] as List<dynamic>;
+  return data
+      .map((item) => DeviceModelOption.fromJson(item as Map<String, dynamic>))
+      .toList();
+});
+
+final inventoryUnitsProvider = FutureProvider.family<List<InventoryUnitOption>,
+    ({String phoneModelId, String search})>((ref, args) async {
+  if (args.phoneModelId.isEmpty) {
+    return [];
+  }
+
+  final res = await ApiClient.instance.get(
+    '/kyc/application/device/inventory',
+    queryParameters: {
+      'phone_model_id': args.phoneModelId,
+      if (args.search.trim().isNotEmpty) 'search': args.search.trim(),
+    },
+  );
+  final data = res.data['data'] as List<dynamic>;
+  return data
+      .map((item) => InventoryUnitOption.fromJson(item as Map<String, dynamic>))
+      .toList();
+});
+
+final branchesProvider = FutureProvider<List<BranchModel>>((ref) async {
+  final res = await ApiClient.instance.get('/kyc/branches');
+  final list = res.data['data'] as List<dynamic>;
+  return list
+      .map((item) => BranchModel.fromJson(item as Map<String, dynamic>))
+      .toList();
+});
 
 final kycProvider = StateNotifierProvider<KycNotifier, KycDraftState>(
   (ref) => KycNotifier(),

@@ -12,9 +12,12 @@
 
     {{-- ── Header ── --}}
     <div class="mb-4 flex items-center justify-between">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="chart-bar-square" size="lg" />
+            <div>
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Executive Dashboard</h1>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Live credit portfolio intelligence &amp; market velocity.</p>
+            </div>
         </div>
         <div class="flex items-center gap-3">
             <span class="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-800">
@@ -42,7 +45,7 @@
         @foreach($actions as $action)
         <a href="{{ $action['href'] }}" wire:navigate
            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all {{ $action['color'] }}">
-            <flux:icon name="{{ $action['icon'] }}" class="size-4" />
+            <x-fluent-icon :name="$action['icon']" size="xs" />
             {{ $action['label'] }}
         </a>
         @endforeach
@@ -52,9 +55,7 @@
     @if($readyToLoad && $overdueCount > 0)
     <div class="mb-5 flex items-center justify-between bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-2xl px-5 py-3.5">
         <div class="flex items-center gap-3">
-            <div class="p-2 rounded-lg bg-red-100 dark:bg-red-900/40 flex-shrink-0">
-                <flux:icon name="exclamation-triangle" class="size-5 text-red-600 dark:text-red-400" />
-            </div>
+            <x-fluent-icon name="exclamation-triangle" palette="rose" />
             <div>
                 <p class="font-bold text-red-700 dark:text-red-400 text-sm">
                     {{ number_format($overdueCount) }} {{ Str::plural('loan', $overdueCount) }} overdue or in default
@@ -76,9 +77,7 @@
         <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-orange-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-white/20">
-                    <flux:icon name="banknotes" class="size-5" />
-                </div>
+                <x-fluent-icon name="banknotes" palette="amber" size="sm" />
                 <span class="text-xs font-semibold text-orange-100 uppercase tracking-wider">Portfolio</span>
             </div>
             @if($readyToLoad)
@@ -93,9 +92,7 @@
         {{-- Collection Rate --}}
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-                    <flux:icon name="arrow-trending-up" class="size-5 text-emerald-600 dark:text-emerald-400" />
-                </div>
+                <x-fluent-icon name="arrow-trending-up" palette="emerald" size="sm" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Collection Rate</span>
             </div>
             @if($readyToLoad)
@@ -110,9 +107,7 @@
         {{-- PAR > 30 --}}
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/30">
-                    <flux:icon name="exclamation-triangle" class="size-5 text-rose-600 dark:text-rose-400" />
-                </div>
+                <x-fluent-icon name="exclamation-triangle" palette="rose" size="sm" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">PAR &gt; 30</span>
             </div>
             @if($readyToLoad)
@@ -127,9 +122,7 @@
         {{-- Active Devices --}}
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/30">
-                    <flux:icon name="device-phone-mobile" class="size-5 text-orange-500 dark:text-orange-400" />
-                </div>
+                <x-fluent-icon name="device-phone-mobile" palette="sky" size="sm" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active Devices</span>
             </div>
             @if($readyToLoad)
@@ -157,9 +150,7 @@
         @foreach($secKpis as $k)
         <a href="{{ $k['href'] }}" wire:navigate
            class="group bg-white dark:bg-zinc-900 rounded-xl border {{ isset($k['alert']) && $k['alert'] ? 'border-red-200 dark:border-red-800' : 'border-gray-100 dark:border-zinc-800' }} p-4 flex items-center gap-3 shadow-sm hover:shadow-md transition-all">
-            <div class="p-2 rounded-lg {{ $k['bg'] }} flex-shrink-0">
-                <flux:icon name="{{ $k['icon'] }}" class="size-4 {{ $k['ic'] }}" />
-            </div>
+            <x-fluent-icon :name="$k['icon']" size="sm" class="flex-shrink-0" />
             <div class="min-w-0">
                 <p class="text-[10px] text-gray-400 truncate uppercase tracking-wider">{{ $k['label'] }}</p>
                 @if($readyToLoad)

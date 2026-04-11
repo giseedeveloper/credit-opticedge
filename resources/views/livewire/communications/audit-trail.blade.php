@@ -12,12 +12,15 @@
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="shield-check" size="lg" palette="slate" />
+            <div>
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Audit Trail</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Every system action — who did what, and when</p>
+            </div>
         </div>
         <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800">
-            <flux:icon name="shield-check" class="size-4 text-slate-500" />
+            <x-fluent-icon name="shield-check" size="xs" palette="slate" />
             <span class="text-sm font-bold text-slate-600 dark:text-slate-400">{{ number_format($stats['total']) }} total entries</span>
         </div>
     </div>
@@ -27,7 +30,7 @@
         <div class="bg-gradient-to-br from-slate-700 to-gray-800 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-slate-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-white/20"><flux:icon name="shield-check" class="size-4" /></div>
+                <x-fluent-icon name="shield-check" size="sm" palette="slate" />
                 <span class="text-xs font-semibold text-white/80 uppercase tracking-wider">All Time</span>
             </div>
             <p class="text-3xl font-black">{{ number_format($stats['total']) }}</p>
@@ -35,7 +38,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600"><flux:icon name="sun" class="size-4" /></div>
+                <x-fluent-icon name="sun" size="sm" palette="amber" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Today</span>
             </div>
             <p class="text-2xl font-black text-gray-900 dark:text-white">{{ number_format($stats['today']) }}</p>
@@ -43,7 +46,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900/30 text-sky-600"><flux:icon name="calendar-days" class="size-4" /></div>
+                <x-fluent-icon name="calendar-days" size="sm" palette="blue" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">This Week</span>
             </div>
             <p class="text-2xl font-black text-gray-900 dark:text-white">{{ number_format($stats['this_week']) }}</p>
@@ -51,7 +54,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-orange-500"><flux:icon name="users" class="size-4" /></div>
+                <x-fluent-icon name="users" size="sm" palette="sky" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active Users</span>
             </div>
             <p class="text-2xl font-black text-gray-900 dark:text-white">{{ number_format($stats['unique_users']) }}</p>

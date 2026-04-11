@@ -12,7 +12,9 @@
 
     {{-- ── Header ──────────────────────────────────────────────────── --}}
     <div class="mb-6 flex items-start justify-between">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="heart" size="lg" palette="rose" />
+            <div>
             <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">System Health</h1>
             <p class="mt-1 text-sm text-gray-400">
                 Real-time infrastructure, services, and application diagnostics
@@ -20,6 +22,7 @@
                     &mdash; Last refreshed: <span class="font-medium text-gray-500">{{ $lastRefreshed }}</span>
                 @endif
             </p>
+            </div>
         </div>
         <button wire:click="refresh" wire:loading.attr="disabled"
                 class="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-xl shadow-sm transition-colors">
@@ -47,9 +50,7 @@
         @endphp
         @foreach($kpis as $kpi)
         <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm p-5 flex items-center gap-4">
-            <div class="p-3 rounded-xl {{ $colorMap[$kpi['color']] }} shrink-0">
-                <flux:icon name="{{ $kpi['icon'] }}" class="w-5 h-5" />
-            </div>
+            <x-fluent-icon :name="$kpi['icon']" size="md" class="shrink-0" />
             <div>
                 <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">{{ $kpi['label'] }}</p>
                 <p class="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{{ number_format($kpi['value']) }}</p>
@@ -109,6 +110,13 @@
                         'ok'     => $beemConfigured,
                         'label'  => $beemConfigured ? 'Ready' : 'Not Set',
                         'icon'   => 'chat-bubble-bottom-center-text',
+                    ],
+                    [
+                        'name'   => 'Selcom Checkout',
+                        'detail' => $selcomStatus.' — Vendor: '.$selcomVendor,
+                        'ok'     => $selcomConfigured,
+                        'label'  => $selcomConfigured ? 'Ready' : 'Not Set',
+                        'icon'   => 'device-phone-mobile',
                     ],
                 ];
                 @endphp
@@ -190,6 +198,56 @@
                     <div class="h-1.5 rounded-full transition-all {{ $diskUsedPct > 85 ? 'bg-red-500' : ($diskUsedPct > 65 ? 'bg-yellow-400' : 'bg-teal-500') }}"
                          style="width: {{ $diskUsedPct }}%"></div>
                 </div>
+            </div>
+
+            {{-- Customer Agreement --}}
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm p-6">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h3 class="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-wider">Customer Agreement PDF</h3>
+                        <p class="mt-1 text-xs text-gray-400">This is the contract FO will show after deposit payment succeeds inside the KYC wizard.</p>
+                    </div>
+                    @if($activeAgreementDocument)
+                    <a href="{{ \Illuminate\Support\Facades\Storage::disk($activeAgreementDocument->disk)->url($activeAgreementDocument->path) }}"
+                       target="_blank"
+                       class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800">
+                        <flux:icon name="document-text" class="size-4" />
+                        View PDF
+                    </a>
+                    @endif
+                </div>
+
+                @if($activeAgreementDocument)
+                <div class="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4 dark:border-emerald-900/30 dark:bg-emerald-900/10">
+                    <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-300">Active Template</p>
+                    <p class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{{ $activeAgreementDocument->metadata['original_name'] ?? $activeAgreementDocument->title }}</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Uploaded {{ $activeAgreementDocument->created_at?->format('d M Y, H:i') ?? '—' }}
+                        @if($activeAgreementDocument->uploadedBy)
+                            by {{ $activeAgreementDocument->uploadedBy->name }}
+                        @endif
+                    </p>
+                </div>
+                @else
+                <div class="mt-4 rounded-2xl border border-dashed border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/10 dark:text-amber-300">
+                    No active agreement PDF uploaded yet. FO will not be able to present a contract in the KYC wizard until one is uploaded.
+                </div>
+                @endif
+
+                @if(auth()->user()->hasAnyRole(['admin', 'owner']))
+                <div class="mt-4 rounded-2xl border border-gray-100 bg-gray-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Upload New Agreement PDF</label>
+                    <input wire:model="customerAgreementUpload" type="file" accept="application/pdf"
+                        class="block w-full rounded-lg border border-gray-200 p-1 text-xs text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-orange-50 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-orange-700 hover:file:bg-orange-100 dark:border-zinc-700" />
+                    @error('customerAgreementUpload') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                    <div wire:loading wire:target="customerAgreementUpload" class="mt-1 text-[10px] text-gray-400">Uploading document…</div>
+                    <button wire:click="uploadCustomerAgreement" wire:loading.attr="disabled"
+                        class="mt-3 inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-600 disabled:opacity-60">
+                        <flux:icon name="arrow-up-tray" class="size-4" />
+                        Save Agreement
+                    </button>
+                </div>
+                @endif
             </div>
         </div>
     </div>

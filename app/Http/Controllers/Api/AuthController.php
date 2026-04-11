@@ -72,6 +72,17 @@ class AuthController extends Controller
             ]);
         }
 
+        if (! $user->is_active) {
+            RateLimiter::hit($rateLimitKey, 60);
+
+            activity('security')
+                ->performedOn($user)
+                ->withProperties(['ip' => $ip, 'identifier' => $request->login_identifier])
+                ->log('Blocked inactive API login attempt.');
+
+            return $this->errorResponse('Your account has been deactivated. Contact your administrator.', 403);
+        }
+
         RateLimiter::clear($rateLimitKey);
 
         $tokenName = $request->header('User-Agent', 'mobile-app');
@@ -84,7 +95,12 @@ class AuthController extends Controller
             ->log('Successful API Login via API Token Generation.');
 
         return $this->successResponse([
-            'user' => $user->only(['id', 'name', 'email', 'role']),
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->primaryRoleName() ?? $user->role,
+            ],
             'token' => $token,
         ], 'Login successful');
     }
@@ -98,6 +114,7 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user()->load('branch');
+        $primaryRole = $user->primaryRoleName() ?? $user->role;
 
         $canRegister = $user->canAccess('loans.create');
 
@@ -106,7 +123,7 @@ class AuthController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
-            'role' => $user->role,
+            'role' => $primaryRole,
             'roles' => $user->getRoleNames(),
             'branch' => $user->branch ? [
                 'id' => $user->branch->id,

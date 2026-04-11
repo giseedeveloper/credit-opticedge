@@ -16,12 +16,10 @@ class ComplianceApiController extends Controller
      */
     public function report(FinancialComplianceService $complianceEngine): JsonResponse
     {
-        // Triggers the mathematical raw updates on active loans
         $complianceEngine->calculateProvisioning();
 
-        // Outputs aggregated financial risk arrays for banking stakeholders
         $eclMatrix = $complianceEngine->generateECLReport();
 
-        return $this->successResponse($eclMatrix, "IFRS 9 Provisioning data successfully matrixed.");
+        return $this->successResponse($eclMatrix, 'IFRS 9 Provisioning data successfully matrixed.');
     }
 }

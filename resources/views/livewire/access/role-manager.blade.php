@@ -68,18 +68,19 @@
 
     {{-- ── Page Header & Stats ────────────────────────────────────── --}}
     <div class="flex items-center justify-between mb-5">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="key" size="lg" palette="violet" />
+            <div>
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Roles & Permissions</h1>
             <p class="text-sm text-gray-400 mt-0.5">Define roles, configure module-level access, and assign users</p>
+            </div>
         </div>
     </div>
     <div class="grid grid-cols-3 gap-4 mb-5">
         <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-white/20">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
-                </div>
+                <x-fluent-icon name="shield-check" size="sm" />
                 <span class="text-xs font-semibold text-white/80 uppercase tracking-wider">Roles</span>
             </div>
             <p class="text-3xl font-black">{{ number_format($stats['roles']) }}</p>

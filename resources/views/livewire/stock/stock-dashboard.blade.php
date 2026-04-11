@@ -12,9 +12,12 @@
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="archive-box" size="lg" palette="sky" />
+            <div>
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-white">Stock Manager</h1>
             <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">Real-time inventory across HQ and all vendors</p>
+            </div>
         </div>
         <div class="flex gap-2">
             <flux:button wire:click="$set('showImportModal', true)" variant="ghost" size="sm" icon="arrow-up-tray">
@@ -43,9 +46,7 @@
                     class="rounded-2xl bg-gradient-to-br {{ $card['color'] }} p-4 text-white shadow-md hover:shadow-lg hover:scale-[1.02] transition-all text-left">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-[10px] font-semibold text-white/70 uppercase tracking-wider">{{ $card['label'] }}</span>
-                    <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
-                        <flux:icon :name="$card['icon']" class="size-3.5 text-white" />
-                    </div>
+                    <x-fluent-icon :name="$card['icon']" size="xs" />
                 </div>
                 <div class="text-2xl font-bold">{{ number_format($summary[$card['key']] ?? 0) }}</div>
                 <div class="mt-0.5 text-[10px] text-white/60">units</div>

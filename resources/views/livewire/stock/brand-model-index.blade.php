@@ -12,9 +12,12 @@
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="building-storefront" size="lg" palette="amber" />
+            <div>
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-white">Brands &amp; Models</h1>
             <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">Manage device catalog</p>
+            </div>
         </div>
         <div class="flex gap-2">
             @can('products.create')
@@ -31,9 +34,7 @@
         <div class="bg-gradient-to-br from-[#2563eb] to-[#2563eb] rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-white/20">
-                    <flux:icon name="building-storefront" class="size-5" />
-                </div>
+                <x-fluent-icon name="building-storefront" size="sm" />
                 <span class="text-xs font-semibold text-blue-200 uppercase tracking-wider">Total Brands</span>
             </div>
             <p class="text-3xl font-black">{{ number_format($stats['total_brands']) }}</p>
@@ -43,9 +44,7 @@
         {{-- Total Models --}}
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                    <flux:icon name="squares-2x2" class="size-5 text-orange-500 dark:text-blue-400" />
-                </div>
+                <x-fluent-icon name="squares-2x2" size="sm" palette="violet" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Models</span>
             </div>
             <p class="text-3xl font-black text-gray-900 dark:text-white">{{ number_format($stats['total_models']) }}</p>
@@ -55,9 +54,7 @@
         {{-- Active Models --}}
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-teal-100 dark:bg-teal-900/30">
-                    <flux:icon name="check-circle" class="size-5 text-teal-600 dark:text-teal-400" />
-                </div>
+                <x-fluent-icon name="check-circle" size="sm" palette="emerald" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active Models</span>
             </div>
             <p class="text-3xl font-black text-gray-900 dark:text-white">{{ number_format($stats['active_models']) }}</p>
@@ -67,9 +64,7 @@
         {{-- Total Units --}}
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900/30">
-                    <flux:icon name="device-phone-mobile" class="size-5 text-sky-600 dark:text-sky-400" />
-                </div>
+                <x-fluent-icon name="device-phone-mobile" size="sm" palette="sky" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Units</span>
             </div>
             <p class="text-3xl font-black text-gray-900 dark:text-white">{{ number_format($stats['total_units']) }}</p>

@@ -292,9 +292,12 @@
 
     {{-- ── Page Header ──────────────────────────────────────────────── --}}
     <div class="flex items-start justify-between mb-6">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="banknotes" size="lg" palette="emerald" />
+            <div>
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Accounting Workspace</h1>
             <p class="text-sm text-gray-400 mt-0.5 max-w-xl">Balance sheets, journals, and reconciliation insights presented with the same polish as your main dashboard.</p>
+            </div>
         </div>
         @if($activeTab === 'journal')
         @can('accounting.create')

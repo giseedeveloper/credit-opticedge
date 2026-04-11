@@ -12,12 +12,15 @@
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="banknotes" size="lg" palette="emerald" />
+            <div>
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Daily Collections</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                 Payment intake for <strong class="text-gray-700 dark:text-gray-300">{{ now()->parse($date)->format('d M Y') }}</strong>
                 · {{ number_format($summary['count']) }} {{ Str::plural('transaction', $summary['count']) }}
             </p>
+            </div>
         </div>
         <button wire:click="openPaymentModal"
                 class="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-emerald-900/20 hover:from-emerald-700 hover:to-teal-700 transition-all">

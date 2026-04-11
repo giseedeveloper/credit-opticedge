@@ -38,9 +38,9 @@ class RoleManager extends Component
 
     public string $userSearch = '';
 
-    public bool    $showUserDetail  = false;
+    public bool $showUserDetail = false;
 
-    public ?string $detailUserId    = null;
+    public ?string $detailUserId = null;
 
     public $modules = [
         'Dashboard', 'Accounting', 'SMS Campaign', 'Payment analytics', 'Loans',
@@ -57,18 +57,21 @@ class RoleManager extends Component
         $this->loadRoles();
     }
 
-    public function updatedUserSearch(): void { $this->resetPage(); }
+    public function updatedUserSearch(): void
+    {
+        $this->resetPage();
+    }
 
     public function openUserDetail(string $id): void
     {
-        $this->detailUserId   = $id;
+        $this->detailUserId = $id;
         $this->showUserDetail = true;
     }
 
     public function closeUserDetail(): void
     {
         $this->showUserDetail = false;
-        $this->detailUserId   = null;
+        $this->detailUserId = null;
     }
 
     public function getDetailUserProperty(): ?User
@@ -273,6 +276,7 @@ class RoleManager extends Component
 
         $user = User::findOrFail($userId);
         $user->syncRoles([$this->selectedRole->name]);
+        $user->syncRoleColumn($this->selectedRole->name);
 
         activity('security')
             ->performedOn($user)
@@ -289,6 +293,7 @@ class RoleManager extends Component
 
         $user = User::findOrFail($userId);
         $user->removeRole($this->selectedRole->name);
+        $user->syncRoleColumn();
 
         activity('security')
             ->performedOn($user)
@@ -318,9 +323,9 @@ class RoleManager extends Component
         }
 
         $stats = [
-            'roles'       => Role::count(),
-            'permissions' => \App\Models\Permission::count(),
-            'users'       => User::whereHas('roles')->count(),
+            'roles' => Role::count(),
+            'permissions' => Permission::count(),
+            'users' => User::whereHas('roles')->count(),
         ];
 
         return view('livewire.access.role-manager', compact('users', 'roleUsers', 'stats'))

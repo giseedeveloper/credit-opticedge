@@ -11,9 +11,12 @@
     </div>
 
     {{-- Header --}}
-    <div>
-        <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Payment Schedules</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Installment breakdown per loan — track what's due, paid, and overdue</p>
+    <div class="flex items-start gap-4">
+        <x-fluent-icon name="calendar-days" size="lg" palette="blue" />
+        <div>
+            <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Payment Schedules</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Installment breakdown per loan — track what's due, paid, and overdue</p>
+        </div>
     </div>
 
     {{-- Stats Bar --}}
@@ -21,7 +24,7 @@
         <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-white/20"><flux:icon name="calendar-days" class="size-4" /></div>
+                <x-fluent-icon name="calendar-days" size="sm" />
                 <span class="text-xs font-semibold text-white/80 uppercase tracking-wider">Due This Week</span>
             </div>
             <p class="text-3xl font-black">{{ number_format($stats['due_this_week']) }}</p>
@@ -29,7 +32,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600"><flux:icon name="exclamation-triangle" class="size-4" /></div>
+                <x-fluent-icon name="exclamation-triangle" size="sm" palette="rose" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Overdue</span>
             </div>
             <p class="text-2xl font-black text-gray-900 dark:text-white">{{ number_format($stats['overdue_count']) }}</p>
@@ -37,7 +40,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600"><flux:icon name="banknotes" class="size-4" /></div>
+                <x-fluent-icon name="banknotes" size="sm" palette="emerald" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Collected ({{ now()->format('M') }})</span>
             </div>
             <p class="text-xl font-black text-gray-900 dark:text-white">TZS {{ number_format($stats['collected_month'], 0) }}</p>
@@ -45,7 +48,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900/30 text-sky-600"><flux:icon name="document-text" class="size-4" /></div>
+                <x-fluent-icon name="document-text" size="sm" palette="blue" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active Loans</span>
             </div>
             <p class="text-2xl font-black text-gray-900 dark:text-white">{{ number_format($stats['active_loans']) }}</p>

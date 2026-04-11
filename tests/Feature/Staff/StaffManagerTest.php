@@ -1,6 +1,8 @@
 <?php
 
 use App\Livewire\Staff\StaffManager;
+use App\Models\Branch;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Livewire\Livewire;
@@ -12,7 +14,7 @@ beforeEach(function () {
 
     foreach (['staff.view', 'staff.create', 'staff.edit'] as $perm) {
         $this->admin->givePermissionTo(
-            \App\Models\Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web'])
+            Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web'])
         );
     }
 });
@@ -30,8 +32,16 @@ test('admin can view the staff management page', function () {
     $this->actingAs($this->admin)->get(route('staff.index'))->assertOk();
 });
 
+test('can open add staff modal without rendering errors', function () {
+    Livewire::actingAs($this->admin)
+        ->test(StaffManager::class)
+        ->call('openCreateModal')
+        ->assertSet('showCreateModal', true);
+});
+
 test('can create a new staff member', function () {
-    $role = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'web']);
+    Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'web']);
+    $branch = Branch::factory()->create();
 
     Livewire::actingAs($this->admin)
         ->test(StaffManager::class)
@@ -39,17 +49,23 @@ test('can create a new staff member', function () {
         ->set('newEmail', 'jane@example.com')
         ->set('newPassword', 'password123')
         ->set('newRole', 'manager')
+        ->set('newBranchId', $branch->id)
+        ->set('newJoinedAt', '2026-01-15')
         ->call('createStaff')
         ->assertDispatched('toast');
 
     $user = User::where('email', 'jane@example.com')->first();
     expect($user)->not->toBeNull();
     expect($user->hasRole('manager'))->toBeTrue();
+    expect($user->role)->toBe('manager');
+    expect($user->branch_id)->toBe($branch->id);
+    expect($user->joined_at?->toDateString())->toBe('2026-01-15');
+    expect($user->employee_code)->not->toBeNull();
     expect($user->is_active)->toBeTrue();
 });
 
 test('create staff validates email uniqueness', function () {
-    $existing = User::factory()->create(['email' => 'duplicate@example.com']);
+    User::factory()->create(['email' => 'duplicate@example.com']);
 
     Livewire::actingAs($this->admin)
         ->test(StaffManager::class)
@@ -57,25 +73,33 @@ test('create staff validates email uniqueness', function () {
         ->set('newEmail', 'duplicate@example.com')
         ->set('newPassword', 'password123')
         ->set('newRole', 'admin')
+        ->set('newJoinedAt', '2026-01-15')
         ->call('createStaff')
         ->assertHasErrors(['newEmail' => 'unique']);
 });
 
 test('can edit staff name and role', function () {
-    $role = Role::firstOrCreate(['name' => 'accountant', 'guard_name' => 'web']);
-    $staff = User::factory()->create(['name' => 'Old Name', 'is_active' => true]);
+    Role::firstOrCreate(['name' => 'accountant', 'guard_name' => 'web']);
+    $branch = Branch::factory()->create();
+    $staff = User::factory()->create(['name' => 'Old Name', 'is_active' => true, 'joined_at' => '2025-01-01']);
     $staff->assignRole('admin');
+    $staff->syncRoleColumn('admin');
 
     Livewire::actingAs($this->admin)
         ->test(StaffManager::class)
         ->call('startEdit', $staff->id)
         ->set('editName', 'New Name')
         ->set('editRole', 'accountant')
+        ->set('editBranchId', $branch->id)
+        ->set('editJoinedAt', '2025-03-01')
         ->call('saveEdit')
         ->assertDispatched('toast');
 
     expect($staff->fresh()->name)->toBe('New Name');
     expect($staff->fresh()->hasRole('accountant'))->toBeTrue();
+    expect($staff->fresh()->role)->toBe('accountant');
+    expect($staff->fresh()->branch_id)->toBe($branch->id);
+    expect($staff->fresh()->joined_at?->toDateString())->toBe('2025-03-01');
 });
 
 test('can deactivate an active staff member', function () {

@@ -15,7 +15,7 @@
         th { background-color: #f9fafb; font-weight: bold; }
         .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #777; border-top: 1px solid #ddd; padding-top: 10px; }
         .page-break { page-break-after: always; }
-        /* Mock Selfie Box */
+        /* Customer photo box */
         .photo-box { width: 100px; height: 100px; border: 1px dashed #2563eb; display: inline-block; vertical-align: top; text-align: center; line-height: 100px; font-size: 10px; color: #999; }
         .sign-area { margin-top: 40px; }
         .sign-line { border-bottom: 1px solid #333; width: 250px; display: inline-block; margin-top: 30px; }
@@ -27,7 +27,7 @@
         <div class="logo-text">Opticedge Credit Limited</div>
         <p>123 Financial District, Dar es Salaam, Tanzania | Tel: +255 700 000 000</p>
         <h2>DEVICE FINANCING & LEASE AGREEMENT</h2>
-        <p>Contract Number: <strong>{{ $loan->id ?? 'XXXX-XXXX-XXXX' }}</strong></p>
+        <p>Contract Number: <strong>{{ $loan->loan_number ?? 'XXXX-XXXX-XXXX' }}</strong></p>
         <p>Date Generated: {{ $dateGenerated }}</p>
     </div>
 
@@ -53,7 +53,7 @@
                 <th>Condition</th>
             </tr>
             <tr>
-                <td>{{ $unit->brandModel->brand->name ?? 'Unknown' }} {{ $unit->brandModel->name ?? 'Model' }}</td>
+                <td>{{ $unit->phoneModel->brand->name ?? 'Unknown' }} {{ $unit->phoneModel->name ?? 'Model' }}</td>
                 <td>{{ $unit->imei_1 ?? 'N/A' }}</td>
                 <td>{{ $unit->imei_2 ?? 'N/A' }}</td>
                 <td>{{ $unit->grading ?? 'Brand New' }}</td>
@@ -63,16 +63,20 @@
 
     <div class="section">
         <h3>3. Commercial Terms & Amortization</h3>
+        @php
+            $totalPayable = $loan->total_payable ?? $loan->total_debt ?? 0;
+            $principalAmount = $loan->principal_amount ?? 0;
+        @endphp
         <table>
             <tr>
                 <td><strong>Capital Financed:</strong></td>
-                <td>TZS {{ number_format($loan->principal_amount ?? 0, 2) }}</td>
+                <td>TZS {{ number_format($principalAmount, 2) }}</td>
                 <td><strong>Total Interest & Fees:</strong></td>
-                <td>TZS {{ number_format(($loan->total_amount_due ?? 0) - ($loan->principal_amount ?? 0), 2) }}</td>
+                <td>TZS {{ number_format($totalPayable - $principalAmount, 2) }}</td>
             </tr>
             <tr>
                 <td><strong>Total Payable:</strong></td>
-                <td>TZS {{ number_format($loan->total_amount_due ?? 0, 2) }}</td>
+                <td>TZS {{ number_format($totalPayable, 2) }}</td>
                 <td><strong>Duration:</strong></td>
                 <td>{{ count($schedules ?? []) }} Installments</td>
             </tr>

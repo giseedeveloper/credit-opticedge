@@ -2,30 +2,32 @@
 
 namespace App\Exports;
 
-use App\Models\Loan;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Illuminate\Support\Facades\DB;
 
 class CollectionsExport implements FromCollection, WithHeadings, WithMapping
 {
-    public function collection()
+    public function collection(): Collection
     {
-        return DB::table('repayment_schedules')
-                 ->join('loans', 'repayment_schedules.loan_id', '=', 'loans.id')
-                 ->join('customers', 'loans.customer_id', '=', 'customers.id')
-                 ->where('repayment_schedules.status', 'paid')
-                 ->select(
-                     'repayment_schedules.paid_date',
-                     'customers.first_name',
-                     'customers.last_name',
-                     'customers.nida_number',
-                     'repayment_schedules.amount_paid',
-                     'repayment_schedules.payment_method'
-                 )
-                 ->orderBy('repayment_schedules.paid_date', 'desc')
-                 ->get();
+        return DB::table('transactions')
+            ->join('loans', 'transactions.loan_id', '=', 'loans.id')
+            ->join('customers', 'transactions.customer_id', '=', 'customers.id')
+            ->where('transactions.type', 'repayment')
+            ->where('transactions.entry_type', 'credit')
+            ->select(
+                'transactions.transacted_at as paid_at',
+                'customers.first_name',
+                'customers.last_name',
+                'customers.nida_number',
+                'transactions.amount',
+                'transactions.channel',
+                'transactions.reference'
+            )
+            ->orderByDesc('transactions.transacted_at')
+            ->get();
     }
 
     public function headings(): array
@@ -36,19 +38,21 @@ class CollectionsExport implements FromCollection, WithHeadings, WithMapping
             'Last Name',
             'NIDA ID',
             'Amount Collected (TZS)',
-            'Remittance Method'
+            'Remittance Method',
+            'Transaction Reference',
         ];
     }
 
     public function map($row): array
     {
         return [
-            $row->paid_date,
+            $row->paid_at,
             $row->first_name,
             $row->last_name,
             $row->nida_number,
-            $row->amount_paid,
-            $row->payment_method,
+            $row->amount,
+            $row->channel,
+            $row->reference,
         ];
     }
 }

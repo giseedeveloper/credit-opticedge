@@ -15,31 +15,34 @@ class RefurbishmentService
     public function processRefurbishment(InventoryUnit $unit, float $partCost, string $grading, string $notes): InventoryUnit
     {
         return DB::transaction(function () use ($unit, $partCost, $grading, $notes) {
-            
-            if (!in_array($unit->status, ['recovered', 'faulty', 'vendor_stock'])) {
-                throw new InvalidArgumentException("Device is not eligible for refurbishment.");
+            if (! in_array($unit->status, ['recovered', 'faulty', 'vendor_stock'])) {
+                throw new InvalidArgumentException('Device is not eligible for refurbishment.');
             }
 
             $costStr = (string) $partCost;
-            
-            // Increment the internal repair cost natively using bcmath concepts
+
             $newRepairCost = bcadd((string) $unit->repair_cost, $costStr, 2);
 
             $unit->update([
                 'grading' => $grading,
                 'repair_cost' => $newRepairCost,
-                'status' => 'available' // Return to pristine rotation logic
+                'status' => 'available',
             ]);
 
-            // Track internal OPEX cost
             Transaction::create([
-                'inventory_unit_id' => $unit->id,
                 'type' => 'operational_cost',
+                'entry_type' => 'debit',
                 'amount' => $costStr,
-                'method' => 'internal',
-                'status' => 'completed',
-                'reference' => 'RFB-' . uniqid(),
+                'channel' => 'internal',
+                'reference' => 'RFB-'.uniqid(),
                 'recorded_by' => auth()->id(),
+                'description' => 'Inventory refurbishment cost',
+                'meta' => [
+                    'inventory_unit_id' => $unit->id,
+                    'grading' => $grading,
+                    'notes' => $notes,
+                ],
+                'transacted_at' => now(),
             ]);
 
             activity('inventory')

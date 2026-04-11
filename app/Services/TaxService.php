@@ -3,39 +3,40 @@
 namespace App\Services;
 
 use App\Models\Transaction;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class TaxService
 {
     /**
-     * Virtual Fiscal Device placeholder for TRA integration
-     * Generating QR Code links for E-FD receipts via SMS
+     * Generate a VFD verification link for the transaction reference.
      */
     public function issueFiscalReceipt(Transaction $transaction): ?string
     {
-        // 1. Prepare XML Payload structurally mapped to TRA specs
-        // 2. Fetch the Bearer/Cert tokens from the VFD box (Middleware)
-        // 3. Post to the VFDS API
-        
         Log::info("TRA Fiscalization Trigger: Proceeding to issue receipt for Transaction {$transaction->reference}");
-        
-        // Placeholder return link
-        return "https://vfd.tra.go.tz/verify/{$transaction->reference}";
+
+        $verifyBaseUrl = rtrim((string) config('services.tra.vfd_verify_base_url', 'https://vfd.tra.go.tz/verify'), '/');
+
+        return $verifyBaseUrl.'/'.urlencode($transaction->reference);
     }
 
     /**
      * Daily collection breakdown per vendor to cross-check Z-Reports
      */
-    public function generateDailyCashierReport(string $vendorId, string $date = null): array
+    public function generateDailyCashierReport(string $vendorId, ?string $date = null): array
     {
         $targetDate = $date ?? today()->toDateString();
 
-        $transactions = Transaction::where('vendor_id', $vendorId)
-            ->whereDate('created_at', $targetDate)
-            ->where('status', 'completed')
+        $transactions = DB::table('transactions')
+            ->join('loans', 'transactions.loan_id', '=', 'loans.id')
+            ->where('loans.vendor_id', $vendorId)
+            ->where('transactions.type', 'repayment')
+            ->where('transactions.entry_type', 'credit')
+            ->whereDate('transactions.transacted_at', $targetDate)
+            ->select('transactions.amount', 'transactions.channel')
             ->get();
 
-        $methods = $transactions->groupBy('method')->map(function ($items) {
+        $methods = $transactions->groupBy(fn ($transaction) => $transaction->channel ?? 'unknown')->map(function ($items) {
             return $items->sum('amount');
         });
 

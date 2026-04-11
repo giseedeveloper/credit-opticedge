@@ -12,13 +12,16 @@
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="shield-check" size="lg" palette="teal" />
+            <div>
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">KYC Vault — Pending</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Customers awaiting identity verification before loan eligibility</p>
+            </div>
         </div>
         <a href="{{ route('kyc.wizard') }}" wire:navigate
            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:opacity-90 transition-opacity shadow-sm">
-            <flux:icon name="user-plus" class="size-4" />
+            <x-fluent-icon name="user-plus" size="xs" palette="emerald" />
             New KYC Wizard
         </a>
     </div>
@@ -44,6 +47,7 @@
                 class="{{ $tabBg }} {{ $tabRing }} rounded-2xl p-4 text-left shadow-sm hover:shadow-md transition-all">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ $sd['label'] }}</span>
+                <x-fluent-icon :name="$sd['icon']" size="xs" class="{{ $isActive ? 'opacity-100' : 'opacity-75' }}" />
                 @if($count > 0)
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-orange-100 text-orange-600">{{ $count }}</span>
                 @endif

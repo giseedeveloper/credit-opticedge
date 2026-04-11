@@ -11,31 +11,36 @@ class WebhookValidationService
     /**
      * Verify if a transaction reference has already been processed.
      */
-    public function validateUniqueReference(string $referenceId, string $method): bool
+    public function validateUniqueReference(string $referenceId): bool
     {
-        return !Transaction::where('reference', $referenceId)
-            ->where('method', $method)
+        return ! Transaction::query()
+            ->where('reference', $referenceId)
+            ->orWhere('external_reference', $referenceId)
             ->exists();
     }
 
     /**
      * Verify the webhook signature to ensure it actually came from the MNO.
-     * Hardcoded for demonstration, but typically uses hash_hmac.
      */
-    public function verifySignature(Request $request, string $providerSecret): bool
+    public function verifySignature(Request $request, ?string $providerSecret): bool
     {
-        // Example logic
-        $signature = $request->header('X-MNO-Signature');
-        
-        if (!$signature) {
+        if (! $providerSecret) {
+            return app()->environment(['local', 'testing']);
+        }
+
+        $signatureHeader = config('services.collections.signature_header', 'X-MNO-Signature');
+        $signature = $request->header($signatureHeader);
+
+        if (! is_string($signature) || trim($signature) === '') {
             return false;
         }
 
-        // $payload = $request->getContent();
-        // $expected = base64_encode(hash_hmac('sha256', $payload, $providerSecret, true));
-        // return hash_equals($expected, $signature);
-        
-        return true; // Placeholder
+        $payload = $request->getContent();
+        $expectedBase64 = base64_encode(hash_hmac('sha256', $payload, $providerSecret, true));
+        $expectedHex = hash_hmac('sha256', $payload, $providerSecret);
+
+        return hash_equals($expectedBase64, trim($signature))
+            || hash_equals($expectedHex, trim($signature));
     }
 
     /**

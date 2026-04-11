@@ -12,9 +12,12 @@
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="arrows-right-left" size="lg" palette="amber" />
+            <div>
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Stock Transfers</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Track device movements between HQ, vendors and branches</p>
+            </div>
         </div>
         @can('devices.create')
         <flux:button variant="primary" wire:click="openCreateModal" icon="plus">New Transfer</flux:button>
@@ -37,9 +40,7 @@
         <div class="bg-gradient-to-br {{ $sd['grad'] }} rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-white/20">
-                    <flux:icon name="{{ $sd['icon'] }}" class="size-5" />
-                </div>
+                <x-fluent-icon :name="$sd['icon']" size="sm" />
                 <span class="text-xs font-semibold text-white/80 uppercase tracking-wider">{{ $sd['label'] }}</span>
             </div>
             <p class="text-3xl font-black">{{ number_format($statCounts[$sd['key']] ?? 0) }}</p>
@@ -48,9 +49,7 @@
         @else
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-gradient-to-br {{ $sd['grad'] }} bg-opacity-10">
-                    <flux:icon name="{{ $sd['icon'] }}" class="size-5 text-white" />
-                </div>
+                <x-fluent-icon :name="$sd['icon']" size="sm" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ $sd['label'] }}</span>
             </div>
             <p class="text-3xl font-black text-gray-900 dark:text-white">{{ number_format($statCounts[$sd['key']] ?? 0) }}</p>

@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\RecoveryApiController;
 use App\Http\Controllers\Api\RefurbishmentApiController;
 use App\Http\Controllers\Api\RoleApiController;
 use App\Http\Controllers\Api\SecurityApiController;
+use App\Http\Controllers\Api\SelcomWebhookController;
 use App\Http\Controllers\Api\StaffApiController;
 use App\Http\Controllers\Api\StockApiController;
 use Illuminate\Support\Facades\Route;
@@ -23,10 +24,13 @@ use Maatwebsite\Excel\Facades\Excel;
 Route::prefix('v1')->group(function () {
 
     // Auth Routes
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:api-login');
 
     // Webhook (unauthenticated because it is server-to-server callback)
-    Route::post('/collection/webhook', [CollectionApiController::class, 'webhook']);
+    Route::post('/collection/webhook', [CollectionApiController::class, 'webhook'])->middleware('throttle:webhooks');
+    Route::post('/payments/selcom/webhook', SelcomWebhookController::class)
+        ->middleware('throttle:webhooks')
+        ->name('api.payments.selcom.webhook');
 
     // Protected Routes (Sanctum)
     Route::middleware('auth:sanctum')->group(function () {
@@ -35,7 +39,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
 
         // KYC — FO Mobile App: dashboard, customers, branches
-        Route::prefix('kyc')->group(function () {
+        Route::prefix('kyc')->middleware('permission:loans.view')->group(function () {
             Route::get('/branches', [KycApiController::class, 'branches']);
             Route::get('/dashboard', [KycApiController::class, 'dashboard']);
             Route::get('/customers', [KycApiController::class, 'myCustomers']);
@@ -46,6 +50,10 @@ Route::prefix('v1')->group(function () {
         Route::prefix('kyc/application')
             ->middleware('permission:loans.create')
             ->group(function () {
+                Route::get('/phone-countries', [KycApiController::class, 'phoneCountries']);
+                Route::get('/device/brands', [KycApiController::class, 'deviceBrands']);
+                Route::get('/device/models', [KycApiController::class, 'deviceModels']);
+                Route::get('/device/inventory', [KycApiController::class, 'deviceInventory']);
                 // Step 1: creates the draft customer, returns customer_id
                 Route::post('/step1', [KycApiController::class, 'step1Device']);
                 // Steps 2-7: enrich the draft using the customer_id from step 1
@@ -59,13 +67,13 @@ Route::prefix('v1')->group(function () {
             });
 
         // Stock Search (Vendor Shop Floor)
-        Route::prefix('stock')->group(function () {
+        Route::prefix('stock')->middleware('permission:devices.view')->group(function () {
             Route::get('/search', [StockApiController::class, 'search']);
             Route::get('/vendor-list', [StockApiController::class, 'vendorStock']);
         });
 
         // Staff / Sales Agent Tracking
-        Route::prefix('staff')->group(function () {
+        Route::prefix('staff')->middleware('permission:staff.view')->group(function () {
             Route::get('/metrics', [StaffApiController::class, 'metrics']);
             Route::get('/commissions', [StaffApiController::class, 'commissions']);
         });
@@ -77,22 +85,22 @@ Route::prefix('v1')->group(function () {
             Route::post('/reconcile/manual', [SecurityApiController::class, 'manualReconciliation']);
         });
 
-        Route::prefix('inventory')->group(function () {
+        Route::prefix('inventory')->middleware('permission:devices.edit')->group(function () {
             Route::post('/refurbish/{unit}', [RefurbishmentApiController::class, 'refurbishDevice']);
         });
 
         // Field Recovery API
-        Route::prefix('recovery')->group(function () {
+        Route::prefix('recovery')->middleware('permission:returned_devices.view')->group(function () {
             Route::get('/tickets', [RecoveryApiController::class, 'fieldTickets']);
         });
 
         // Finance & Early Settlement
-        Route::prefix('finance')->group(function () {
+        Route::prefix('finance')->middleware('permission:loans.view')->group(function () {
             Route::get('/settlement-quote/{loanId}', [FinanceApiController::class, 'settlementQuote']);
         });
 
         // Geo-Spatial Analytics & Profitability
-        Route::prefix('analytics')->group(function () {
+        Route::prefix('analytics')->middleware('permission:reports.view')->group(function () {
             Route::get('/risk-map', [AnalyticsApiController::class, 'riskMap']);
             Route::get('/roi-analysis', [AnalyticsApiController::class, 'profitabilityAnalysis']);
         });
@@ -115,7 +123,7 @@ Route::prefix('v1')->group(function () {
         });
 
         // Fraud & KYC Intelligence
-        Route::prefix('fraud')->group(function () {
+        Route::prefix('fraud')->middleware('permission:loans.view')->group(function () {
             Route::get('/alerts/{customer}', [FraudApiController::class, 'scanApplication']);
         });
 

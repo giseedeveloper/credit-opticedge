@@ -13,20 +13,20 @@ use Livewire\Component;
 #[Title('Secure Console - Login')]
 class Login extends Component
 {
-    public string $method            = 'email';
+    public string $method = 'email';
 
-    public string $login_identifier  = '';
+    public string $login_identifier = '';
 
-    public string $password          = '';
+    public string $password = '';
 
-    public bool   $showPassword      = false;
+    public bool $showPassword = false;
 
-    public bool   $remember          = false;
+    public bool $remember = false;
 
     public function mount()
     {
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            return redirect()->route(Auth::user()->firstAccessibleRouteName());
         }
     }
 
@@ -78,6 +78,15 @@ class Login extends Component
         }
 
         if (Auth::attempt([$field => $loginId, 'password' => $this->password])) {
+            if (! Auth::user()->is_active) {
+                RateLimiter::hit($rateLimitKey, 60);
+                Auth::logout();
+
+                throw ValidationException::withMessages([
+                    'login_identifier' => 'Your account has been deactivated. Contact your administrator.',
+                ]);
+            }
+
             RateLimiter::clear($rateLimitKey);
 
             activity('security')
@@ -88,7 +97,7 @@ class Login extends Component
 
             session()->regenerate();
 
-            return redirect()->route('dashboard');
+            return redirect()->route(Auth::user()->firstAccessibleRouteName());
         }
 
         RateLimiter::hit($rateLimitKey, 60);

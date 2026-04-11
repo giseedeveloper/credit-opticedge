@@ -3,19 +3,21 @@
 namespace App\Services;
 
 use App\Models\InventoryUnit;
-use App\Models\RepaymentSchedule;
 use App\Models\RecoveryTicket;
+use App\Models\RepaymentSchedule;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 class DeviceLockingService
 {
     /**
-     * Lock device via MDM (Samsung Knox/Google Device Lock Placeholder).
+     * Lock device via the configured MDM driver.
      */
     public function lockDevice(InventoryUnit $unit, string $reason): bool
     {
-        if (!$unit->mdm_id) {
+        if (! $unit->mdm_id) {
             Log::warning("Cannot lock device {$unit->imei_1}. No MDM ID associated.");
+
             return false;
         }
 
@@ -23,8 +25,7 @@ class DeviceLockingService
             return true;
         }
 
-        // Placeholder for MDM API Call (e.g. POST /knox/v1/devices/{id}/lock)
-        Log::info("MDM API: Locking device {$unit->mdm_id} for reason: {$reason}");
+        $this->sendMdmCommand('lock', $unit, $reason);
 
         $unit->update(['lock_status' => 'locked']);
 
@@ -41,12 +42,11 @@ class DeviceLockingService
      */
     public function unlockDevice(InventoryUnit $unit, string $reason): bool
     {
-        if (!$unit->mdm_id || $unit->lock_status === 'unlocked') {
+        if (! $unit->mdm_id || $unit->lock_status === 'unlocked') {
             return false;
         }
 
-        // Placeholder for MDM API Call
-        Log::info("MDM API: Unlocking device {$unit->mdm_id} for reason: {$reason}");
+        $this->sendMdmCommand('unlock', $unit, $reason);
 
         $unit->update(['lock_status' => 'unlocked']);
 
@@ -66,7 +66,7 @@ class DeviceLockingService
         $overduePoint = today()->subDays($daysOverdueThreshold);
 
         $schedules = RepaymentSchedule::with('loan.inventoryUnit')
-            ->whereIn('status', ['unpaid', 'partial', 'overdue'])
+            ->whereIn('status', ['pending', 'partial', 'overdue'])
             ->where('due_date', '<', $overduePoint)
             ->get();
 
@@ -87,8 +87,7 @@ class DeviceLockingService
 
         $units = InventoryUnit::where('lock_status', 'locked')
             ->where('updated_at', '<', $sevenDaysAgo)
-            ->whereHas('loan', function($q) {
-                // Ensure loan isn't closed or physically recovered yet
+            ->whereHas('loan', function ($q) {
                 $q->whereIn('status', ['active', 'defaulted', 'overdue']);
             })
             ->get();
@@ -101,15 +100,31 @@ class DeviceLockingService
                 ->whereIn('status', ['open', 'assigned'])
                 ->exists();
 
-            if (!$ticketExists) {
+            if (! $ticketExists) {
                 RecoveryTicket::create([
                     'loan_id' => $loan->id,
                     'status' => 'open',
-                    'reward_amount' => 50000.00, // Static baseline commission
-                    'notes' => "Device locked for > 7 days. Escalated to field team."
+                    'reward_amount' => 50000.00,
+                    'notes' => 'Device locked for > 7 days. Escalated to field team.',
                 ]);
                 Log::info("Recovery Ticket generated for Loan: {$loan->loan_number}");
             }
         }
+    }
+
+    private function sendMdmCommand(string $command, InventoryUnit $unit, string $reason): void
+    {
+        $driver = config('services.mdm.driver', 'log');
+
+        if ($driver === 'log') {
+            Log::info("MDM {$command} command recorded for {$unit->mdm_id}.", [
+                'inventory_unit_id' => $unit->id,
+                'reason' => $reason,
+            ]);
+
+            return;
+        }
+
+        throw new RuntimeException("MDM driver [{$driver}] is not implemented.");
     }
 }

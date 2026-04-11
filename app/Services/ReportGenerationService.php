@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\DB;
 use App\Models\Loan;
+use App\Models\Transaction;
 
 class ReportGenerationService
 {
@@ -14,27 +14,24 @@ class ReportGenerationService
     {
         $today = today();
 
-        // 1. Collections Cashflow
-        $collected = DB::table('repayment_schedules')
-                       ->whereDate('paid_date', $today)
-                       ->sum('amount_paid');
+        $collected = Transaction::where('type', 'repayment')
+            ->where('entry_type', 'credit')
+            ->whereDate('transacted_at', $today)
+            ->sum('amount');
 
-        // 2. Default Surges (Loans converting to default today)
         $newDefaults = Loan::where('status', 'defaulted')
-                           ->whereDate('updated_at', $today)
-                           ->count();
+            ->whereDate('updated_at', $today)
+            ->count();
 
-        // 3. New Disbursements Capital Outflow
-        $disbursed = Loan::whereDate('created_at', $today)
-                         ->sum('principal_amount');
+        $disbursed = Loan::whereDate('disbursed_at', $today)
+            ->sum('principal_amount');
 
-        // Format Payload String
         $msg = "📊 *Opticedge EOD Report* \n";
-        $msg .= "Date: " . $today->format('Y-m-d') . "\n\n";
-        $msg .= "💰 Total Collections: TZS " . number_format($collected) . "\n";
-        $msg .= "🚀 Capital Disbursed: TZS " . number_format($disbursed) . "\n";
-        $msg .= "🚨 New Defaults Logged: " . $newDefaults . " units\n\n";
-        $msg .= "_System verified by Laravel Core Reporting._";
+        $msg .= 'Date: '.$today->format('Y-m-d')."\n\n";
+        $msg .= '💰 Total Collections: TZS '.number_format((float) $collected)."\n";
+        $msg .= '🚀 Capital Disbursed: TZS '.number_format((float) $disbursed)."\n";
+        $msg .= '🚨 New Defaults Logged: '.$newDefaults." units\n\n";
+        $msg .= '_System verified by Laravel Core Reporting._';
 
         return $msg;
     }

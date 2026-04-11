@@ -3,15 +3,16 @@
 namespace App\Exports;
 
 use App\Models\InventoryUnit;
+use Illuminate\Database\Eloquent\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
 class InventoryExport implements FromCollection, WithHeadings, WithMapping
 {
-    public function collection()
+    public function collection(): Collection
     {
-        return InventoryUnit::with(['brandModel.brand', 'vendor'])->get();
+        return InventoryUnit::with(['phoneModel.brand', 'vendor', 'branch'])->get();
     }
 
     public function headings(): array
@@ -25,7 +26,7 @@ class InventoryExport implements FromCollection, WithHeadings, WithMapping
             'Acquisition Base Cost',
             'Asset Status',
             'Branch / Vendor Assignment',
-            'Physical Grading'
+            'Physical Grading',
         ];
     }
 
@@ -33,13 +34,13 @@ class InventoryExport implements FromCollection, WithHeadings, WithMapping
     {
         return [
             $unit->id,
-            $unit->brandModel->brand->name ?? 'N/A',
-            $unit->brandModel->name ?? 'N/A',
+            $unit->phoneModel->brand->name ?? 'N/A',
+            $unit->phoneModel->name ?? 'N/A',
             $unit->imei_1,
             $unit->imei_2,
-            $unit->cost_price,
+            $unit->purchase_price,
             $unit->status,
-            $unit->vendor->shop_name ?? 'Central HQ Vault',
+            $unit->vendor->name ?? $unit->branch->name ?? 'Central HQ Vault',
             $unit->grading ?? 'Brand New',
         ];
     }

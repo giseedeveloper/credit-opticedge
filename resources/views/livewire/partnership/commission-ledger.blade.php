@@ -11,9 +11,12 @@
     </div>
 
     {{-- Header --}}
-    <div>
-        <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Commission Ledger</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Vendor commission tracking, payout status &amp; loan attribution</p>
+    <div class="flex items-start gap-4">
+        <x-fluent-icon name="chart-bar" size="lg" palette="amber" />
+        <div>
+            <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Commission Ledger</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Vendor commission tracking, payout status &amp; loan attribution</p>
+        </div>
     </div>
 
     {{-- Stats Bar --}}
@@ -21,7 +24,7 @@
         <div class="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-emerald-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-white/20"><flux:icon name="banknotes" class="size-4" /></div>
+                <x-fluent-icon name="banknotes" size="sm" />
                 <span class="text-xs font-semibold text-white/80 uppercase tracking-wider">Total Paid Out</span>
             </div>
             <p class="text-2xl font-black">TZS {{ number_format($stats['paid_sum'], 0) }}</p>
@@ -29,7 +32,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-600"><flux:icon name="clock" class="size-4" /></div>
+                <x-fluent-icon name="clock" size="sm" palette="amber" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pending</span>
             </div>
             <p class="text-xl font-black text-gray-900 dark:text-white">TZS {{ number_format($stats['pending_sum'], 0) }}</p>
@@ -37,7 +40,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-orange-500"><flux:icon name="calendar-days" class="size-4" /></div>
+                <x-fluent-icon name="calendar-days" size="sm" palette="blue" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">This Month</span>
             </div>
             <p class="text-xl font-black text-gray-900 dark:text-white">TZS {{ number_format($stats['this_month_sum'], 0) }}</p>
@@ -45,7 +48,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-orange-500"><flux:icon name="queue-list" class="size-4" /></div>
+                <x-fluent-icon name="queue-list" size="sm" palette="violet" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Records</span>
             </div>
             <p class="text-2xl font-black text-gray-900 dark:text-white">{{ number_format($stats['total_count']) }}</p>

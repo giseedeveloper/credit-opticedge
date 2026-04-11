@@ -25,19 +25,20 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name'                       => fake()->name(),
-            'email'                      => fake()->unique()->safeEmail(),
-            'email_verified_at'          => now(),
-            'password'                   => static::$password ??= Hash::make('password'),
-            'remember_token'             => Str::random(10),
-            'two_factor_secret'          => null,
-            'two_factor_recovery_codes'  => null,
-            'two_factor_confirmed_at'    => null,
-            'role'                       => 'staff',
-            'phone'                      => fake()->phoneNumber(),
-            'employee_code'              => strtoupper(fake()->unique()->bothify('EMP-####')),
-            'is_active'                  => true,
-            'branch_id'                  => null,
+            'name' => fake()->name(),
+            'email' => fake()->unique()->safeEmail(),
+            'email_verified_at' => now(),
+            'password' => static::$password ??= Hash::make('password'),
+            'remember_token' => Str::random(10),
+            'two_factor_secret' => null,
+            'two_factor_recovery_codes' => null,
+            'two_factor_confirmed_at' => null,
+            'role' => 'staff',
+            'phone' => fake()->phoneNumber(),
+            'joined_at' => fake()->dateTimeBetween('-2 years', 'now')->format('Y-m-d'),
+            'employee_code' => strtoupper(fake()->unique()->bothify('EMP-####')),
+            'is_active' => true,
+            'branch_id' => null,
         ];
     }
 

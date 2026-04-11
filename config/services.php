@@ -35,4 +35,28 @@ return [
         ],
     ],
 
+    'collections' => [
+        'webhook_secret' => env('COLLECTIONS_WEBHOOK_SECRET'),
+        'signature_header' => env('COLLECTIONS_SIGNATURE_HEADER', 'X-MNO-Signature'),
+    ],
+
+    'tra' => [
+        'vfd_verify_base_url' => env('TRA_VFD_VERIFY_BASE_URL', 'https://vfd.tra.go.tz/verify'),
+    ],
+
+    'sms' => [
+        'driver' => env('SMS_DRIVER', 'log'),
+    ],
+
+    'mdm' => [
+        'driver' => env('MDM_DRIVER', 'log'),
+    ],
+
+    'selcom' => [
+        'base_url' => env('SELCOM_BASE_URL', 'https://apigw.selcommobile.com'),
+        'vendor' => env('SELCOM_VENDOR'),
+        'api_key' => env('SELCOM_API_KEY'),
+        'api_secret' => env('SELCOM_API_SECRET'),
+    ],
+
 ];

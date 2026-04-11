@@ -10,6 +10,7 @@ use App\Services\PaymentProcessingService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 /**
  * @group Admin Security & Overrides
@@ -30,11 +31,11 @@ class SecurityApiController extends Controller
 
         $success = $mdm->lockDevice($unit, $reason);
 
-        if (!$success) {
-            return $this->errorResponse("Device lacks MDM integration or is already locked", 422);
+        if (! $success) {
+            return $this->errorResponse('Device lacks MDM integration or is already locked', 422);
         }
 
-        return $this->successResponse($unit->fresh(), "Command issued globally.");
+        return $this->successResponse($unit->fresh(), 'Command issued globally.');
     }
 
     /**
@@ -47,16 +48,16 @@ class SecurityApiController extends Controller
 
         $success = $mdm->unlockDevice($unit, $reason);
 
-        if (!$success) {
-            return $this->errorResponse("Device is already unlocked or lacks MDM", 422);
+        if (! $success) {
+            return $this->errorResponse('Device is already unlocked or lacks MDM', 422);
         }
 
-        return $this->successResponse($unit->fresh(), "Unlock command issued successfully.");
+        return $this->successResponse($unit->fresh(), 'Unlock command issued successfully.');
     }
 
     /**
      * Manual Payment Reconciliation Override
-     * 
+     *
      * Admins force-allocate a payment that failed webhook mapping (e.g. wrong account number).
      */
     public function manualReconciliation(Request $request, PaymentProcessingService $paymentService): JsonResponse
@@ -66,17 +67,27 @@ class SecurityApiController extends Controller
             'amount' => 'required|numeric',
             'reference' => 'required|string',
             'method' => 'required|string',
-            'override_reason' => 'required|string'
+            'override_reason' => 'required|string',
         ]);
 
         $loan = Loan::findOrFail($request->loan_id);
 
-        $transaction = $paymentService->recordPayment(
-            $loan,
-            (float) $request->amount,
-            $request->reference,
-            $request->method
-        );
+        try {
+            $transaction = $paymentService->recordPayment(
+                $loan,
+                (float) $request->amount,
+                $request->reference,
+                $request->method,
+                [
+                    'override_reason' => $request->override_reason,
+                    'description' => 'Manual payment reconciliation override',
+                ]
+            );
+        } catch (InvalidArgumentException $e) {
+            $status = str_contains($e->getMessage(), 'Duplicate') ? 409 : 422;
+
+            return $this->errorResponse($e->getMessage(), $status);
+        }
 
         // Security Log mapping to Admin
         activity('security')
@@ -84,8 +95,8 @@ class SecurityApiController extends Controller
             ->causedBy(auth()->user())
             ->event('manual_reconcile')
             ->withProperties(['reason' => $request->override_reason])
-            ->log("Manual payment override processed by HQ.");
+            ->log('Manual payment override processed by HQ.');
 
-        return $this->successResponse($transaction, "Manual payment successfully reconciled.");
+        return $this->successResponse($transaction, 'Manual payment successfully reconciled.');
     }
 }

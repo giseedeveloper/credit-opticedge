@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Loan;
 use App\Models\CommissionLedger;
+use App\Models\Customer;
+use App\Models\Loan;
+use App\Models\Vendor;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,51 +22,49 @@ class StaffApiController extends Controller
 
     /**
      * Agent Metrics Dashboard
-     * 
+     *
      * Load counts of customers boarded, active loans generated, and overall performance.
      */
     public function metrics(Request $request): JsonResponse
     {
         $user = $request->user();
 
-        // Count how many customers or loans this specific agent onboarded
-        $totalCustomers = Loan::where('created_by', $user->id)
-            ->distinct('customer_id')
-            ->count();
+        $totalCustomers = Customer::where('registered_by', $user->id)->count();
 
-        $activeLoans = Loan::where('created_by', $user->id)
+        $activeLoans = Loan::where('disbursed_by', $user->id)
             ->where('status', 'active')
             ->count();
 
         $metrics = [
             'total_customers_acquired' => $totalCustomers,
-            'active_loans_managed'     => $activeLoans,
+            'active_loans_managed' => $activeLoans,
         ];
 
-        return $this->successResponse($metrics, "Agent performance metrics gathered.");
+        return $this->successResponse($metrics, 'Agent performance metrics gathered.');
     }
 
     /**
      * Commission History
-     * 
+     *
      * View history if this user is a Vendor Owner mapped to a Ledger.
      */
     public function commissions(Request $request): JsonResponse
     {
         $user = $request->user();
+        $vendorId = $user->managedVendors()->value('id');
 
-        // Ensure only Vendor Owners or similar roles retrieve this
-        // For simplicity, assumed user is linked to vendor:
-        $vendorId = $user->branch->vendor_id ?? null;
+        if (! $vendorId && $user->branch_id) {
+            $vendorId = Vendor::where('branch_id', $user->branch_id)->value('id');
+        }
 
-        if (!$vendorId) {
-            return $this->errorResponse("You do not have a mapped Vendor structure to earn commissions.", 403);
+        if (! $vendorId) {
+            return $this->errorResponse('You do not have a mapped Vendor structure to earn commissions.', 403);
         }
 
         $ledgers = CommissionLedger::where('vendor_id', $vendorId)
             ->orderBy('posted_at', 'desc')
             ->paginate(15);
 
-        return $this->successResponse($ledgers, "Commission ledger extracted.");
+        return $this->successResponse($ledgers, 'Commission ledger extracted.');
     }
 }

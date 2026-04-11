@@ -1,8 +1,11 @@
 <div>
     <div class="mb-6 flex justify-between items-center">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="banknotes" size="lg" palette="emerald" />
+            <div>
             <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Active Lending Control</h1>
             <p class="mt-1 text-sm text-gray-500">Monitor active portfolios and dispatch rapid collections logic.</p>
+            </div>
         </div>
         
         <div class="flex gap-2">
@@ -97,7 +100,7 @@
                             @empty
                                 <tr>
                                     <td colspan="4" class="px-6 py-10 text-center text-gray-500">
-                                        <flux:icon name="document-magnifying-glass" class="w-10 h-10 mx-auto mb-3 text-gray-300" />
+                                        <x-fluent-icon name="document-text" size="xl" class="mx-auto mb-3" />
                                         <p class="font-medium">No Loans Matched Filter.</p>
                                     </td>
                                 </tr>
@@ -116,8 +119,13 @@
         <div class="lg:col-span-1">
             <div class="bg-white dark:bg-zinc-900 shadow-sm rounded-xl border border-blue-100 dark:border-zinc-800 sticky top-6">
                 <div class="p-6 border-b border-gray-100 dark:border-zinc-800">
-                    <h3 class="font-bold text-lg text-orange-500 dark:text-blue-400">Live Simulator</h3>
-                    <p class="text-sm text-gray-500">Real-time amortization pricing</p>
+                    <div class="flex items-center gap-3">
+                        <x-fluent-icon name="calculator" size="sm" palette="violet" />
+                        <div>
+                            <h3 class="font-bold text-lg text-orange-500 dark:text-blue-400">Live Simulator</h3>
+                            <p class="text-sm text-gray-500">Real-time amortization pricing</p>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="p-6 space-y-4">

@@ -12,13 +12,16 @@
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="users" size="lg" palette="sky" />
+            <div>
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Customer Profiles</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">All registered customers — verified, pending and unverified</p>
+            </div>
         </div>
         <a href="{{ route('kyc.wizard') }}" wire:navigate
            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:opacity-90 transition-opacity shadow-sm">
-            <flux:icon name="user-plus" class="size-4" />
+            <x-fluent-icon name="user-plus" size="xs" palette="emerald" />
             New KYC Wizard
         </a>
     </div>
@@ -38,7 +41,7 @@
         <div class="bg-gradient-to-br {{ $sd['grad'] }} rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-white/20"><flux:icon name="users" class="size-5" /></div>
+                <x-fluent-icon name="users" size="sm" />
                 <span class="text-xs font-semibold text-white/80 uppercase tracking-wider">{{ $sd['label'] }}</span>
             </div>
             <p class="text-3xl font-black">{{ number_format($statCounts[$sd['key']] ?? 0) }}</p>
@@ -47,9 +50,7 @@
         @else
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg {{ $sd['icolor'] }}">
-                    <flux:icon name="user-circle" class="size-5" />
-                </div>
+                <x-fluent-icon name="user-circle" size="sm" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ $sd['label'] }}</span>
             </div>
             <p class="text-3xl font-black text-gray-900 dark:text-white">{{ number_format($statCounts[$sd['key']] ?? 0) }}</p>
@@ -133,7 +134,7 @@
                             </div>
                         </div>
                     </td>
-                    <td class="px-4 py-3.5 text-sm text-gray-700 dark:text-gray-300">{{ $customer->phone }}</td>
+                    <td class="px-4 py-3.5 text-sm text-gray-700 dark:text-gray-300">{{ $customer->formattedPhone('phone') ?? '—' }}</td>
                     <td class="px-4 py-3.5 font-mono text-xs text-gray-500 hidden md:table-cell">
                         {{ $customer->nida_number ? substr($customer->nida_number, 0, 8).'…' : '—' }}
                     </td>
@@ -236,6 +237,29 @@
                 };
 
                 $photoBase = fn($path) => $path ? \Illuminate\Support\Facades\Storage::disk('public')->url($path) : null;
+                $agreementUrl = $dc->agreementDocument
+                    ? \Illuminate\Support\Facades\Storage::disk($dc->agreementDocument->disk)->url($dc->agreementDocument->path)
+                    : null;
+                $handoverUrl = $photoBase($dc->asset_handover_list_path);
+                $paymentBadge = match($dc->deposit_payment_status) {
+                    'completed' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+                    'failed' => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+                    'pending', 'initiated', 'order_created' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+                    default => 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
+                };
+                $paymentLabel = match($dc->deposit_payment_status) {
+                    'completed' => 'Deposit Paid',
+                    'failed' => 'Payment Failed',
+                    'pending', 'initiated', 'order_created' => 'Awaiting Payment',
+                    default => 'Not Started',
+                };
+                $assetBadge = match($dc->asset_release_status) {
+                    'released' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+                    'pending' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+                    default => 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
+                };
+                $assetLabel = $dc->asset_release_status === 'released' ? 'Asset Released' : 'Awaiting Release';
+                $canReleaseAsset = $this->canReleaseCustomerAsset($dc);
             @endphp
 
             {{-- ── Header ── --}}
@@ -257,6 +281,8 @@
                             @if($autoStatus)
                             <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $autoBadge }}">Auto: {{ str_replace('_', ' ', ucfirst($autoStatus)) }}</span>
                             @endif
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $paymentBadge }}">{{ $paymentLabel }}</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $assetBadge }}">{{ $assetLabel }}</span>
                         </div>
                     </div>
                 </div>
@@ -274,6 +300,7 @@
                     ['id'=>'income',   'label'=>'Income',    'icon'=>'currency-dollar'],
                     ['id'=>'nok',      'label'=>'NOK',       'icon'=>'users'],
                     ['id'=>'consent',  'label'=>'Consent',   'icon'=>'shield-check'],
+                    ['id'=>'handover', 'label'=>'Payment & Release', 'icon'=>'document-check'],
                     ['id'=>'checks',   'label'=>'Checks',    'icon'=>'clipboard-document-check'],
                     ['id'=>'history',  'label'=>'History',   'icon'=>'clock'],
                 ] as $t)
@@ -323,6 +350,32 @@
                         <div class="col-span-2 bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Repayment Cycle</p>
                             <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->preferred_repayment ? ucfirst($dc->preferred_repayment) : '—' }}</p>
+                        </div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Accessories / Store Offers</p>
+                            @if($dc->device_accessories)
+                            <div class="mt-2 space-y-2">
+                                @foreach($dc->device_accessories as $item)
+                                <div class="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-900">
+                                    <div>
+                                        <p class="font-semibold text-gray-800 dark:text-gray-100">{{ $item['name'] ?? 'Accessory' }}</p>
+                                        <p class="mt-0.5 text-gray-500">{{ ucfirst($item['offer_type'] ?? 'free') }} · Qty {{ $item['quantity'] ?? 1 }}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-semibold text-gray-800 dark:text-gray-100">{{ isset($item['unit_price']) ? 'TZS '.number_format((float) $item['unit_price']) : 'Free' }}</p>
+                                        @if($item['notes'] ?? null)
+                                        <p class="mt-0.5 text-gray-500">{{ $item['notes'] }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                                @endforeach
+                            </div>
+                            @else
+                            <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-gray-100">No accessory or store offer recorded</p>
+                            @endif
+                            @if($dc->store_offer_notes)
+                            <p class="mt-3 text-xs text-gray-500">{{ $dc->store_offer_notes }}</p>
+                            @endif
                         </div>
                     </div>
                     <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Device Photos</p>
@@ -406,11 +459,11 @@
                     <div class="grid grid-cols-2 gap-2">
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Phone</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->phone ?? '—' }}</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->formattedPhone('phone') ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Alt Phone</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->alt_phone ?? '—' }}</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->formattedPhone('alt_phone') ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Branch</p>
@@ -506,7 +559,7 @@
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Phone</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->nok_phone ?? '—' }}</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->formattedPhone('nok_phone') ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Relationship</p>
@@ -522,7 +575,7 @@
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Phone</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->nok2_phone ?? '—' }}</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->formattedPhone('nok2_phone') ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Relationship</p>
@@ -590,6 +643,151 @@
                             <p class="text-sm text-gray-700 dark:text-gray-300">{{ $dc->fo_notes }}</p>
                         </div>
                         @endif
+                    </div>
+                </div>
+
+                {{-- ▸ AUTO-CHECKS --}}
+                <div x-show="tab==='handover'" x-cloak>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="rounded-xl p-3 {{ $paymentBadge }}">
+                            <p class="text-[10px] uppercase tracking-wider font-semibold opacity-75">Deposit Payment</p>
+                            <p class="mt-1 text-sm font-black">{{ $paymentLabel }}</p>
+                            <p class="mt-1 text-[11px] opacity-80">
+                                {{ $dc->deposit_payment_amount ? 'TZS '.number_format((float) $dc->deposit_payment_amount) : 'No amount captured' }}
+                            </p>
+                        </div>
+                        <div class="rounded-xl p-3 {{ $assetBadge }}">
+                            <p class="text-[10px] uppercase tracking-wider font-semibold opacity-75">Asset Release</p>
+                            <p class="mt-1 text-sm font-black">{{ $assetLabel }}</p>
+                            <p class="mt-1 text-[11px] opacity-80">
+                                {{ $dc->asset_released_at?->format('d M Y, H:i') ?? 'Waiting for final release action' }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 rounded-2xl border border-gray-100 bg-gray-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Release Checklist</p>
+                        <div class="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+                            @foreach([
+                                ['label' => 'Deposit payment completed', 'done' => $dc->hasSuccessfulDepositPayment()],
+                                ['label' => 'Agreement accepted', 'done' => $dc->hasAcceptedAgreement()],
+                                ['label' => 'Customer signature captured', 'done' => filled($dc->customer_signature_path)],
+                                ['label' => 'FO signature captured', 'done' => filled($dc->fo_signature_path)],
+                                ['label' => 'Handover list uploaded', 'done' => $dc->hasAssetHandoverRecord()],
+                                ['label' => 'Linked stock unit selected', 'done' => filled($dc->inventory_unit_id)],
+                            ] as $check)
+                            <div class="flex items-center gap-3 rounded-xl bg-white px-3 py-2 text-xs dark:bg-zinc-900">
+                                <span class="inline-flex h-6 w-6 items-center justify-center rounded-full {{ $check['done'] ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-300' }}">
+                                    @if($check['done'])
+                                    <flux:icon name="check" class="size-4" />
+                                    @else
+                                    <flux:icon name="x-mark" class="size-4" />
+                                    @endif
+                                </span>
+                                <span class="font-medium text-gray-700 dark:text-gray-200">{{ $check['label'] }}</span>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                        <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+                            <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Payment Details</p>
+                            <div class="mt-3 space-y-2 text-sm">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-gray-500">Reference</span>
+                                    <span class="font-mono font-semibold text-gray-800 dark:text-gray-100">{{ $dc->deposit_payment_reference ?? '—' }}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-gray-500">Paid At</span>
+                                    <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $dc->deposit_paid_at?->format('d M Y, H:i') ?? '—' }}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-gray-500">Stock Unit</span>
+                                    <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $dc->inventoryUnit?->imei_1 ?? '—' }}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-gray-500">Stock Status</span>
+                                    <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $dc->inventoryUnit?->status ? ucwords(str_replace('_', ' ', $dc->inventoryUnit->status)) : '—' }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Agreement</p>
+                                    <p class="mt-1 text-sm font-semibold text-gray-800 dark:text-gray-100">{{ $dc->agreementDocument?->title ?? 'No agreement linked' }}</p>
+                                </div>
+                                @if($agreementUrl)
+                                <a href="{{ $agreementUrl }}" target="_blank"
+                                   class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-700">
+                                    <flux:icon name="document-text" class="size-4" />
+                                    View PDF
+                                </a>
+                                @endif
+                            </div>
+                            <div class="mt-3 space-y-2 text-sm">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-gray-500">Decision</span>
+                                    <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $dc->agreement_accepted ? 'Accepted' : 'Pending / Declined' }}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-gray-500">Presented At</span>
+                                    <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $dc->agreement_presented_at?->format('d M Y, H:i') ?? '—' }}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-gray-500">Decision At</span>
+                                    <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $dc->agreement_decision_at?->format('d M Y, H:i') ?? '—' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                        @foreach([
+                            ['path' => $dc->customer_signature_path, 'label' => 'Customer Signature'],
+                            ['path' => $dc->fo_signature_path, 'label' => 'Front Officer Signature'],
+                        ] as $signature)
+                        <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+                            <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">{{ $signature['label'] }}</p>
+                            @if($photoBase($signature['path']))
+                            <a href="{{ $photoBase($signature['path']) }}" target="_blank" class="mt-3 block overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-zinc-700">
+                                <img src="{{ $photoBase($signature['path']) }}" alt="{{ $signature['label'] }}" class="h-40 w-full object-contain bg-white">
+                            </a>
+                            @else
+                            <div class="mt-3 flex h-40 items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-white text-xs text-gray-400 dark:border-zinc-700 dark:bg-zinc-900">
+                                Signature not captured yet
+                            </div>
+                            @endif
+                        </div>
+                        @endforeach
+                    </div>
+
+                    <div class="mt-4 rounded-2xl border border-gray-100 bg-gray-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Asset Handover</p>
+                                <p class="mt-1 text-sm font-semibold text-gray-800 dark:text-gray-100">Checklist / proof of items given to the customer</p>
+                            </div>
+                            @if($handoverUrl)
+                            <a href="{{ $handoverUrl }}" target="_blank"
+                               class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-700">
+                                <flux:icon name="arrow-top-right-on-square" class="size-4" />
+                                Open File
+                            </a>
+                            @endif
+                        </div>
+                        <div class="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+                            <div class="rounded-xl bg-white px-3 py-3 text-sm dark:bg-zinc-900">
+                                <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Notes</p>
+                                <p class="mt-1 text-gray-700 dark:text-gray-200">{{ $dc->asset_handover_notes ?? 'No handover notes recorded' }}</p>
+                            </div>
+                            <div class="rounded-xl bg-white px-3 py-3 text-sm dark:bg-zinc-900">
+                                <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Released By</p>
+                                <p class="mt-1 text-gray-700 dark:text-gray-200">{{ $dc->assetReleasedBy?->name ?? 'Pending release' }}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -747,7 +945,21 @@
             </div>
 
             {{-- ── Footer Actions ── --}}
-            <div class="px-6 py-4 border-t border-gray-100 dark:border-zinc-800 flex gap-2 flex-shrink-0 bg-white dark:bg-zinc-900">
+            <div class="px-6 py-4 border-t border-gray-100 dark:border-zinc-800 flex flex-wrap gap-2 flex-shrink-0 bg-white dark:bg-zinc-900">
+                @if($agreementUrl)
+                <a href="{{ $agreementUrl }}" target="_blank"
+                   class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <flux:icon name="document-text" class="size-4" />
+                    Agreement PDF
+                </a>
+                @endif
+                @if($handoverUrl)
+                <a href="{{ $handoverUrl }}" target="_blank"
+                   class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                    <flux:icon name="clipboard-document-list" class="size-4" />
+                    Handover File
+                </a>
+                @endif
                 @if(!$isApproved)
                 @can('loans.create')
                 <button wire:click="openApproveModal('{{ $dc->id }}')"
@@ -765,6 +977,25 @@
                     <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     <span class="text-sm font-semibold text-emerald-700 dark:text-emerald-400">KYC Verified</span>
                 </div>
+                @can('loans.create')
+                    @if($canReleaseAsset)
+                    <button wire:click="releaseAsset('{{ $dc->id }}')"
+                            class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-colors">
+                        <flux:icon name="cube" class="size-4" />
+                        Release Asset
+                    </button>
+                    @elseif($dc->isAssetReleased())
+                    <div class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
+                        <flux:icon name="check-badge" class="size-4" />
+                        Asset Released
+                    </div>
+                    @else
+                    <div class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+                        <flux:icon name="exclamation-circle" class="size-4" />
+                        Finish payment and handover checklist before release
+                    </div>
+                    @endif
+                @endcan
                 @endif
                 <button wire:click="closeDetail"
                         class="px-4 py-2.5 text-sm font-semibold rounded-xl border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">

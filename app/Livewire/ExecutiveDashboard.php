@@ -2,9 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\InventoryUnit;
 use App\Models\Loan;
+use App\Models\RepaymentSchedule;
 use App\Models\Transaction;
 use App\Services\AnalyticsService;
 use Carbon\Carbon;
@@ -64,8 +66,7 @@ class ExecutiveDashboard extends Component
     {
         $analytics = app(AnalyticsService::class);
 
-        $this->portfolioValue = Cache::remember('dash.portfolio_value', 300, fn () =>
-            (float) Loan::whereIn('status', ['active', 'defaulted', 'overdue'])->sum('remaining_balance')
+        $this->portfolioValue = Cache::remember('dash.portfolio_value', 300, fn () => (float) Loan::whereIn('status', ['active', 'defaulted', 'overdue'])->sum('remaining_balance')
         );
 
         $this->collectionEfficiency = Cache::remember('dash.collection_efficiency', 300, function () use ($analytics) {
@@ -80,12 +81,11 @@ class ExecutiveDashboard extends Component
             return $par['par_30'];
         });
 
-        $this->activeDevices     = Cache::remember('dash.active_devices', 300, fn () => InventoryUnit::whereIn('status', ['sold', 'active'])->count());
-        $this->totalActiveLoans  = Cache::remember('dash.active_loans', 300, fn () => Loan::where('status', 'active')->count());
-        $this->totalCustomers    = Cache::remember('dash.total_customers', 300, fn () => Customer::count());
+        $this->activeDevices = Cache::remember('dash.active_devices', 300, fn () => InventoryUnit::whereIn('status', ['sold', 'active'])->count());
+        $this->totalActiveLoans = Cache::remember('dash.active_loans', 300, fn () => Loan::where('status', 'active')->count());
+        $this->totalCustomers = Cache::remember('dash.total_customers', 300, fn () => Customer::count());
 
-        $this->newLoansThisMonth = Cache::remember('dash.new_loans_month', 300, fn () =>
-            Loan::whereMonth('disbursed_at', now()->month)->whereYear('disbursed_at', now()->year)->count()
+        $this->newLoansThisMonth = Cache::remember('dash.new_loans_month', 300, fn () => Loan::whereMonth('disbursed_at', now()->month)->whereYear('disbursed_at', now()->year)->count()
         );
 
         $this->todayCollections = (float) Transaction::where('type', 'repayment')
@@ -97,16 +97,13 @@ class ExecutiveDashboard extends Component
             ->whereYear('transacted_at', now()->year)
             ->sum('amount');
 
-        $this->overdueCount = Cache::remember('dash.overdue_count', 120, fn () =>
-            Loan::whereIn('status', ['overdue', 'defaulted'])->count()
+        $this->overdueCount = Cache::remember('dash.overdue_count', 120, fn () => Loan::whereIn('status', ['overdue', 'defaulted'])->count()
         );
 
-        $this->pendingKycCount = Cache::remember('dash.pending_kyc', 120, fn () =>
-            Customer::where('kyc_status', '!=', 'approved')->count()
+        $this->pendingKycCount = Cache::remember('dash.pending_kyc', 120, fn () => Customer::query()->kycNotApproved()->count()
         );
 
-        $this->availableStockCount = Cache::remember('dash.available_stock', 120, fn () =>
-            InventoryUnit::whereIn('status', ['available', 'hq_stock'])->count()
+        $this->availableStockCount = Cache::remember('dash.available_stock', 120, fn () => InventoryUnit::whereIn('status', ['available', 'hq_stock'])->count()
         );
 
         // Top overdue loans for alert panel
@@ -116,33 +113,33 @@ class ExecutiveDashboard extends Component
             ->take(5)
             ->get()
             ->map(fn ($l) => [
-                'loan_number'         => $l->loan_number,
-                'status'              => $l->status,
+                'loan_number' => $l->loan_number,
+                'status' => $l->status,
                 'outstanding_balance' => (float) $l->outstanding_balance,
-                'customer_name'       => trim(($l->customer?->first_name ?? '').' '.($l->customer?->last_name ?? '')),
-                'phone'               => $l->customer?->phone ?? '—',
-                'device'              => ($l->inventoryUnit?->phoneModel?->name ?? 'Device'),
-                'days_overdue'        => $l->disbursed_at
+                'customer_name' => trim(($l->customer?->first_name ?? '').' '.($l->customer?->last_name ?? '')),
+                'phone' => $l->customer?->phone ?? '—',
+                'device' => ($l->inventoryUnit?->phoneModel?->name ?? 'Device'),
+                'days_overdue' => $l->disbursed_at
                     ? (int) now()->diffInDays($l->disbursed_at->addDays((int) $l->loan_term_weeks * 7))
                     : 0,
             ])->toArray();
 
         // Repayment schedules due today or overdue (next 10)
-        $this->todayDuePayments = \App\Models\RepaymentSchedule::with(['loan.customer'])
+        $this->todayDuePayments = RepaymentSchedule::with(['loan.customer'])
             ->whereIn('status', ['pending', 'overdue'])
             ->whereDate('due_date', '<=', today())
             ->orderBy('due_date')
             ->take(8)
             ->get()
             ->map(fn ($s) => [
-                'loan_number'   => $s->loan?->loan_number ?? '—',
+                'loan_number' => $s->loan?->loan_number ?? '—',
                 'customer_name' => trim(($s->loan?->customer?->first_name ?? '').' '.($s->loan?->customer?->last_name ?? '')),
-                'phone'         => $s->loan?->customer?->phone ?? '—',
-                'amount_due'    => (float) $s->amount_due,
-                'amount_paid'   => (float) $s->amount_paid,
-                'balance'       => (float) ($s->amount_due - $s->amount_paid),
-                'due_date'      => $s->due_date?->format('d M Y') ?? '—',
-                'status'        => $s->status,
+                'phone' => $s->loan?->customer?->phone ?? '—',
+                'amount_due' => (float) $s->amount_due,
+                'amount_paid' => (float) $s->amount_paid,
+                'balance' => (float) ($s->amount_due - $s->amount_paid),
+                'due_date' => $s->due_date?->format('d M Y') ?? '—',
+                'status' => $s->status,
             ])->toArray();
 
         // Recent repayment transactions (last 7 days)
@@ -153,21 +150,21 @@ class ExecutiveDashboard extends Component
             ->take(6)
             ->get()
             ->map(fn ($t) => [
-                'reference'     => $t->reference ?? '—',
-                'loan_number'   => $t->loan?->loan_number ?? '—',
+                'reference' => $t->reference ?? '—',
+                'loan_number' => $t->loan?->loan_number ?? '—',
                 'customer_name' => trim(($t->loan?->customer?->first_name ?? '').' '.($t->loan?->customer?->last_name ?? '')),
-                'amount'        => (float) $t->amount,
-                'channel'       => $t->channel ?? 'cash',
+                'amount' => (float) $t->amount,
+                'channel' => $t->channel ?? 'cash',
                 'transacted_at' => $t->transacted_at?->diffForHumans() ?? '—',
             ])->toArray();
 
         // Branch performance
-        $this->branchStats = \App\Models\Branch::withCount(['loans as active_loans' => fn ($q) => $q->where('status', 'active')])
+        $this->branchStats = Branch::withCount(['loans as active_loans' => fn ($q) => $q->where('status', 'active')])
             ->get()
             ->map(fn ($b) => [
-                'name'         => $b->name,
+                'name' => $b->name,
                 'active_loans' => $b->active_loans,
-                'collections'  => (float) Transaction::whereHas('loan', fn ($q) => $q->where('branch_id', $b->id))
+                'collections' => (float) Transaction::whereHas('loan', fn ($q) => $q->where('branch_id', $b->id))
                     ->where('type', 'repayment')
                     ->whereMonth('transacted_at', now()->month)
                     ->sum('amount'),

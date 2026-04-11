@@ -11,31 +11,45 @@ class CommissionLedger extends Component
 {
     use WithPagination;
 
-    public string $search        = '';
-    public string $statusFilter  = '';
-    public string $vendorFilter  = '';
+    public string $search = '';
 
-    public bool    $showDetail     = false;
+    public string $statusFilter = '';
+
+    public string $vendorFilter = '';
+
+    public bool $showDetail = false;
+
     public ?string $detailRecordId = null;
 
     public function mount(): void
     {
-        abort_unless(auth()->user()->canAccess('vendors.view'), 403);
+        abort_unless(auth()->user()->canAccess('accounting.view'), 403);
     }
 
-    public function updatedSearch(): void       { $this->resetPage(); }
-    public function updatedStatusFilter(): void { $this->resetPage(); }
-    public function updatedVendorFilter(): void { $this->resetPage(); }
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedStatusFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedVendorFilter(): void
+    {
+        $this->resetPage();
+    }
 
     public function openDetail(string $id): void
     {
         $this->detailRecordId = $id;
-        $this->showDetail     = true;
+        $this->showDetail = true;
     }
 
     public function closeDetail(): void
     {
-        $this->showDetail     = false;
+        $this->showDetail = false;
         $this->detailRecordId = null;
     }
 
@@ -67,11 +81,11 @@ class CommissionLedger extends Component
             ->paginate(20);
 
         $stats = [
-            'total_count'    => CommissionLedgerModel::count(),
-            'paid_sum'       => CommissionLedgerModel::where('status', 'paid')->sum('commission_amount'),
-            'paid_count'     => CommissionLedgerModel::where('status', 'paid')->count(),
-            'pending_sum'    => CommissionLedgerModel::where('status', 'pending')->sum('commission_amount'),
-            'pending_count'  => CommissionLedgerModel::where('status', 'pending')->count(),
+            'total_count' => CommissionLedgerModel::count(),
+            'paid_sum' => CommissionLedgerModel::where('status', 'paid')->sum('commission_amount'),
+            'paid_count' => CommissionLedgerModel::where('status', 'paid')->count(),
+            'pending_sum' => CommissionLedgerModel::where('status', 'pending')->sum('commission_amount'),
+            'pending_count' => CommissionLedgerModel::where('status', 'pending')->count(),
             'this_month_sum' => CommissionLedgerModel::whereMonth('posted_at', now()->month)
                 ->whereYear('posted_at', now()->year)
                 ->sum('commission_amount'),

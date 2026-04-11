@@ -11,9 +11,12 @@
     </div>
 
     {{-- Header --}}
-    <div>
-        <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">IMEI / Serial Search</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Instantly locate any device in the system by IMEI or serial number.</p>
+    <div class="flex items-start gap-4">
+        <x-fluent-icon name="magnifying-glass" size="lg" palette="blue" />
+        <div>
+            <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">IMEI / Serial Search</h1>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Instantly locate any device in the system by IMEI or serial number.</p>
+        </div>
     </div>
 
     {{-- KPI Stats --}}
@@ -50,7 +53,7 @@
         <div class="absolute -left-6 -bottom-6 w-24 h-24 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
         <div class="relative">
             <p class="text-white/70 text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-2">
-                <flux:icon name="magnifying-glass" class="size-4" />
+                <x-fluent-icon name="magnifying-glass" size="xs" />
                 Enter IMEI 1, IMEI 2, or Serial Number
             </p>
             <div class="flex gap-3">

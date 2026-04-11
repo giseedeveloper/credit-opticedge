@@ -3,39 +3,30 @@
 namespace App\Services;
 
 use App\Models\Loan;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class FinancialComplianceService
 {
     /**
-     * IFRS 9: Update DPD (Days Past Due) and map to IFRS Stages natively using postgres features.
-     * Can process a large multi-tenant deployment concurrently.
+     * IFRS 9: Update DPD (Days Past Due) and map to IFRS stages using app schema.
      */
     public function calculateProvisioning(): void
     {
         DB::transaction(function () {
-            // Update Days Past Due mathematically to avoid active memory overhead
-            DB::statement("
-                UPDATE loans
-                SET dpd = GREATEST(0, (CURRENT_DATE - (
-                    SELECT MIN(due_date) FROM repayment_schedules 
-                    WHERE loan_id = loans.id AND status IN ('unpaid', 'partial', 'overdue')
-                ))::integer)
-                WHERE status IN ('active', 'defaulted')
-            ");
+            Loan::query()
+                ->whereIn('status', ['active', 'defaulted', 'overdue'])
+                ->get()
+                ->each(function (Loan $loan): void {
+                    $dpd = $this->calculateDaysPastDue($loan);
 
-            // Recalculate Stages (IFRS 9 Standard)
-            // Stage 1: Performing (DPD 0 - 29)
-            // Stage 2: Underperforming (DPD 30 - 89)
-            // Stage 3: Non-performing (DPD 90+)
-            DB::statement("
-                UPDATE loans SET ifrs_stage = CASE
-                    WHEN dpd >= 90 THEN 3
-                    WHEN dpd >= 30 THEN 2
-                    ELSE 1
-                END
-                WHERE status IN ('active', 'defaulted')
-            ");
+                    Loan::query()
+                        ->whereKey($loan->getKey())
+                        ->update([
+                            'dpd' => $dpd,
+                            'ifrs_stage' => $this->ifrsStageForDaysPastDue($dpd),
+                        ]);
+                });
         });
     }
 
@@ -48,7 +39,7 @@ class FinancialComplianceService
      */
     public function generateECLReport(): array
     {
-        $loans = Loan::whereIn('status', ['active', 'defaulted'])
+        $loans = Loan::whereIn('status', ['active', 'defaulted', 'overdue'])
             ->selectRaw('ifrs_stage, SUM(remaining_balance) as exposure')
             ->groupBy('ifrs_stage')
             ->get();
@@ -62,19 +53,45 @@ class FinancialComplianceService
             $stage = $loan->ifrs_stage;
             $exposure = (string) $loan->exposure;
             $rate = $eclMatrix[$stage] ?? '0.00';
-            
+
             $provision = bcmul($exposure, $rate, 2);
             $totalProvisioning = bcadd($totalProvisioning, $provision, 2);
 
             $report["stage_{$stage}"] = [
                 'exposure' => $exposure,
                 'provision_required' => $provision,
-                'rate' => $rate
+                'rate' => $rate,
             ];
         }
 
         $report['total_expected_credit_loss'] = $totalProvisioning;
 
         return $report;
+    }
+
+    private function calculateDaysPastDue(Loan $loan): int
+    {
+        $oldestOverdueInstallment = $loan->repaymentSchedules()
+            ->whereIn('status', ['pending', 'partial', 'overdue'])
+            ->whereDate('due_date', '<', today())
+            ->orderBy('due_date')
+            ->value('due_date');
+
+        if (! $oldestOverdueInstallment) {
+            return 0;
+        }
+
+        return (int) Carbon::parse($oldestOverdueInstallment)
+            ->startOfDay()
+            ->diffInDays(today());
+    }
+
+    private function ifrsStageForDaysPastDue(int $daysPastDue): int
+    {
+        return match (true) {
+            $daysPastDue >= 90 => 3,
+            $daysPastDue >= 30 => 2,
+            default => 1,
+        };
     }
 }

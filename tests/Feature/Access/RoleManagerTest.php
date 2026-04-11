@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Access\RoleManager;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Livewire\Livewire;
@@ -9,10 +10,10 @@ beforeEach(function () {
     $this->admin = User::factory()->create(['is_active' => true]);
     Role::create(['name' => 'admin', 'guard_name' => 'web', 'description' => 'Administrator']);
     $this->admin->assignRole('admin');
-    $this->admin->givePermissionTo(\App\Models\Permission::firstOrCreate(['name' => 'access.view', 'guard_name' => 'web']));
-    $this->admin->givePermissionTo(\App\Models\Permission::firstOrCreate(['name' => 'access.create', 'guard_name' => 'web']));
-    $this->admin->givePermissionTo(\App\Models\Permission::firstOrCreate(['name' => 'access.edit', 'guard_name' => 'web']));
-    $this->admin->givePermissionTo(\App\Models\Permission::firstOrCreate(['name' => 'access.delete', 'guard_name' => 'web']));
+    $this->admin->givePermissionTo(Permission::firstOrCreate(['name' => 'access.view', 'guard_name' => 'web']));
+    $this->admin->givePermissionTo(Permission::firstOrCreate(['name' => 'access.create', 'guard_name' => 'web']));
+    $this->admin->givePermissionTo(Permission::firstOrCreate(['name' => 'access.edit', 'guard_name' => 'web']));
+    $this->admin->givePermissionTo(Permission::firstOrCreate(['name' => 'access.delete', 'guard_name' => 'web']));
 });
 
 test('unauthenticated users are redirected from /access', function () {
@@ -122,6 +123,7 @@ test('can assign a role to a user', function () {
         ->assertDispatched('toast');
 
     expect($user->fresh()->hasRole('assignable'))->toBeTrue();
+    expect($user->fresh()->role)->toBe('assignable');
 });
 
 test('can revoke a role from a user', function () {
@@ -136,6 +138,7 @@ test('can revoke a role from a user', function () {
         ->assertDispatched('toast');
 
     expect($user->fresh()->hasRole('revokable'))->toBeFalse();
+    expect($user->fresh()->role)->toBe('staff');
 });
 
 test('inactive user is blocked even with correct credentials', function () {

@@ -37,9 +37,11 @@
     --color-warning-light: #fef3c7;
 
     /* ── Layout surfaces ── */
-    --color-page:    #e9ebee;
-    --color-surface: #ffffff;
-    --color-border:  #d1d5db;
+    --color-page:           #e9ebee;
+    --color-surface:        #ffffff;
+    --color-border:         #d1d5db;
+    --color-sidebar:        #f0f2f5;
+    --color-sidebar-border: #d9dee5;
 
     /* ── Typography ── */
     --color-text:  #111827;
@@ -102,4 +104,9 @@ select:focus[data-flux-control] {
 
 [data-flux-sidebar] {
     transition: width 0.25s ease;
+}
+
+.app-shell-sidebar {
+    background-color: var(--color-sidebar);
+    border-color: var(--color-sidebar-border);
 }

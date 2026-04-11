@@ -12,18 +12,32 @@
 
     {{-- ── Create Staff Modal ──────────────────────────────────────── --}}
     @if($showCreateModal)
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" wire:click.self="$set('showCreateModal',false)">
-        <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-zinc-700 w-full max-w-lg mx-4">
+    @php
+        $newRoleRequiresBranch = $this->roleRequiresBranch($newRole);
+    @endphp
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" wire:click.self="closeCreateModal">
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-zinc-700 w-full max-w-2xl mx-4">
             <div class="px-6 py-5 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between">
                 <div>
                     <h3 class="text-base font-bold text-gray-900 dark:text-white">Add Staff Member</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Create a new system user and assign a role</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Create a new system user, assign a role, and anchor branch accountability</p>
                 </div>
-                <button wire:click="$set('showCreateModal',false)" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors">
+                <button wire:click="closeCreateModal" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
             <div class="px-6 py-5 grid grid-cols-2 gap-4">
+                <div class="col-span-2 rounded-2xl border {{ $newRoleRequiresBranch ? 'border-orange-200 bg-orange-50/80 dark:border-orange-900/40 dark:bg-orange-950/30' : 'border-blue-100 bg-blue-50/80 dark:border-blue-900/40 dark:bg-blue-950/20' }} p-4">
+                    <div class="flex items-start gap-3">
+                        <x-fluent-icon name="{{ $newRoleRequiresBranch ? 'building-office' : 'shield-check' }}" size="sm" palette="{{ $newRoleRequiresBranch ? 'orange' : 'sky' }}" />
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-wider {{ $newRoleRequiresBranch ? 'text-orange-700 dark:text-orange-300' : 'text-blue-700 dark:text-blue-300' }}">
+                                {{ $newRole ? ($newRoleRequiresBranch ? 'Branch-bound role' : 'Global role') : 'Role scope' }}
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ $this->roleScopeDescription($newRole) }}</p>
+                        </div>
+                    </div>
+                </div>
                 <div class="col-span-2">
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Full Name</label>
                     <input wire:model="newName" type="text" placeholder="John Doe"
@@ -50,7 +64,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Role</label>
-                    <select wire:model="newRole"
+                    <select wire:model.live="newRole"
                             class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
                         <option value="">Select role…</option>
                         @foreach($roles as $role)
@@ -59,9 +73,31 @@
                     </select>
                     @error('newRole') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
+                        Branch {{ $newRoleRequiresBranch ? '*' : '' }}
+                    </label>
+                    <select wire:model="newBranchId"
+                            class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <option value="">Select branch…</option>
+                        @foreach($branches as $branch)
+                        <option value="{{ $branch->id }}">{{ $branch->code }} · {{ $branch->name }}{{ $branch->is_headquarter ? ' (HQ)' : '' }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-[11px] text-gray-400 mt-1">
+                        {{ $newRoleRequiresBranch ? 'Required for branch operational roles.' : 'Optional for global roles such as admin or owner.' }}
+                    </p>
+                    @error('newBranchId') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Joined Date *</label>
+                    <input wire:model="newJoinedAt" type="date"
+                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                    @error('newJoinedAt') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                </div>
             </div>
             <div class="px-6 py-4 bg-gray-50 dark:bg-zinc-800/60 rounded-b-2xl flex justify-end gap-3">
-                <button wire:click="$set('showCreateModal',false)" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-xl transition-colors">Cancel</button>
+                <button wire:click="closeCreateModal" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-xl transition-colors">Cancel</button>
                 <button wire:click="createStaff" wire:loading.attr="disabled" class="px-5 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-xl transition-colors shadow-sm">Add Member</button>
             </div>
         </div>
@@ -70,18 +106,32 @@
 
     {{-- ── Edit Staff Modal ────────────────────────────────────────── --}}
     @if($showEditModal)
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" wire:click.self="$set('showEditModal',false)">
-        <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-zinc-700 w-full max-w-lg mx-4">
+    @php
+        $editRoleRequiresBranch = $this->roleRequiresBranch($editRole);
+    @endphp
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" wire:click.self="closeEditModal">
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-zinc-700 w-full max-w-2xl mx-4">
             <div class="px-6 py-5 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between">
                 <div>
                     <h3 class="text-base font-bold text-gray-900 dark:text-white">Edit Staff Member</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Update profile details and role</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Update profile, role scope, and branch assignment</p>
                 </div>
-                <button wire:click="$set('showEditModal',false)" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors">
+                <button wire:click="closeEditModal" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
             <div class="px-6 py-5 grid grid-cols-2 gap-4">
+                <div class="col-span-2 rounded-2xl border {{ $editRoleRequiresBranch ? 'border-orange-200 bg-orange-50/80 dark:border-orange-900/40 dark:bg-orange-950/30' : 'border-blue-100 bg-blue-50/80 dark:border-blue-900/40 dark:bg-blue-950/20' }} p-4">
+                    <div class="flex items-start gap-3">
+                        <x-fluent-icon name="{{ $editRoleRequiresBranch ? 'building-office' : 'shield-check' }}" size="sm" palette="{{ $editRoleRequiresBranch ? 'orange' : 'sky' }}" />
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-wider {{ $editRoleRequiresBranch ? 'text-orange-700 dark:text-orange-300' : 'text-blue-700 dark:text-blue-300' }}">
+                                {{ $editRole ? ($editRoleRequiresBranch ? 'Branch-bound role' : 'Global role') : 'Role scope' }}
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ $this->roleScopeDescription($editRole) }}</p>
+                        </div>
+                    </div>
+                </div>
                 <div class="col-span-2">
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Full Name</label>
                     <input wire:model="editName" type="text"
@@ -101,7 +151,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Role</label>
-                    <select wire:model="editRole"
+                    <select wire:model.live="editRole"
                             class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
                         <option value="">Select role…</option>
                         @foreach($roles as $role)
@@ -109,6 +159,28 @@
                         @endforeach
                     </select>
                     @error('editRole') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
+                        Branch {{ $editRoleRequiresBranch ? '*' : '' }}
+                    </label>
+                    <select wire:model="editBranchId"
+                            class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <option value="">Select branch…</option>
+                        @foreach($branches as $branch)
+                        <option value="{{ $branch->id }}">{{ $branch->code }} · {{ $branch->name }}{{ $branch->is_headquarter ? ' (HQ)' : '' }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-[11px] text-gray-400 mt-1">
+                        {{ $editRoleRequiresBranch ? 'Required for branch operational roles.' : 'Optional for global roles such as admin or owner.' }}
+                    </p>
+                    @error('editBranchId') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Joined Date *</label>
+                    <input wire:model="editJoinedAt" type="date"
+                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                    @error('editJoinedAt') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div class="col-span-2">
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">New Password <span class="font-normal text-gray-400">(leave blank to keep current)</span></label>
@@ -118,7 +190,7 @@
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-50 dark:bg-zinc-800/60 rounded-b-2xl flex justify-end gap-3">
-                <button wire:click="$set('showEditModal',false)" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-xl transition-colors">Cancel</button>
+                <button wire:click="closeEditModal" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-xl transition-colors">Cancel</button>
                 <button wire:click="saveEdit" wire:loading.attr="disabled" class="px-5 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-xl transition-colors shadow-sm">Save Changes</button>
             </div>
         </div>
@@ -126,25 +198,27 @@
     @endif
 
     {{-- ── Deactivate Confirm ───────────────────────────────────────── --}}
-    @if($showDeactivateConfirm && $targetUserId)
-    @php $targetUser = \App\Models\User::find($targetUserId); @endphp
+    @php
+        $deactivateTarget = $this->targetUser;
+    @endphp
+    @if($showDeactivateConfirm && $deactivateTarget)
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
         <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-sm mx-4 border border-gray-100 dark:border-zinc-700">
             <div class="px-6 py-6 text-center">
                 <div class="mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4
-                            {{ $targetUser?->is_active ? 'bg-red-100 dark:bg-red-900/30' : 'bg-teal-100 dark:bg-teal-900/30' }}">
-                    <svg class="w-6 h-6 {{ $targetUser?->is_active ? 'text-red-600' : 'text-teal-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $targetUser?->is_active ? 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636' : 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }}"/>
+                            {{ $deactivateTarget->is_active ? 'bg-red-100 dark:bg-red-900/30' : 'bg-teal-100 dark:bg-teal-900/30' }}">
+                    <svg class="w-6 h-6 {{ $deactivateTarget->is_active ? 'text-red-600' : 'text-teal-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $deactivateTarget->is_active ? 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636' : 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }}"/>
                     </svg>
                 </div>
                 <h3 class="text-base font-bold text-gray-900 dark:text-white mb-1">
-                    {{ $targetUser?->is_active ? 'Deactivate Account?' : 'Reactivate Account?' }}
+                    {{ $deactivateTarget->is_active ? 'Deactivate Account?' : 'Reactivate Account?' }}
                 </h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                    @if($targetUser?->is_active)
-                        <strong>{{ $targetUser?->name }}</strong> will be logged out and blocked from signing in.
+                    @if($deactivateTarget->is_active)
+                        <strong>{{ $deactivateTarget->name }}</strong> will be logged out and blocked from signing in.
                     @else
-                        <strong>{{ $targetUser?->name }}</strong> will regain access to the system.
+                        <strong>{{ $deactivateTarget->name }}</strong> will regain access to the system.
                     @endif
                 </p>
             </div>
@@ -152,8 +226,8 @@
                 <button wire:click="$set('showDeactivateConfirm',false)" class="flex-1 px-4 py-2 text-sm border border-gray-200 dark:border-zinc-600 text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">Cancel</button>
                 <button wire:click="toggleStatus"
                         class="flex-1 px-4 py-2 text-sm font-semibold text-white rounded-xl transition-colors shadow-sm
-                               {{ $targetUser?->is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-teal-600 hover:bg-teal-700' }}">
-                    {{ $targetUser?->is_active ? 'Deactivate' : 'Reactivate' }}
+                               {{ $deactivateTarget->is_active ? 'bg-red-600 hover:bg-red-700' : 'bg-teal-600 hover:bg-teal-700' }}">
+                    {{ $deactivateTarget->is_active ? 'Deactivate' : 'Reactivate' }}
                 </button>
             </div>
         </div>
@@ -162,11 +236,14 @@
 
     {{-- ── Page Header ─────────────────────────────────────────────── --}}
     <div class="flex items-center justify-between mb-6">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="users" size="lg" palette="sky" />
+            <div>
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Staff Management</h1>
             <p class="text-sm text-gray-400 mt-0.5">Manage system users, roles, and account status · {{ number_format($stats['total']) }} {{ Str::plural('member', $stats['total']) }}</p>
+            </div>
         </div>
-        <button wire:click="$set('showCreateModal',true)"
+        <button wire:click="openCreateModal"
                 class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-xl shadow-sm transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Add Staff
@@ -178,9 +255,7 @@
         <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-white/20">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
-                </div>
+                <x-fluent-icon name="users" size="sm" />
                 <span class="text-xs font-semibold text-white/80 uppercase tracking-wider">Total Staff</span>
             </div>
             <p class="text-3xl font-black">{{ number_format($stats['total']) }}</p>
@@ -188,9 +263,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-teal-100 dark:bg-teal-900/30 text-teal-600">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
+                <x-fluent-icon name="check-circle" size="sm" palette="emerald" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active</span>
             </div>
             <p class="text-2xl font-black text-gray-900 dark:text-white">{{ number_format($stats['active']) }}</p>
@@ -198,9 +271,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-500">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-                </div>
+                <x-fluent-icon name="x-circle" size="sm" palette="rose" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Inactive</span>
             </div>
             <p class="text-2xl font-black text-gray-900 dark:text-white">{{ number_format($stats['inactive']) }}</p>
@@ -208,9 +279,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-orange-500">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
+                <x-fluent-icon name="chart-bar-square" size="sm" palette="blue" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active Rate</span>
             </div>
             <p class="text-2xl font-black text-gray-900 dark:text-white">{{ $stats['total'] > 0 ? round(($stats['active'] / $stats['total']) * 100) : 0 }}%</p>
@@ -295,7 +364,7 @@
                     </td>
                     <td class="px-5 py-4 hidden lg:table-cell">
                         <p class="text-xs text-gray-700 dark:text-gray-300">{{ $member->branch?->name ?? '—' }}</p>
-                        <p class="text-[10px] text-gray-400 mt-0.5">{{ $member->created_at->format('d M Y') }}</p>
+                        <p class="text-[10px] text-gray-400 mt-0.5">{{ ($member->joined_at ?? $member->created_at)?->format('d M Y') ?? '—' }}</p>
                     </td>
                     <td class="px-5 py-4 text-center">
                         @if($member->is_active)
@@ -361,29 +430,29 @@
              x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
              class="relative w-full max-w-lg bg-white dark:bg-zinc-900 shadow-2xl overflow-y-auto flex flex-col">
 
-            @if($this->detailStaff)
             @php
-                $ds             = $this->detailStaff;
-                $dsRole         = $ds->roles->first();
-                $dsInitials     = Str::of($ds->name)->explode(' ')->map(fn($p) => strtoupper(substr($p,0,1)))->take(2)->implode('');
-                $loansCount     = $ds->disbursedLoans()->count();
-                $customersCount = $ds->registeredCustomers()->count();
-                $vendorsCount   = $ds->managedVendors()->count();
+                $detailStaff = $this->detailStaff;
+                $detailRole = $detailStaff?->roles->first();
+                $detailInitials = $detailStaff?->initials() ?? '';
+                $loansCount = $detailStaff ? $detailStaff->disbursedLoans()->count() : 0;
+                $customersCount = $detailStaff ? $detailStaff->registeredCustomers()->count() : 0;
+                $vendorsCount = $detailStaff ? $detailStaff->managedVendors()->count() : 0;
             @endphp
+            @if($detailStaff)
 
             {{-- Header --}}
             <div class="px-6 py-6 bg-gradient-to-r from-blue-700 to-blue-800 text-white">
                 <div class="flex items-start justify-between">
                     <div class="flex items-center gap-4">
                         <div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white text-xl font-black flex-shrink-0">
-                            {{ $dsInitials }}
+                            {{ $detailInitials }}
                         </div>
                         <div>
-                            <p class="text-lg font-black leading-tight">{{ $ds->name }}</p>
-                            <p class="text-white/70 text-xs mt-0.5">{{ $ds->email }}</p>
-                            @if($dsRole)
+                            <p class="text-lg font-black leading-tight">{{ $detailStaff->name }}</p>
+                            <p class="text-white/70 text-xs mt-0.5">{{ $detailStaff->email }}</p>
+                            @if($detailRole)
                             <span class="mt-1.5 inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white">
-                                {{ ucwords(str_replace(['-','_'],' ',$dsRole->name)) }}
+                                {{ ucwords(str_replace(['-','_'],' ',$detailRole->name)) }}
                             </span>
                             @endif
                         </div>
@@ -393,7 +462,7 @@
                     </button>
                 </div>
                 <div class="mt-4 flex items-center gap-2">
-                    @if($ds->is_active)
+                    @if($detailStaff->is_active)
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-teal-500/20 text-teal-200">
                         <span class="w-1.5 h-1.5 rounded-full bg-teal-300"></span>Active
                     </span>
@@ -402,7 +471,7 @@
                         <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>Inactive
                     </span>
                     @endif
-                    @if($ds->email_verified_at)
+                    @if($detailStaff->email_verified_at)
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-white/10 text-white/70">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
                         Email verified
@@ -419,20 +488,20 @@
                     <div class="grid grid-cols-2 gap-2">
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase font-bold">Phone</p>
-                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $ds->phone ?? '—' }}</p>
+                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $detailStaff->phone ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase font-bold">Employee Code</p>
-                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5 font-mono">{{ $ds->employee_code ?? '—' }}</p>
+                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5 font-mono">{{ $detailStaff->employee_code ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase font-bold">Branch</p>
-                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $ds->branch?->name ?? '—' }}</p>
+                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $detailStaff->branch?->name ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase font-bold">Joined</p>
-                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $ds->created_at->format('d M Y') }}</p>
-                            <p class="text-[10px] text-gray-400">{{ $ds->created_at->diffForHumans() }}</p>
+                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ ($detailStaff->joined_at ?? $detailStaff->created_at)?->format('d M Y') ?? '—' }}</p>
+                            <p class="text-[10px] text-gray-400">{{ ($detailStaff->joined_at ?? $detailStaff->created_at)?->diffForHumans() ?? '—' }}</p>
                         </div>
                     </div>
                 </div>
@@ -457,11 +526,11 @@
                 </div>
 
                 {{-- Roles --}}
-                @if($ds->roles->isNotEmpty())
+                @if($detailStaff->roles->isNotEmpty())
                 <div>
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Roles</h3>
                     <div class="flex flex-wrap gap-2">
-                        @foreach($ds->roles as $role)
+                        @foreach($detailStaff->roles as $role)
                         <span class="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-300">
                             {{ ucwords(str_replace(['-','_'],' ',$role->name)) }}
                         </span>
@@ -473,9 +542,9 @@
                 {{-- Account ID --}}
                 <div class="pt-3 border-t border-gray-100 dark:border-zinc-800">
                     <p class="text-[10px] text-gray-400 uppercase font-bold">Account ID</p>
-                    <p class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-0.5 break-all">{{ $ds->id }}</p>
-                    @if($ds->email_verified_at)
-                    <p class="text-[10px] text-gray-400 mt-1">Email verified {{ $ds->email_verified_at->diffForHumans() }}</p>
+                    <p class="text-xs font-mono text-gray-500 dark:text-gray-400 mt-0.5 break-all">{{ $detailStaff->id }}</p>
+                    @if($detailStaff->email_verified_at)
+                    <p class="text-[10px] text-gray-400 mt-1">Email verified {{ $detailStaff->email_verified_at->diffForHumans() }}</p>
                     @endif
                 </div>
 
@@ -487,7 +556,7 @@
                         class="flex-1 py-2.5 text-sm font-semibold rounded-xl border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
                     Close
                 </button>
-                <button wire:click="startEdit('{{ $ds->id }}'); $wire.closeDetail()"
+                <button wire:click="startEdit('{{ $detailStaff->id }}'); $wire.closeDetail()"
                         class="flex-1 py-2.5 text-sm font-semibold rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-colors">
                     Edit Profile
                 </button>

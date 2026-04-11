@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Services\ReportGenerationService;
 use App\Models\User;
+use App\Services\ReportGenerationService;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 class SendDailyDigest extends Command
@@ -21,27 +21,31 @@ class SendDailyDigest extends Command
      *
      * @var string
      */
-    protected $description = 'Aggregates EOD Metrics and dispatches to Admins & Owners';
+    protected $description = 'Aggregates EOD metrics for admins and owners';
 
     /**
      * Execute the console command.
      */
-    public function handle(ReportGenerationService $reportService)
+    public function handle(ReportGenerationService $reportService): int
     {
-        $this->info("Compiling End of Day Business Digest...");
+        $this->info('Compiling End of Day Business Digest...');
 
         $payload = $reportService->generateDailyDigestMessage();
 
-        $owners = User::role(['owner', 'admin'])->get();
+        $owners = User::whereHas('roles', function ($query): void {
+            $query->whereIn('name', ['owner', 'admin']);
+        })->get();
 
         foreach ($owners as $executive) {
-            // Placeholder: Replace with actual Laravel Notification / Mail class / WhatsApp API sender
-            Log::info("Dispatching Daily Digest Email to: " . $executive->email);
-            Log::info("Digest Payload:\n" . $payload);
-            
-            // Mail::to($executive->email)->send(new DailyDigestMail($payload));
+            Log::info('Daily digest prepared for executive delivery.', [
+                'user_id' => $executive->id,
+                'email' => $executive->email,
+                'payload' => $payload,
+            ]);
         }
 
-        $this->info("Broadcast Complete. " . $owners->count() . " executives notified.");
+        $this->info('Digest Complete. '.$owners->count().' executive digests recorded.');
+
+        return self::SUCCESS;
     }
 }

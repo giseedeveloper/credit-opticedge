@@ -14,7 +14,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'phone_model_id', 'branch_id', 'vendor_id', 'imei_1', 'imei_2',
-    'serial_number', 'status', 'purchase_price', 'received_at', 'extra_data',
+    'serial_number', 'mdm_id', 'lock_status', 'status', 'grading', 'repair_cost',
+    'purchase_price', 'received_at', 'extra_data',
 ])]
 class InventoryUnit extends Model
 {
@@ -26,6 +27,7 @@ class InventoryUnit extends Model
         return [
             'extra_data' => 'array',
             'purchase_price' => 'decimal:2',
+            'repair_cost' => 'decimal:2',
             'received_at' => 'date',
         ];
     }

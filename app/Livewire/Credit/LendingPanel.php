@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\InventoryUnit;
 use App\Models\Loan;
 use App\Services\DocumentService;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -108,9 +109,9 @@ class LendingPanel extends Component
         ]);
 
         $principal = (float) $this->newPrincipal;
-        $rate      = $this->newInterestRate / 100;
-        $months    = (int) ceil($this->newDurationWeeks / 4);
-        $deposit   = (float) ($this->newDepositPaid ?: 0);
+        $rate = $this->newInterestRate / 100;
+        $months = (int) ceil($this->newDurationWeeks / 4);
+        $deposit = (float) ($this->newDepositPaid ?: 0);
 
         if ($this->newInterestType === 'flat') {
             $totalInterest = $principal * $rate * $months;
@@ -128,36 +129,36 @@ class LendingPanel extends Component
         $totalDebt = $principal + $totalInterest;
         $remaining = $totalDebt - $deposit;
 
-        $loan = \Illuminate\Support\Facades\DB::transaction(function () use (
-            $principal, $deposit, $totalDebt, $remaining, $months
+        $loan = DB::transaction(function () use (
+            $principal, $deposit, $totalDebt, $remaining
         ) {
             // Atomic loan number — lock last row to prevent race condition
-            $last = \App\Models\Loan::withTrashed()->lockForUpdate()->count();
+            $last = Loan::withTrashed()->lockForUpdate()->count();
             $loanNumber = 'LN-'.str_pad($last + 1, 6, '0', STR_PAD_LEFT);
 
-            return \App\Models\Loan::create([
-                'customer_id'        => $this->newCustomerId,
-                'inventory_unit_id'  => $this->newUnitId,
-                'disbursed_by'       => auth()->id(),
-                'approved_by'        => auth()->id(),
-                'branch_id'          => auth()->user()->branch_id,
-                'loan_number'        => $loanNumber,
-                'principal_amount'   => $principal,
-                'deposit_paid'       => $deposit,
-                'interest_rate'      => $this->newInterestRate,
-                'interest_type'      => $this->newInterestType,
-                'total_debt'         => $totalDebt,
-                'total_payable'      => $remaining,
-                'amount_paid'        => $deposit,
-                'remaining_balance'  => $remaining,
-                'outstanding_balance'=> $remaining,
-                'penalty_amount'     => 0,
-                'duration_weeks'     => $this->newDurationWeeks,
-                'repayment_frequency'=> $this->newFrequency,
-                'status'             => 'active',
-                'disbursed_at'       => now(),
-                'due_date'           => now()->addWeeks($this->newDurationWeeks),
-                'notes'              => $this->newNotes,
+            return Loan::create([
+                'customer_id' => $this->newCustomerId,
+                'inventory_unit_id' => $this->newUnitId,
+                'disbursed_by' => auth()->id(),
+                'approved_by' => auth()->id(),
+                'branch_id' => auth()->user()->branch_id,
+                'loan_number' => $loanNumber,
+                'principal_amount' => $principal,
+                'deposit_paid' => $deposit,
+                'interest_rate' => $this->newInterestRate,
+                'interest_type' => $this->newInterestType,
+                'total_debt' => $totalDebt,
+                'total_payable' => $remaining,
+                'amount_paid' => $deposit,
+                'remaining_balance' => $remaining,
+                'outstanding_balance' => $remaining,
+                'penalty_amount' => 0,
+                'duration_weeks' => $this->newDurationWeeks,
+                'repayment_frequency' => $this->newFrequency,
+                'status' => 'active',
+                'disbursed_at' => now(),
+                'due_date' => now()->addWeeks($this->newDurationWeeks),
+                'notes' => $this->newNotes,
             ]);
         });
 
@@ -208,12 +209,12 @@ class LendingPanel extends Component
             ->paginate(10);
 
         $customers = Customer::query()
+            ->kycApproved()
             ->when($this->customerSearch, function ($q) {
                 $q->where('first_name', 'like', "%{$this->customerSearch}%")
                     ->orWhere('last_name', 'like', "%{$this->customerSearch}%")
                     ->orWhere('phone', 'like', "%{$this->customerSearch}%");
             })
-            ->where('kyc_status', 'verified')
             ->orderBy('first_name')
             ->limit(50)
             ->get();

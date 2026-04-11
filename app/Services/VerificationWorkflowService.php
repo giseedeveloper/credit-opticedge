@@ -6,9 +6,6 @@ use App\Models\Customer;
 use App\Models\User;
 use App\Models\Verification;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Notifications\DatabaseNotification;
-use Illuminate\Support\Facades\Notification;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification as BaseNotification;
 
 class VerificationWorkflowService
@@ -19,7 +16,7 @@ class VerificationWorkflowService
     public function initiateKyc(Customer $customer): Verification
     {
         $verification = $customer->verifications()->create([
-            'type'   => 'kyc',
+            'type' => 'kyc',
             'status' => 'pending',
         ]);
 
@@ -49,10 +46,10 @@ class VerificationWorkflowService
     public function approve(Verification $verification, User $reviewer, ?string $notes = null): Verification
     {
         $verification->update([
-            'status'      => 'approved',
+            'status' => 'approved',
             'reviewed_by' => $reviewer->id,
             'reviewed_at' => now(),
-            'notes'       => $notes,
+            'notes' => $notes,
         ]);
 
         if ($verification->type === 'kyc') {
@@ -68,9 +65,9 @@ class VerificationWorkflowService
     public function reject(Verification $verification, User $reviewer, string $reason): Verification
     {
         $verification->update([
-            'status'           => 'rejected',
-            'reviewed_by'      => $reviewer->id,
-            'reviewed_at'      => now(),
+            'status' => 'rejected',
+            'reviewed_by' => $reviewer->id,
+            'reviewed_at' => now(),
             'rejection_reason' => $reason,
         ]);
 
@@ -86,10 +83,11 @@ class VerificationWorkflowService
      */
     private function notifyAdmins(Customer $customer, Verification $verification): void
     {
-        $admins = User::where('role', 'admin')->get();
+        $admins = User::role('admin')->get();
 
         $admins->each(function (User $admin) use ($customer, $verification) {
-            $admin->notify(new class ($customer, $verification) extends BaseNotification {
+            $admin->notify(new class($customer, $verification) extends BaseNotification
+            {
                 public function __construct(
                     public Customer $customer,
                     public Verification $verification
@@ -104,10 +102,10 @@ class VerificationWorkflowService
                 public function toArray(object $notifiable): array
                 {
                     return [
-                        'title'           => 'New KYC Verification Request',
-                        'message'         => "Customer {$this->customer->full_name} submitted KYC documents.",
+                        'title' => 'New KYC Verification Request',
+                        'message' => "Customer {$this->customer->full_name} submitted KYC documents.",
                         'verification_id' => $this->verification->id,
-                        'customer_id'     => $this->customer->id,
+                        'customer_id' => $this->customer->id,
                     ];
                 }
             });

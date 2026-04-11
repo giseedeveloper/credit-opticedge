@@ -1,0 +1,52 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'config/theme.dart';
+import 'config/routes.dart';
+import 'core/api/api_client.dart';
+import 'core/providers/settings_provider.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Enforce portrait mode for FO app
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+    ),
+  );
+
+  // Initialize API client with base URL and interceptors
+  ApiClient.instance.init();
+
+  runApp(
+    const ProviderScope(
+      child: OpticedgeFOApp(),
+    ),
+  );
+}
+
+class OpticedgeFOApp extends ConsumerWidget {
+  const OpticedgeFOApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(appRouterProvider);
+    final settings = ref.watch(settingsProvider);
+
+    return MaterialApp.router(
+      title: 'Opticedge FO',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: settings.themeMode,
+      routerConfig: router,
+    );
+  }
+}

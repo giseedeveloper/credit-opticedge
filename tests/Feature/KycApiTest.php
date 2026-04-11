@@ -1,8 +1,11 @@
 <?php
 
 use App\Models\Branch;
+use App\Models\Brand;
 use App\Models\Customer;
+use App\Models\InventoryUnit;
 use App\Models\Permission;
+use App\Models\PhoneModel;
 use App\Models\User;
 use App\Models\Verification;
 use Illuminate\Http\UploadedFile;
@@ -12,9 +15,23 @@ use Spatie\Permission\PermissionRegistrar;
 beforeEach(function () {
     app()[PermissionRegistrar::class]->forgetCachedPermissions();
     Permission::firstOrCreate(['name' => 'loans.create', 'guard_name' => 'web']);
-    $this->agent = User::factory()->create();
-    $this->agent->givePermissionTo('loans.create');
     $this->branch = Branch::factory()->create();
+    $this->agent = User::factory()->create(['branch_id' => $this->branch->id]);
+    $this->agent->givePermissionTo('loans.create');
+    $this->brand = Brand::factory()->create(['name' => 'Samsung']);
+    $this->phoneModel = PhoneModel::factory()->create([
+        'brand_id' => $this->brand->id,
+        'name' => 'Galaxy A15',
+        'retail_price' => 380000,
+        'specifications' => ['ram' => '6GB', 'storage' => '128GB', 'color' => 'Blue'],
+    ]);
+    $this->inventoryUnit = InventoryUnit::factory()->create([
+        'phone_model_id' => $this->phoneModel->id,
+        'branch_id' => $this->branch->id,
+        'status' => 'hq_stock',
+        'imei_1' => '123456789012345',
+        'serial_number' => 'SN-GALAXY-001',
+    ]);
     Sanctum::actingAs($this->agent);
 });
 
@@ -22,18 +39,31 @@ beforeEach(function () {
 
 it('step1 creates a draft customer and returns customer_id', function () {
     $response = $this->postJson('/api/v1/kyc/application/step1', [
-        'device_specs' => 'Tecno Camon 30 – 8GB/256GB',
-        'imei_number' => '123456789012345',
-        'cash_price' => 450000,
+        'brand_id' => $this->brand->id,
+        'phone_model_id' => $this->phoneModel->id,
+        'inventory_unit_id' => $this->inventoryUnit->id,
         'deposit_amount' => 50000,
         'preferred_repayment' => 'weekly',
+        'accessories' => [
+            ['code' => 'screen_protector', 'name' => 'Screen Protector', 'quantity' => 1, 'offer_type' => 'free'],
+            ['name' => 'Phone Cover', 'quantity' => 1, 'offer_type' => 'charged', 'unit_price' => 15000],
+        ],
+        'store_offer_notes' => 'Weekend promo included a free protector.',
     ]);
 
     $response->assertOk()
         ->assertJsonPath('data.step', 1)
         ->assertJsonStructure(['data' => ['customer_id', 'step']]);
 
-    expect(Customer::where('imei_number', '123456789012345')->exists())->toBeTrue();
+    $draft = Customer::where('imei_number', $this->inventoryUnit->imei_1)
+        ->where('phone_model_id', $this->phoneModel->id)
+        ->where('inventory_unit_id', $this->inventoryUnit->id)
+        ->latest()
+        ->first();
+
+    expect($draft)->not->toBeNull()
+        ->and($draft?->device_accessories)->toHaveCount(2)
+        ->and($draft?->store_offer_notes)->toBe('Weekend promo included a free protector.');
 });
 
 it('step1 rejects invalid IMEI', function () {
@@ -45,6 +75,60 @@ it('step1 rejects invalid IMEI', function () {
         'preferred_repayment' => 'weekly',
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['imei_number']);
+});
+
+it('step1 can derive identifiers from a scanned payload when inventory is not linked', function () {
+    $response = $this->postJson('/api/v1/kyc/application/step1', [
+        'device_specs' => 'Samsung - Galaxy A15 - 6GB/128GB/Blue',
+        'cash_price' => 380000,
+        'deposit_amount' => 50000,
+        'preferred_repayment' => 'weekly',
+        'device_scan' => [
+            'raw_text' => 'IMEI: 356789012345678 Serial Number: SN-SCAN-001',
+            'detectors' => ['text'],
+        ],
+    ]);
+
+    $response->assertOk()->assertJsonPath('data.step', 1);
+
+    $draft = Customer::latest()->first();
+
+    expect($draft?->imei_number)->toBe('356789012345678')
+        ->and($draft?->serial_number)->toBe('SN-SCAN-001')
+        ->and($draft?->device_scan_metadata['selected_imei'])->toBe('356789012345678');
+});
+
+it('step1 rejects a scan payload that conflicts with the selected stock unit', function () {
+    $this->postJson('/api/v1/kyc/application/step1', [
+        'brand_id' => $this->brand->id,
+        'phone_model_id' => $this->phoneModel->id,
+        'inventory_unit_id' => $this->inventoryUnit->id,
+        'deposit_amount' => 50000,
+        'preferred_repayment' => 'weekly',
+        'device_scan' => [
+            'raw_text' => 'IMEI: 356789012345679 Serial Number: SN-WRONG-001',
+            'detectors' => ['text'],
+        ],
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['device_scan']);
+});
+
+it('device catalog endpoints return scoped brands, models and units', function () {
+    $this->getJson('/api/v1/kyc/application/phone-countries')
+        ->assertOk()
+        ->assertJsonFragment(['iso' => 'TZ', 'dial_code' => '+255']);
+
+    $this->getJson('/api/v1/kyc/application/device/brands')
+        ->assertOk()
+        ->assertJsonFragment(['id' => $this->brand->id, 'name' => 'Samsung']);
+
+    $this->getJson('/api/v1/kyc/application/device/models?brand_id='.$this->brand->id)
+        ->assertOk()
+        ->assertJsonFragment(['id' => $this->phoneModel->id, 'name' => 'Galaxy A15']);
+
+    $this->getJson('/api/v1/kyc/application/device/inventory?phone_model_id='.$this->phoneModel->id)
+        ->assertOk()
+        ->assertJsonFragment(['id' => $this->inventoryUnit->id, 'imei_1' => $this->inventoryUnit->imei_1]);
 });
 
 // ─── Step 2: Identity ─────────────────────────────────────────────────────────
@@ -79,6 +163,7 @@ it('step2 saves customer identity details', function () {
 it('step2 rejects duplicate NIDA', function () {
     $existing = Customer::factory()->create(['nida_number' => '11111111111111111111']);
     $draft = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
         'first_name' => '_draft_',
         'last_name' => '_draft_',
         'phone' => '_draft_'.uniqid(),
@@ -108,27 +193,35 @@ it('step3 saves contact and location', function () {
 
     $this->postJson("/api/v1/kyc/application/{$draft->id}/step3", [
         'phone' => '0712345678',
+        'phone_country' => 'TZ',
         'branch_id' => $this->branch->id,
         'region' => 'Dar es Salaam',
         'district' => 'Kinondoni',
     ])->assertOk()->assertJsonPath('data.step', 3);
 
-    expect($draft->fresh()->phone)->toBe('0712345678');
+    expect($draft->fresh()->phone)->toBe('+255712345678');
+    expect($draft->fresh()->phone_metadata['phone']['country_iso'])->toBe('TZ');
     expect($draft->fresh()->region)->toBe('Dar es Salaam');
 });
 
 // ─── Step 5: NOK ─────────────────────────────────────────────────────────────
 
 it('step5 saves next of kin details', function () {
-    $customer = Customer::factory()->create(['registered_by' => $this->agent->id]);
+    $customer = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'phone' => '+255712345678',
+    ]);
 
     $this->postJson("/api/v1/kyc/application/{$customer->id}/step5", [
         'nok_name' => 'John Mwangi',
         'nok_phone' => '0754111222',
+        'nok_phone_country' => 'TZ',
         'nok_relationship' => 'spouse',
     ])->assertOk()->assertJsonPath('data.step', 5);
 
     expect($customer->fresh()->nok_name)->toBe('John Mwangi');
+    expect($customer->fresh()->nok_phone)->toBe('+255754111222');
+    expect($customer->fresh()->phone_metadata['nok_phone']['country_iso'])->toBe('TZ');
 });
 
 // ─── Step 6: Consent ──────────────────────────────────────────────────────────
@@ -150,7 +243,7 @@ it('step6 records consent and timestamp', function () {
 });
 
 it('step6 rejects missing consent', function () {
-    $customer = Customer::factory()->create();
+    $customer = Customer::factory()->create(['registered_by' => $this->agent->id]);
 
     $this->postJson("/api/v1/kyc/application/{$customer->id}/step6", [
         'terms_accepted' => false,

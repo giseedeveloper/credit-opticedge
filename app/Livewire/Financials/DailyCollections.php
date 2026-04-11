@@ -32,12 +32,13 @@ class DailyCollections extends Component
 
     public string $search = '';
 
-    public bool    $showDetail    = false;
-    public ?string $detailTxnId   = null;
+    public bool $showDetail = false;
+
+    public ?string $detailTxnId = null;
 
     public function mount(): void
     {
-        abort_unless(auth()->user()->canAccess('transactions.view'), 403);
+        abort_unless(auth()->user()->canAccess('accounting.view'), 403);
         $this->date = today()->toDateString();
     }
 
@@ -48,9 +49,20 @@ class DailyCollections extends Component
         $this->showPaymentModal = true;
     }
 
-    public function updatedDate(): void          { $this->resetPage(); }
-    public function updatedChannelFilter(): void  { $this->resetPage(); }
-    public function updatedSearch(): void         { $this->resetPage(); }
+    public function updatedDate(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedChannelFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
     public function updatedPaymentLoanSearch(): void
     {
@@ -60,12 +72,12 @@ class DailyCollections extends Component
     public function openDetail(string $id): void
     {
         $this->detailTxnId = $id;
-        $this->showDetail  = true;
+        $this->showDetail = true;
     }
 
     public function closeDetail(): void
     {
-        $this->showDetail  = false;
+        $this->showDetail = false;
         $this->detailTxnId = null;
     }
 
@@ -150,13 +162,13 @@ class DailyCollections extends Component
         $base = fn () => Transaction::where('entry_type', 'credit')->whereDate('transacted_at', $this->date);
 
         $summary = [
-            'total'       => (clone $base())->sum('amount'),
-            'count'       => (clone $base())->count(),
-            'mpesa'       => (clone $base())->where('channel', 'mpesa')->sum('amount'),
-            'cash'        => (clone $base())->where('channel', 'cash')->sum('amount'),
-            'tigopesa'    => (clone $base())->where('channel', 'tigopesa')->sum('amount'),
-            'halopesa'    => (clone $base())->where('channel', 'halopesa')->sum('amount'),
-            'bank'        => (clone $base())->where('channel', 'bank')->sum('amount'),
+            'total' => (clone $base())->sum('amount'),
+            'count' => (clone $base())->count(),
+            'mpesa' => (clone $base())->where('channel', 'mpesa')->sum('amount'),
+            'cash' => (clone $base())->where('channel', 'cash')->sum('amount'),
+            'tigopesa' => (clone $base())->where('channel', 'tigopesa')->sum('amount'),
+            'halopesa' => (clone $base())->where('channel', 'halopesa')->sum('amount'),
+            'bank' => (clone $base())->where('channel', 'bank')->sum('amount'),
             'month_total' => Transaction::where('entry_type', 'credit')
                 ->whereMonth('transacted_at', now()->month)
                 ->whereYear('transacted_at', now()->year)

@@ -11,77 +11,126 @@ use InvalidArgumentException;
 class PaymentProcessingService
 {
     /**
-     * Record a payment, allocate linearly using bcmath, handle partials and overpayments.
+     * Record a payment against the next open installments for a loan.
+     *
+     * @param  array<string, mixed>  $meta
      */
-    public function recordPayment(Loan $loan, float $amount, string $reference, string $method): Transaction
+    public function recordPayment(Loan $loan, float $amount, string $reference, string $channel, array $meta = []): Transaction
     {
-        return DB::transaction(function () use ($loan, $amount, $reference, $method) {
-            $paymentStr = (string) $amount;
-            
-            if (bccomp($paymentStr, '0.00', 2) <= 0) {
-                throw new InvalidArgumentException("Payment amount must be greater than zero.");
+        if ($amount <= 0) {
+            throw new InvalidArgumentException('Payment amount must be greater than zero.');
+        }
+
+        return DB::transaction(function () use ($loan, $amount, $reference, $channel, $meta) {
+            /** @var Loan $lockedLoan */
+            $lockedLoan = Loan::query()
+                ->whereKey($loan->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $currentOutstanding = max(
+                (float) $lockedLoan->outstanding_balance,
+                (float) $lockedLoan->remaining_balance
+            );
+
+            if ($currentOutstanding <= 0) {
+                throw new InvalidArgumentException('Loan has no outstanding balance.');
             }
 
-            // Record the transaction
-            $transaction = Transaction::create([
-                'loan_id'        => $loan->id,
-                'customer_id'    => $loan->customer_id,
-                'vendor_id'      => $loan->vendor_id,
-                'reference'      => $reference,
-                'type'           => 'repayment',
-                'amount'         => $paymentStr,
-                'method'         => $method,
-                'status'         => 'completed',
-                'recorded_by'    => auth()->id(),
-            ]);
+            $duplicateReferenceExists = Transaction::query()
+                ->where('reference', $reference)
+                ->orWhere('external_reference', $reference)
+                ->exists();
 
-            // Update remaining balance using bcmath
-            $currentBalance = (string) $loan->remaining_balance;
-            $newBalance = bcsub($currentBalance, $paymentStr, 2);
-            $loan->update(['remaining_balance' => max(0, $newBalance)]);
+            if ($duplicateReferenceExists) {
+                throw new InvalidArgumentException('Duplicate transaction reference.');
+            }
 
-            // Waterfall payment against unpaid schedules
-            $unpaidSchedules = $loan->schedules()
-                ->whereIn('status', ['unpaid', 'partial', 'overdue'])
+            $remainingAllocation = round($amount, 2);
+            $allocations = [];
+
+            $openSchedules = RepaymentSchedule::query()
+                ->where('loan_id', $lockedLoan->id)
+                ->whereIn('status', ['pending', 'partial', 'overdue'])
                 ->orderBy('due_date')
+                ->orderBy('installment_number')
+                ->lockForUpdate()
                 ->get();
 
-            $remainingAllocation = $paymentStr;
-
-            foreach ($unpaidSchedules as $schedule) {
-                if (bccomp($remainingAllocation, '0.00', 2) <= 0) break;
-
-                $scheduleDue = (string) $schedule->amount_due;
-                $schedulePaid = (string) $schedule->amount_paid;
-                $balanceNeeded = bcsub($scheduleDue, $schedulePaid, 2);
-
-                if (bccomp($balanceNeeded, '0.00', 2) <= 0) continue;
-
-                if (bccomp($remainingAllocation, $balanceNeeded, 2) >= 0) {
-                    // Fully pay this schedule
-                    $schedule->update([
-                        'amount_paid' => $scheduleDue,
-                        'status'      => 'paid',
-                        'paid_at'     => now()
-                    ]);
-                    $remainingAllocation = bcsub($remainingAllocation, $balanceNeeded, 2);
-                } else {
-                    // Partially pay this schedule
-                    $newPaid = bcadd($schedulePaid, $remainingAllocation, 2);
-                    $schedule->update([
-                        'amount_paid' => $newPaid,
-                        'status'      => 'partial'
-                    ]);
-                    $remainingAllocation = '0.00';
+            foreach ($openSchedules as $schedule) {
+                if ($remainingAllocation <= 0) {
+                    break;
                 }
+
+                $scheduleOutstanding = round(
+                    ((float) $schedule->amount_due + (float) $schedule->penalty_component) - (float) $schedule->amount_paid,
+                    2
+                );
+
+                if ($scheduleOutstanding <= 0) {
+                    continue;
+                }
+
+                $allocatedAmount = min($remainingAllocation, $scheduleOutstanding);
+                $newAmountPaid = round((float) $schedule->amount_paid + $allocatedAmount, 2);
+                $newBalanceRemaining = max(
+                    0,
+                    round(
+                        ((float) $schedule->amount_due + (float) $schedule->penalty_component) - $newAmountPaid,
+                        2
+                    )
+                );
+
+                $schedule->update([
+                    'amount_paid' => $newAmountPaid,
+                    'balance_remaining' => $newBalanceRemaining,
+                    'status' => $newBalanceRemaining <= 0 ? 'paid' : 'partial',
+                    'paid_at' => $newBalanceRemaining <= 0 ? now()->toDateString() : null,
+                ]);
+
+                $allocations[] = [
+                    'schedule_id' => $schedule->id,
+                    'installment_number' => $schedule->installment_number,
+                    'allocated_amount' => $allocatedAmount,
+                ];
+
+                $remainingAllocation = round($remainingAllocation - $allocatedAmount, 2);
             }
 
-            // Check if loan is fully paid
-            if (bccomp((string) $loan->remaining_balance, '0.00', 2) <= 0) {
-                $loan->update(['status' => 'completed']);
-                
-                // Unmark inventory assignment if needed, or trigger unlock command
-            }
+            $appliedAmount = min(round($amount, 2), $currentOutstanding);
+            $unappliedAmount = round(max(0, $amount - $appliedAmount), 2);
+            $newOutstanding = round(max(0, $currentOutstanding - $appliedAmount), 2);
+            $normalizedChannel = $this->normalizeChannel($channel);
+
+            $transactionMeta = array_merge($meta, [
+                'source_channel' => $channel,
+                'allocations' => $allocations,
+                'applied_amount' => $appliedAmount,
+                'unapplied_amount' => $unappliedAmount,
+            ]);
+
+            $transaction = Transaction::create([
+                'loan_id' => $lockedLoan->id,
+                'customer_id' => $lockedLoan->customer_id,
+                'recorded_by' => auth()->id(),
+                'reference' => $reference,
+                'type' => 'repayment',
+                'entry_type' => 'credit',
+                'amount' => round($amount, 2),
+                'channel' => $normalizedChannel,
+                'external_reference' => $meta['external_reference'] ?? null,
+                'description' => $meta['description'] ?? "Repayment via {$normalizedChannel}",
+                'meta' => $transactionMeta,
+                'transacted_at' => now(),
+            ]);
+
+            $lockedLoan->update([
+                'amount_paid' => round((float) $lockedLoan->amount_paid + $appliedAmount, 2),
+                'remaining_balance' => $newOutstanding,
+                'outstanding_balance' => $newOutstanding,
+                'status' => $newOutstanding <= 0 ? 'completed' : $lockedLoan->status,
+                'completed_at' => $newOutstanding <= 0 ? now()->toDateString() : null,
+            ]);
 
             return $transaction;
         });
@@ -94,18 +143,32 @@ class PaymentProcessingService
     {
         DB::transaction(function () {
             $overdueSchedules = RepaymentSchedule::where('due_date', '<', today())
-                ->whereIn('status', ['unpaid', 'partial'])
+                ->whereIn('status', ['pending', 'partial'])
                 ->get();
 
             foreach ($overdueSchedules as $schedule) {
-                // Apply a fixed 500 TZS penalty per day overdue
-                $penaltyAmount = '500.00';
-                $schedule->increment('penalty_amount', (float) $penaltyAmount);
+                $penaltyAmount = 500.00;
+
+                $schedule->increment('penalty_component', $penaltyAmount);
                 $schedule->update(['status' => 'overdue']);
-                
-                $schedule->loan->increment('total_debt', (float) $penaltyAmount);
-                $schedule->loan->increment('remaining_balance', (float) $penaltyAmount);
+
+                $schedule->loan->increment('penalty_amount', $penaltyAmount);
+                $schedule->loan->increment('remaining_balance', $penaltyAmount);
+                $schedule->loan->increment('outstanding_balance', $penaltyAmount);
             }
         });
+    }
+
+    private function normalizeChannel(string $channel): string
+    {
+        $normalized = strtolower(trim($channel));
+
+        return match ($normalized) {
+            'm-pesa', 'mpesa' => 'mpesa',
+            'tigo', 'tigo pesa', 'tigo_pesa', 'tigopesa' => 'tigopesa',
+            'halo pesa', 'halo_pesa', 'halopesa' => 'halopesa',
+            'bank transfer', 'bank_transfer' => 'bank',
+            default => str_replace(' ', '_', $normalized),
+        };
     }
 }

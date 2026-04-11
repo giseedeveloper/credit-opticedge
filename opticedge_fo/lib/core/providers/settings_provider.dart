@@ -1,0 +1,120 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../storage/secure_storage.dart';
+import '../services/biometric_service.dart';
+
+// ─── Language ────────────────────────────────────────────────────────────────
+
+enum AppLanguage { en, sw }
+
+extension AppLanguageX on AppLanguage {
+  String get label => this == AppLanguage.en ? 'English' : 'Kiswahili';
+  String get flag => this == AppLanguage.en ? '🇬🇧' : '🇹🇿';
+}
+
+// ─── Settings State ──────────────────────────────────────────────────────────
+
+class SettingsState {
+  final ThemeMode themeMode;
+  final AppLanguage language;
+  final bool biometricEnabled;
+  final bool notificationsEnabled;
+
+  const SettingsState({
+    this.themeMode = ThemeMode.system,
+    this.language = AppLanguage.en,
+    this.biometricEnabled = false,
+    this.notificationsEnabled = true,
+  });
+
+  SettingsState copyWith({
+    ThemeMode? themeMode,
+    AppLanguage? language,
+    bool? biometricEnabled,
+    bool? notificationsEnabled,
+  }) =>
+      SettingsState(
+        themeMode: themeMode ?? this.themeMode,
+        language: language ?? this.language,
+        biometricEnabled: biometricEnabled ?? this.biometricEnabled,
+        notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'themeMode': themeMode.index,
+        'language': language.index,
+        'biometricEnabled': biometricEnabled,
+        'notificationsEnabled': notificationsEnabled,
+      };
+
+  factory SettingsState.fromJson(Map<String, dynamic> json) => SettingsState(
+        themeMode: ThemeMode.values[json['themeMode'] ?? 0],
+        language: AppLanguage.values[json['language'] ?? 0],
+        biometricEnabled: json['biometricEnabled'] ?? false,
+        notificationsEnabled: json['notificationsEnabled'] ?? true,
+      );
+}
+
+// ─── Notifier ────────────────────────────────────────────────────────────────
+
+class SettingsNotifier extends StateNotifier<SettingsState> {
+  SettingsNotifier() : super(const SettingsState()) {
+    _load();
+  }
+
+  static const _key = 'fo_app_settings';
+
+  Future<void> _load() async {
+    final data = await SecureStorageService.instance.read(_key);
+    if (data != null) {
+      try {
+        state = SettingsState.fromJson(jsonDecode(data));
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _save() async {
+    await SecureStorageService.instance.write(_key, jsonEncode(state.toJson()));
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    state = state.copyWith(themeMode: mode);
+    await _save();
+  }
+
+  Future<void> setLanguage(AppLanguage lang) async {
+    state = state.copyWith(language: lang);
+    await _save();
+  }
+
+  /// Enable biometric: checks availability, then authenticates.
+  /// Returns a message if it fails, or null on success.
+  Future<String?> toggleBiometric(bool enabled) async {
+    if (enabled) {
+      final bio = BiometricService.instance;
+      final available = await bio.isAvailable;
+      if (!available) {
+        return 'Biometrics not available on this device';
+      }
+      final authenticated = await bio.authenticate(
+        reason: 'Verify your identity to enable biometric login',
+      );
+      if (!authenticated) {
+        return 'Authentication failed';
+      }
+    }
+    state = state.copyWith(biometricEnabled: enabled);
+    await _save();
+    return null;
+  }
+
+  Future<void> toggleNotifications(bool enabled) async {
+    state = state.copyWith(notificationsEnabled: enabled);
+    await _save();
+  }
+}
+
+final settingsProvider = StateNotifierProvider<SettingsNotifier, SettingsState>(
+  (ref) => SettingsNotifier(),
+);

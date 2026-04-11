@@ -2,17 +2,18 @@
 
 namespace App\Services;
 
-use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Loan;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Response;
 
 class DocumentService
 {
     /**
-     * Generate Legal Loan Agreement mapping customer Spatie Media bounds.
+     * Generate legal loan agreement using the current loan/device schema.
      */
-    public function generateLoanAgreement(Loan $loan)
+    public function generateLoanAgreement(Loan $loan): Response
     {
-        $loan->load(['customer', 'inventoryUnit.brandModel.brand', 'repaymentSchedules']);
+        $loan->load(['customer', 'inventoryUnit.phoneModel.brand', 'repaymentSchedules']);
 
         $pdf = Pdf::loadView('pdf.loan-agreement', [
             'loan' => $loan,
@@ -22,6 +23,6 @@ class DocumentService
             'dateGenerated' => now()->format('Y-m-d H:i:s'),
         ]);
 
-        return $pdf->download("Opticedge_Agreement_{$loan->contract_number}.pdf");
+        return $pdf->download("Opticedge_Agreement_{$loan->loan_number}.pdf");
     }
 }

@@ -15,14 +15,14 @@ class RiskAssessmentService
         $score = 50; // Base score
 
         // 1. Verification / KYC Status
-        if ($customer->kyc_status === 'verified' && $customer->nida_number) {
+        if ($customer->hasApprovedKyc() && $customer->nida_number) {
             $score += 20;
         }
 
         // 2. Employment/Income Logic (from JSONB metadata)
         $metadata = $customer->metadata ?? [];
         $income = (float) ($metadata['monthly_income'] ?? $customer->monthly_income ?? 0);
-        
+
         if ($income > 1000000) {
             $score += 15;
         } elseif ($income > 500000) {
@@ -33,7 +33,7 @@ class RiskAssessmentService
         $completedLoans = Loan::where('customer_id', $customer->id)
             ->where('status', 'completed')
             ->count();
-            
+
         $defaultedLoans = Loan::where('customer_id', $customer->id)
             ->whereIn('status', ['defaulted', 'overdue'])
             ->count();
@@ -51,7 +51,7 @@ class RiskAssessmentService
     public function assessApplication(Customer $customer, float $requestedAmount): array
     {
         $score = $this->generateCreditScore($customer);
-        
+
         $decision = 'approved';
         $reason = 'Meets criteria';
 
@@ -60,13 +60,13 @@ class RiskAssessmentService
             $reason = "Credit score ({$score}) is too low.";
         } elseif ($score < 60 && $requestedAmount > 500000) {
             $decision = 'requires_guarantor';
-            $reason = "High requested amount for moderate risk score.";
+            $reason = 'High requested amount for moderate risk score.';
         }
 
         return [
-            'score'    => $score,
+            'score' => $score,
             'decision' => $decision,
-            'reason'   => $reason,
+            'reason' => $reason,
         ];
     }
 }

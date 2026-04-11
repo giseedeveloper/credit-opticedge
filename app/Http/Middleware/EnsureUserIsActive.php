@@ -10,7 +10,18 @@ class EnsureUserIsActive
 {
     public function handle(Request $request, Closure $next): mixed
     {
-        if (Auth::check() && ! Auth::user()->is_active) {
+        $user = $request->user();
+
+        if ($user && ! $user->is_active) {
+            $user->currentAccessToken()?->delete();
+
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your account has been deactivated. Contact your administrator.',
+                ], 403);
+            }
+
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

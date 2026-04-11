@@ -38,8 +38,10 @@ class AdminUserSeeder extends Seeder
                 'password' => Hash::make('Admin@2025!'),
                 'email_verified_at' => now(),
                 'phone' => '+255 700 000 000',
+                'role' => 'admin',
                 'employee_code' => 'EMP-ADMIN-001',
                 'branch_id' => $hq->id,
+                'joined_at' => now()->toDateString(),
                 'is_active' => true,
             ]
         );
@@ -52,6 +54,10 @@ class AdminUserSeeder extends Seeder
         $adminRole->syncPermissions(Permission::all());
 
         $admin->syncRoles(['admin']);
+        $admin->forceFill([
+            'role' => 'admin',
+            'joined_at' => $admin->joined_at ?? now()->toDateString(),
+        ])->save();
 
         $this->command->info('✓ Admin user:  admin@opticedge.co.tz');
         $this->command->info('✓ Password:    Admin@2025!');

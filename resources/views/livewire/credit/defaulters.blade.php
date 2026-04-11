@@ -12,9 +12,12 @@
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="exclamation-triangle" size="lg" palette="rose" />
+            <div>
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Defaulters</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Overdue &amp; defaulted loans requiring immediate action</p>
+            </div>
         </div>
         <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40">
             <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
@@ -28,9 +31,7 @@
         <div class="bg-gradient-to-br from-red-600 to-rose-700 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-red-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-white/20">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-                </div>
+                <x-fluent-icon name="exclamation-triangle" size="sm" palette="rose" />
                 <span class="text-xs font-semibold text-white/80 uppercase tracking-wider">Defaulters</span>
             </div>
             <p class="text-3xl font-black">{{ number_format($stats['total']) }}</p>
@@ -39,9 +40,7 @@
         {{-- Total Outstanding --}}
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600">
-                    <flux:icon name="banknotes" class="size-4" />
-                </div>
+                <x-fluent-icon name="banknotes" size="sm" palette="rose" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Outstanding</span>
             </div>
             <p class="text-xl font-black text-gray-900 dark:text-white">TZS {{ number_format($stats['outstanding'], 0) }}</p>
@@ -50,9 +49,7 @@
         {{-- Total Penalty --}}
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-600">
-                    <flux:icon name="exclamation-triangle" class="size-4" />
-                </div>
+                <x-fluent-icon name="exclamation-triangle" size="sm" palette="amber" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Penalties</span>
             </div>
             <p class="text-xl font-black text-gray-900 dark:text-white">TZS {{ number_format($stats['penalty'], 0) }}</p>
@@ -61,9 +58,7 @@
         {{-- Total Exposure --}}
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-600">
-                    <flux:icon name="fire" class="size-4" />
-                </div>
+                <x-fluent-icon name="fire" size="sm" palette="orange" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Exposure</span>
             </div>
             <p class="text-xl font-black text-gray-900 dark:text-white">TZS {{ number_format($stats['exposure'], 0) }}</p>

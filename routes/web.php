@@ -1,36 +1,37 @@
 <?php
 
+use App\Livewire\Access\RoleManager;
+use App\Livewire\Accounting\AccountingWorkspace;
+use App\Livewire\Audits\AuditLogDashboard;
+use App\Livewire\Auth\Login;
 use App\Livewire\Communications\AuditTrail;
 use App\Livewire\Communications\SmsLogs;
 use App\Livewire\Credit\Defaulters;
+use App\Livewire\Credit\LendingPanel;
 use App\Livewire\Credit\LoanCalculator;
 use App\Livewire\Credit\PaymentSchedules;
-use App\Livewire\Accounting\AccountingWorkspace;
+use App\Livewire\ExecutiveDashboard;
 use App\Livewire\Financials\DailyCollections;
+use App\Livewire\Inventory\StockGrid;
 use App\Livewire\Kyc\CustomerProfiles;
 use App\Livewire\Kyc\PendingVerifications;
+use App\Livewire\Kyc\VerificationWizard;
 use App\Livewire\Partnership\CommissionLedger;
 use App\Livewire\Partnership\VendorDirectory;
+use App\Livewire\Settings\SystemHealthDashboard;
+use App\Livewire\Staff\StaffManager;
 use App\Livewire\Stock\BrandModelIndex;
 use App\Livewire\Stock\ImeiSearch;
 use App\Livewire\Stock\StockDashboard;
 use App\Livewire\Stock\StockTransfers;
 use Illuminate\Support\Facades\Route;
 
-use App\Livewire\ExecutiveDashboard;
-use App\Livewire\Access\RoleManager;
-use App\Livewire\Inventory\StockGrid;
-use App\Livewire\Credit\LendingPanel;
-use App\Livewire\Kyc\VerificationWizard;
-use App\Livewire\Audits\AuditLogDashboard;
-use App\Livewire\Settings\SystemHealthDashboard;
-
 Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
 Route::middleware('guest')->group(function () {
-    Route::get('/login', \App\Livewire\Auth\Login::class)->name('login');
+    Route::get('/login', Login::class)->name('login');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -41,7 +42,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Advanced Matrix Components
     Route::get('/inventory', StockGrid::class)->name('inventory.grid')->middleware('can:devices.view');
     Route::get('/loans', LendingPanel::class)->name('credit.panel')->middleware('can:loans.view');
-    Route::get('/kyc/wizard', VerificationWizard::class)->name('kyc.wizard')->middleware('can:loans.view');
+    Route::get('/kyc/wizard', VerificationWizard::class)->name('kyc.wizard')->middleware('can:loans.create');
 
     // Corporate Audits & Maintenance
     Route::get('/audits', AuditLogDashboard::class)->name('audits.logs')->middleware('can:reports.view');
@@ -75,7 +76,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/comms/audit', AuditTrail::class)->name('comms.audit')->middleware('can:reports.view');
 
     // Staff Management
-    Route::get('/staff', \App\Livewire\Staff\StaffManager::class)->name('staff.index')->middleware('can:staff.view');
+    Route::get('/staff', StaffManager::class)->name('staff.index')->middleware('can:staff.view');
 });
 
 require __DIR__.'/settings.php';

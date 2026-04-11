@@ -1,9 +1,12 @@
 <div class="flex flex-col gap-6">
 
     {{-- Header --}}
-    <div>
-        <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Loan Calculator</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Simulate repayment schedules, compare interest methods, and view full amortization</p>
+    <div class="flex items-start gap-4">
+        <x-fluent-icon name="calculator" size="lg" palette="violet" />
+        <div>
+            <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Loan Calculator</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Simulate repayment schedules, compare interest methods, and view full amortization</p>
+        </div>
     </div>
 
     {{-- Main 2-col layout --}}
@@ -31,7 +34,7 @@
 
                 @if($deposit > 0 && $principal > 0)
                 <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40">
-                    <flux:icon name="information-circle" class="size-4 text-blue-500 flex-shrink-0" />
+                    <x-fluent-icon name="information-circle" size="xs" palette="blue" />
                     <p class="text-xs text-orange-500 dark:text-blue-300">
                         Financed principal: <strong>TZS {{ number_format(max(0, $principal - $deposit), 0) }}</strong>
                     </p>

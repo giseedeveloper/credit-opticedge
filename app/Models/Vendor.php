@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\VendorFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 #[Fillable([
     'branch_id', 'owner_user_id', 'name', 'code', 'phone', 'email',
@@ -26,6 +28,40 @@ class Vendor extends Model
         return [
             'commission_rate' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Apply a portable case-insensitive LIKE filter for SQL drivers that do not support ILIKE.
+     *
+     * @param  Builder<Vendor>  $query
+     */
+    public function scopeWhereInsensitiveLike(Builder $query, string $column, string $pattern): Builder
+    {
+        return $this->applyInsensitiveLike($query, $column, $pattern);
+    }
+
+    /**
+     * Apply a portable case-insensitive OR LIKE filter for SQL drivers that do not support ILIKE.
+     *
+     * @param  Builder<Vendor>  $query
+     */
+    public function scopeOrWhereInsensitiveLike(Builder $query, string $column, string $pattern): Builder
+    {
+        return $this->applyInsensitiveLike($query, $column, $pattern, boolean: 'or');
+    }
+
+    /**
+     * @param  Builder<Vendor>  $query
+     */
+    protected function applyInsensitiveLike(Builder $query, string $column, string $pattern, string $boolean = 'and'): Builder
+    {
+        $wrappedColumn = $query->getQuery()->getGrammar()->wrap($column);
+
+        return $query->whereRaw(
+            "LOWER({$wrappedColumn}) LIKE ?",
+            [Str::lower($pattern)],
+            $boolean
+        );
     }
 
     public function branch(): BelongsTo

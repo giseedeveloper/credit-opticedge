@@ -13,19 +13,22 @@
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="identification" size="lg" palette="teal" />
+            <div>
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Customer Acquisition Center</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">7-step agent KYC onboarding — device, identity, contact, income, NOK, consent &amp; submit</p>
+            </div>
         </div>
         <div class="flex items-center gap-2">
             <a href="{{ route('kyc.pending') }}" wire:navigate
                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                <flux:icon name="clock" class="size-4" />
+                <x-fluent-icon name="clock" size="xs" palette="amber" />
                 Pending Queue
             </a>
             <a href="{{ route('kyc.customers') }}" wire:navigate
                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                <flux:icon name="users" class="size-4" />
+                <x-fluent-icon name="users" size="xs" palette="sky" />
                 All Profiles
             </a>
         </div>
@@ -155,15 +158,180 @@
                         <div class="space-y-4">
                             <div>
                                 <h3 class="text-lg font-black text-gray-900 dark:text-white">Device Information</h3>
-                                <p class="text-sm text-gray-500 mt-0.5">Capture the device being applied for — IMEI, price &amp; photos</p>
+                                <p class="text-sm text-gray-500 mt-0.5">Choose the exact device from stock, then confirm IMEI, serial, price &amp; proof photos</p>
                             </div>
-                            <div class="grid grid-cols-1 gap-4">
+
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                                 <flux:field>
-                                    <flux:label>Device Brand / Model <span class="text-red-500">*</span></flux:label>
-                                    <flux:input wire:model="deviceSpecs" placeholder="e.g. Tecno Camon 30 – 8GB/256GB" />
-                                    <flux:error name="deviceSpecs" />
+                                    <flux:label>Device Brand <span class="text-red-500">*</span></flux:label>
+                                    <flux:select wire:model.live="brandId">
+                                        <flux:select.option value="">— Select brand —</flux:select.option>
+                                        @foreach($availableBrands as $brand)
+                                        <flux:select.option :value="$brand->id">{{ $brand->name }}</flux:select.option>
+                                        @endforeach
+                                    </flux:select>
+                                    <flux:error name="brandId" />
+                                </flux:field>
+                                <flux:field>
+                                    <flux:label>Phone Model <span class="text-red-500">*</span></flux:label>
+                                    <flux:select wire:model.live="phoneModelId" :disabled="$brandId === ''">
+                                        <flux:select.option value="">— Select model —</flux:select.option>
+                                        @foreach($availableModels as $model)
+                                        <flux:select.option :value="$model->id">{{ $model->name }}</flux:select.option>
+                                        @endforeach
+                                    </flux:select>
+                                    <flux:error name="phoneModelId" />
+                                </flux:field>
+                                <flux:field>
+                                    <flux:label>Find Stock Unit</flux:label>
+                                    <flux:input wire:model.live.debounce.300ms="inventorySearch" placeholder="Search IMEI, serial or model…" />
+                                    <flux:description>Filter the stock list before picking a specific device.</flux:description>
                                 </flux:field>
                             </div>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <flux:field>
+                                    <flux:label>Available Stock Unit <span class="text-red-500">*</span></flux:label>
+                                    <flux:select wire:model.live="inventoryUnitId" :disabled="$phoneModelId === ''">
+                                        <flux:select.option value="">— Select stock unit —</flux:select.option>
+                                        @foreach($availableUnits as $unit)
+                                        <flux:select.option :value="$unit->id">
+                                            {{ $unit->phoneModel?->brand?->name }} {{ $unit->phoneModel?->name }} · {{ $unit->imei_1 }}{{ $unit->serial_number ? ' · '.$unit->serial_number : '' }}
+                                        </flux:select.option>
+                                        @endforeach
+                                    </flux:select>
+                                    <flux:error name="inventoryUnitId" />
+                                    <flux:description>{{ $availableUnits->count() }} matching unit(s) available for this step.</flux:description>
+                                </flux:field>
+                                <flux:field>
+                                    <flux:label>Device Summary <span class="text-red-500">*</span></flux:label>
+                                    <flux:input wire:model="deviceSpecs" placeholder="Auto-filled from selected model" readonly />
+                                    <flux:error name="deviceSpecs" />
+                                    <flux:description>Model, storage, RAM and color are pulled from the catalog automatically.</flux:description>
+                                </flux:field>
+                            </div>
+
+                            @if($selectedPhoneModel || $selectedInventoryUnit)
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                @if($selectedPhoneModel)
+                                <div class="rounded-2xl border border-sky-100 bg-sky-50/80 p-4">
+                                    <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-sky-500">Chosen Model</p>
+                                    <p class="mt-2 text-sm font-black text-slate-900">{{ $selectedPhoneModel->brand?->name }} {{ $selectedPhoneModel->name }}</p>
+                                    <p class="mt-1 text-xs text-slate-600">
+                                        @foreach(($selectedPhoneModel->specifications ?? []) as $label => $value)
+                                            {{ ucfirst($label) }}: {{ $value }}@if(! $loop->last) · @endif
+                                        @endforeach
+                                    </p>
+                                    <p class="mt-2 text-xs font-semibold text-sky-700">Recommended cash price: TZS {{ number_format((float) $selectedPhoneModel->retail_price) }}</p>
+                                </div>
+                                @endif
+                                @if($selectedInventoryUnit)
+                                <div class="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4">
+                                    <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-500">Linked Inventory</p>
+                                    <p class="mt-2 text-sm font-black text-slate-900">{{ $selectedInventoryUnit->imei_1 }}</p>
+                                    <p class="mt-1 text-xs text-slate-600">
+                                        {{ $selectedInventoryUnit->serial_number ?: 'No serial saved' }}
+                                        @if($selectedInventoryUnit->vendor)
+                                            · {{ $selectedInventoryUnit->vendor->name }}
+                                        @elseif($selectedInventoryUnit->branch)
+                                            · {{ $selectedInventoryUnit->branch->name }}
+                                        @endif
+                                    </p>
+                                    <p class="mt-2 text-xs font-semibold text-emerald-700">This unit is now tied to the application draft for confirmation.</p>
+                                </div>
+                                @endif
+                            </div>
+                            @endif
+
+                            <div class="rounded-2xl border border-gray-200 bg-white/80 p-4 shadow-sm">
+                                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                    <div>
+                                        <h4 class="text-sm font-black text-gray-900">Store Offers & Accessories</h4>
+                                        <p class="mt-1 text-xs text-gray-500">Capture free gifts, discounted add-ons, or paid extras handed over with the phone.</p>
+                                    </div>
+                                    <button type="button" wire:click="addCustomAccessory"
+                                            class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50">
+                                        <flux:icon name="plus" class="size-4" />
+                                        Add Custom Item
+                                    </button>
+                                </div>
+
+                                <div class="mt-4 flex flex-wrap gap-2">
+                                    @foreach($accessoryPresets as $preset)
+                                    <button type="button" wire:click="addAccessoryPreset('{{ $preset['code'] }}')"
+                                            class="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700 hover:bg-orange-100">
+                                        {{ $preset['name'] }}
+                                    </button>
+                                    @endforeach
+                                </div>
+
+                                @if($deviceAccessories !== [])
+                                <div class="mt-4 space-y-3">
+                                    @foreach($deviceAccessories as $index => $accessory)
+                                    <div wire:key="accessory-{{ $index }}" class="rounded-2xl border border-gray-100 bg-gray-50/90 p-4">
+                                        <div class="flex items-start justify-between gap-3">
+                                            <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Accessory {{ $index + 1 }}</p>
+                                            <button type="button" wire:click="removeAccessoryItem({{ $index }})"
+                                                    class="inline-flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-600">
+                                                <flux:icon name="trash" class="size-4" />
+                                                Remove
+                                            </button>
+                                        </div>
+                                        <div class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-12">
+                                            <div class="lg:col-span-4">
+                                                <flux:field>
+                                                    <flux:label>Accessory Name</flux:label>
+                                                    <flux:input wire:model="deviceAccessories.{{ $index }}.name" placeholder="e.g. Screen Protector" />
+                                                    @error("deviceAccessories.$index.name") <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                                                </flux:field>
+                                            </div>
+                                            <div class="lg:col-span-2">
+                                                <flux:field>
+                                                    <flux:label>Qty</flux:label>
+                                                    <flux:input wire:model="deviceAccessories.{{ $index }}.quantity" type="number" min="1" max="10" />
+                                                    @error("deviceAccessories.$index.quantity") <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                                                </flux:field>
+                                            </div>
+                                            <div class="lg:col-span-3">
+                                                <flux:field>
+                                                    <flux:label>Offer Type</flux:label>
+                                                    <flux:select wire:model="deviceAccessories.{{ $index }}.offer_type">
+                                                        <flux:select.option value="free">Free Gift</flux:select.option>
+                                                        <flux:select.option value="discounted">Discounted</flux:select.option>
+                                                        <flux:select.option value="charged">Charged</flux:select.option>
+                                                    </flux:select>
+                                                    @error("deviceAccessories.$index.offer_type") <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                                                </flux:field>
+                                            </div>
+                                            <div class="lg:col-span-3">
+                                                <flux:field>
+                                                    <flux:label>Unit Price (TZS)</flux:label>
+                                                    <flux:input wire:model="deviceAccessories.{{ $index }}.unit_price" type="number" min="0" placeholder="0 for free" />
+                                                    @error("deviceAccessories.$index.unit_price") <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                                                </flux:field>
+                                            </div>
+                                            <div class="lg:col-span-12">
+                                                <flux:field>
+                                                    <flux:label>Notes</flux:label>
+                                                    <flux:input wire:model="deviceAccessories.{{ $index }}.notes" placeholder="Promo reason, brand of cover, colour, or handover note" />
+                                                    @error("deviceAccessories.$index.notes") <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                                                </flux:field>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                </div>
+                                @endif
+
+                                <div class="mt-4">
+                                    <flux:field>
+                                        <flux:label>Store Offer Notes <span class="text-gray-400 font-normal">(optional)</span></flux:label>
+                                        <flux:textarea wire:model="storeOfferNotes" rows="2" placeholder="Example: Customer received a free cover and protector because of weekend promo." />
+                                        <flux:error name="storeOfferNotes" />
+                                    </flux:field>
+                                </div>
+                            </div>
+
                             <div class="grid grid-cols-2 gap-4">
                                 <flux:field>
                                     <flux:label>IMEI 1 <span class="text-red-500">*</span></flux:label>
@@ -207,22 +375,45 @@
                             </div>
                             <div class="grid grid-cols-3 gap-3">
                                 @foreach([
-                                    ['imeiPhoto','IMEI / Box Sticker Photo','optional'],
-                                    ['deviceBoxPhoto','Box Photo','optional'],
-                                    ['devicePhoto','Device Photo','optional'],
-                                ] as [$field,$label,$hint])
-                                <div>
+                                    ['imeiPhoto','IMEI / Box Sticker Photo','optional', true],
+                                    ['deviceBoxPhoto','Box Photo','optional', true],
+                                    ['devicePhoto','Device Photo','optional', false],
+                                ] as [$field,$label,$hint,$supportsScan])
+                                <div @if($supportsScan) x-data="deviceIdentifierScanner($wire, '{{ $field }}')" @endif>
                                     <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{{ $label }} <span class="text-gray-400 font-normal">({{ $hint }})</span></label>
                                     <input wire:model="{{ $field }}" type="file" accept="image/*"
+                                           @if($supportsScan) capture="environment" x-on:change="scan($event)" @endif
                                            class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-gray-200 rounded-lg p-1" />
                                     @error($field) <p class="mt-0.5 text-xs text-red-500">{{ $message }}</p> @enderror
                                     <div wire:loading wire:target="{{ $field }}" class="mt-0.5 text-[10px] text-gray-400">Uploading…</div>
+                                    @if($supportsScan)
+                                    <div x-show="message" x-transition class="mt-1 text-[10px] text-sky-600" x-text="message"></div>
+                                    @endif
                                 </div>
                                 @endforeach
                             </div>
+                            @if($scanFeedbackMessage)
+                            <div @class([
+                                'flex items-start gap-2 rounded-xl border p-3',
+                                'border-emerald-100 bg-emerald-50 text-emerald-700' => $scanFeedbackTone === 'emerald',
+                                'border-sky-100 bg-sky-50 text-sky-700' => $scanFeedbackTone === 'sky',
+                                'border-red-100 bg-red-50 text-red-700' => $scanFeedbackTone === 'red',
+                                'border-amber-100 bg-amber-50 text-amber-700' => $scanFeedbackTone === 'amber',
+                                'border-slate-200 bg-slate-50 text-slate-700' => ! in_array($scanFeedbackTone, ['emerald', 'sky', 'red', 'amber'], true),
+                            ])>
+                                <flux:icon name="sparkles" class="mt-0.5 size-4 shrink-0" />
+                                <div>
+                                    <p class="text-xs font-semibold">Auto-scan feedback</p>
+                                    <p class="mt-0.5 text-xs">{{ $scanFeedbackMessage }}</p>
+                                    @if(($deviceScan['confidence'] ?? 0) > 0)
+                                    <p class="mt-1 text-[10px] uppercase tracking-[0.2em] opacity-80">Confidence {{ number_format((float) $deviceScan['confidence'] * 100, 0) }}%</p>
+                                    @endif
+                                </div>
+                            </div>
+                            @endif
                             <div class="p-3 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-2">
                                 <flux:icon name="information-circle" class="size-4 text-amber-600 mt-0.5 shrink-0" />
-                                <p class="text-xs text-amber-700">IMEI must be exactly 15 digits. Back Office will validate device authenticity before approval.</p>
+                                <p class="text-xs text-amber-700">IMEI and serial should come from the linked stock unit. Uploading the box or sticker photo will also try to auto-detect identifiers on supported browsers.</p>
                             </div>
                         </div>
                         @endif
@@ -312,16 +503,45 @@
                                 <h3 class="text-lg font-black text-gray-900 dark:text-white">Contact & Location</h3>
                                 <p class="text-sm text-gray-500 mt-0.5">Phone numbers, branch, and residential address</p>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <flux:field>
-                                    <flux:label>Primary Phone <span class="text-red-500">*</span></flux:label>
-                                    <flux:input wire:model="phone" type="tel" placeholder="+255 7XX XXX XXX" />
-                                    <flux:error name="phone" />
-                                </flux:field>
-                                <flux:field>
-                                    <flux:label>Alt Phone <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
-                                    <flux:input wire:model="altPhone" type="tel" placeholder="+255 7XX XXX XXX" />
-                                </flux:field>
+                            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                                <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4">
+                                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-[200px_minmax(0,1fr)]">
+                                        <flux:field>
+                                            <flux:label>Primary Country <span class="text-red-500">*</span></flux:label>
+                                            <flux:select wire:model="phoneCountry">
+                                                @foreach($phoneCountries as $country)
+                                                <flux:select.option value="{{ $country['iso'] }}">{{ $country['flag'] }} {{ $country['name'] }} ({{ $country['dial_code'] }})</flux:select.option>
+                                                @endforeach
+                                            </flux:select>
+                                            <flux:error name="phoneCountry" />
+                                        </flux:field>
+                                        <flux:field>
+                                            <flux:label>Primary Phone <span class="text-red-500">*</span></flux:label>
+                                            <flux:input wire:model="phone" type="tel" placeholder="712 345 678" />
+                                            <flux:error name="phone" />
+                                            <flux:description>Enter local digits. The system will save it with the selected country code.</flux:description>
+                                        </flux:field>
+                                    </div>
+                                </div>
+                                <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4">
+                                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-[200px_minmax(0,1fr)]">
+                                        <flux:field>
+                                            <flux:label>Alt Country</flux:label>
+                                            <flux:select wire:model="altPhoneCountry">
+                                                @foreach($phoneCountries as $country)
+                                                <flux:select.option value="{{ $country['iso'] }}">{{ $country['flag'] }} {{ $country['name'] }} ({{ $country['dial_code'] }})</flux:select.option>
+                                                @endforeach
+                                            </flux:select>
+                                            <flux:error name="altPhoneCountry" />
+                                        </flux:field>
+                                        <flux:field>
+                                            <flux:label>Alt Phone <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
+                                            <flux:input wire:model="altPhone" type="tel" placeholder="744 000 111" />
+                                            <flux:error name="altPhone" />
+                                            <flux:description>Use a second reachable number if available.</flux:description>
+                                        </flux:field>
+                                    </div>
+                                </div>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <flux:field>
@@ -440,17 +660,28 @@
                             {{-- Primary NOK --}}
                             <div class="border border-gray-100 dark:border-zinc-700 rounded-xl p-4 space-y-4">
                                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Primary NOK <span class="text-red-400">*</span></p>
-                                <div class="grid grid-cols-2 gap-4">
+                                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
                                     <flux:field>
                                         <flux:label>Full Name <span class="text-red-500">*</span></flux:label>
                                         <flux:input wire:model="nokName" placeholder="e.g. John Mwangi" />
                                         <flux:error name="nokName" />
                                     </flux:field>
-                                    <flux:field>
-                                        <flux:label>Phone <span class="text-red-500">*</span></flux:label>
-                                        <flux:input wire:model="nokPhone" type="tel" placeholder="+255 7XX XXX XXX" />
-                                        <flux:error name="nokPhone" />
-                                    </flux:field>
+                                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-[200px_minmax(0,1fr)]">
+                                        <flux:field>
+                                            <flux:label>Country <span class="text-red-500">*</span></flux:label>
+                                            <flux:select wire:model="nokPhoneCountry">
+                                                @foreach($phoneCountries as $country)
+                                                <flux:select.option value="{{ $country['iso'] }}">{{ $country['flag'] }} {{ $country['name'] }} ({{ $country['dial_code'] }})</flux:select.option>
+                                                @endforeach
+                                            </flux:select>
+                                            <flux:error name="nokPhoneCountry" />
+                                        </flux:field>
+                                        <flux:field>
+                                            <flux:label>Phone <span class="text-red-500">*</span></flux:label>
+                                            <flux:input wire:model="nokPhone" type="tel" placeholder="713 222 444" />
+                                            <flux:error name="nokPhone" />
+                                        </flux:field>
+                                    </div>
                                 </div>
                                 <flux:field>
                                     <flux:label>Relationship <span class="text-red-500">*</span></flux:label>
@@ -469,15 +700,27 @@
                             {{-- Secondary NOK --}}
                             <div class="border border-gray-100 dark:border-zinc-700 rounded-xl p-4 space-y-4">
                                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Secondary NOK <span class="text-gray-400">(optional)</span></p>
-                                <div class="grid grid-cols-2 gap-4">
+                                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
                                     <flux:field>
                                         <flux:label>Full Name</flux:label>
                                         <flux:input wire:model="nok2Name" placeholder="e.g. Maria Juma" />
                                     </flux:field>
-                                    <flux:field>
-                                        <flux:label>Phone</flux:label>
-                                        <flux:input wire:model="nok2Phone" type="tel" placeholder="+255 7XX XXX XXX" />
-                                    </flux:field>
+                                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-[200px_minmax(0,1fr)]">
+                                        <flux:field>
+                                            <flux:label>Country</flux:label>
+                                            <flux:select wire:model="nok2PhoneCountry">
+                                                @foreach($phoneCountries as $country)
+                                                <flux:select.option value="{{ $country['iso'] }}">{{ $country['flag'] }} {{ $country['name'] }} ({{ $country['dial_code'] }})</flux:select.option>
+                                                @endforeach
+                                            </flux:select>
+                                            <flux:error name="nok2PhoneCountry" />
+                                        </flux:field>
+                                        <flux:field>
+                                            <flux:label>Phone</flux:label>
+                                            <flux:input wire:model="nok2Phone" type="tel" placeholder="754 987 654" />
+                                            <flux:error name="nok2Phone" />
+                                        </flux:field>
+                                    </div>
                                 </div>
                                 <flux:field>
                                     <flux:label>Relationship</flux:label>
@@ -539,10 +782,164 @@
 
                         {{-- ═══ STEP 7: REVIEW & SUBMIT ═══ --}}
                         @if($step === 7)
+                        @php
+                            $paymentRecord = $latestDraftPayment;
+                            $paymentBadge = match($paymentRecord?->status) {
+                                'completed' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+                                'failed' => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+                                'pending', 'order_created', 'initiated' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+                                default => 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400',
+                            };
+                            $paymentLabel = match($paymentRecord?->status) {
+                                'completed' => 'Deposit paid successfully',
+                                'failed' => 'Payment failed',
+                                'pending', 'order_created', 'initiated' => 'Waiting for customer approval',
+                                default => 'Payment not started',
+                            };
+                            $agreementUrl = $activeAgreementDocument
+                                ? \Illuminate\Support\Facades\Storage::disk($activeAgreementDocument->disk)->url($activeAgreementDocument->path)
+                                : null;
+                        @endphp
                         <div class="space-y-5">
                             <div>
                                 <h3 class="text-lg font-black text-gray-900 dark:text-white">Review & Submit</h3>
-                                <p class="text-sm text-gray-500 mt-0.5">Final review — add FO notes then submit to verification queue</p>
+                                <p class="text-sm text-gray-500 mt-0.5">Collect the first deposit, present the agreement, capture signatures, then submit to verification.</p>
+                            </div>
+
+                            {{-- Payment --}}
+                            <div class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/60">
+                                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                    <div>
+                                        <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Step 7A · Deposit Payment</p>
+                                        <h4 class="mt-1 text-sm font-black text-gray-900 dark:text-white">Send Selcom mobile money prompt</h4>
+                                        <p class="mt-1 text-xs text-gray-500">Customer should approve the deposit using their phone before the agreement and signatures can continue.</p>
+                                    </div>
+                                    <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold {{ $paymentBadge }}">
+                                        <span class="h-2 w-2 rounded-full {{ str_contains($paymentBadge, 'emerald') ? 'bg-emerald-500' : (str_contains($paymentBadge, 'red') ? 'bg-red-500' : 'bg-amber-500') }}"></span>
+                                        {{ $paymentLabel }}
+                                    </span>
+                                </div>
+                                <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+                                    <flux:field>
+                                        <flux:label>Payment Phone</flux:label>
+                                        <flux:input wire:model="paymentPhone" type="tel" placeholder="+255712345678" />
+                                        <flux:error name="paymentPhone" />
+                                        @error('depositAmount') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                                    </flux:field>
+                                    <div class="flex flex-wrap items-end gap-2">
+                                        <button type="button" wire:click="initiateDepositPayment"
+                                                class="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-orange-600">
+                                            <flux:icon name="device-phone-mobile" class="size-4" />
+                                            Send Prompt
+                                        </button>
+                                        <button type="button" wire:click="refreshDepositPaymentStatus"
+                                                class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800">
+                                            <flux:icon name="arrow-path" class="size-4" />
+                                            Refresh Status
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-3 grid grid-cols-1 gap-2 text-xs text-gray-500 lg:grid-cols-3">
+                                    <div class="rounded-xl bg-gray-50 px-3 py-2 dark:bg-zinc-800">
+                                        <span class="font-semibold text-gray-700 dark:text-gray-200">Deposit amount:</span>
+                                        TZS {{ number_format((float) $depositAmount) }}
+                                    </div>
+                                    <div class="rounded-xl bg-gray-50 px-3 py-2 dark:bg-zinc-800">
+                                        <span class="font-semibold text-gray-700 dark:text-gray-200">Reference:</span>
+                                        {{ $paymentRecord?->selcom_reference ?? $paymentRecord?->transid ?? 'Not generated yet' }}
+                                    </div>
+                                    <div class="rounded-xl bg-gray-50 px-3 py-2 dark:bg-zinc-800">
+                                        <span class="font-semibold text-gray-700 dark:text-gray-200">Last update:</span>
+                                        {{ $paymentRecord?->updated_at?->diffForHumans() ?? '—' }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Agreement & signatures --}}
+                            <div class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/60">
+                                <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Step 7B · Agreement, Signatures & Handover</p>
+                                <h4 class="mt-1 text-sm font-black text-gray-900 dark:text-white">Present agreement after successful payment</h4>
+                                <p class="mt-1 text-xs text-gray-500">FO should only continue when the deposit is successful and the customer has read or been shown the agreement PDF.</p>
+
+                                @if(! $activeAgreementDocument)
+                                <div class="mt-4 rounded-2xl border border-dashed border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/10 dark:text-amber-300">
+                                    Admin or owner must upload the active agreement PDF in Settings → System Health before this application can be completed.
+                                </div>
+                                @elseif($paymentRecord?->status !== 'completed')
+                                <div class="mt-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700 dark:border-blue-900/40 dark:bg-blue-900/10 dark:text-blue-300">
+                                    Waiting for successful deposit payment. Once payment is confirmed, the agreement preview and signature pads below become the required next action.
+                                </div>
+                                @else
+                                <div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+                                    <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <div>
+                                                <p class="text-xs font-semibold text-gray-900 dark:text-white">{{ $activeAgreementDocument->metadata['original_name'] ?? 'Customer agreement' }}</p>
+                                                <p class="mt-0.5 text-[11px] text-gray-500">Show or open the PDF with the customer before asking for a decision.</p>
+                                            </div>
+                                            <a href="{{ $agreementUrl }}" target="_blank"
+                                               class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-700">
+                                                <flux:icon name="document-text" class="size-4" />
+                                                View PDF
+                                            </a>
+                                        </div>
+                                        <div class="mt-4 overflow-hidden rounded-2xl border border-gray-200 dark:border-zinc-700">
+                                            <iframe src="{{ $agreementUrl }}" class="h-72 w-full bg-white"></iframe>
+                                        </div>
+                                        <div class="mt-4">
+                                            <p class="text-xs font-semibold text-gray-700 dark:text-gray-200">Customer accepts the agreement?</p>
+                                            <div class="mt-2 flex flex-wrap gap-2">
+                                                @foreach(['yes' => 'Yes, customer accepts', 'no' => 'No, customer declined'] as $value => $label)
+                                                <button type="button" wire:click="$set('agreementDecision', '{{ $value }}')"
+                                                        class="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition-colors {{ $agreementDecision === $value ? ($value === 'yes' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300') : 'bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-zinc-300' }}">
+                                                    {{ $label }}
+                                                </button>
+                                                @endforeach
+                                            </div>
+                                            @error('agreementDecision') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+                                            <p class="text-xs font-semibold text-gray-900 dark:text-white">Customer Signature</p>
+                                            <p class="mt-0.5 text-[11px] text-gray-500">Capture the customer's signature after they agree to the contract.</p>
+                                            <div class="mt-3" x-data="signaturePadCapture($wire, 'customerSignatureData')">
+                                                <canvas x-ref="canvas" class="h-40 w-full rounded-xl border border-dashed border-gray-300 bg-white"></canvas>
+                                                <div class="mt-2 flex justify-end">
+                                                    <button type="button" @click="clear()" class="text-xs font-semibold text-red-500 hover:text-red-600">Clear</button>
+                                                </div>
+                                            </div>
+                                            @error('customerSignatureData') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                                        </div>
+
+                                        <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+                                            <p class="text-xs font-semibold text-gray-900 dark:text-white">Front Officer Signature</p>
+                                            <p class="mt-0.5 text-[11px] text-gray-500">FO confirms the agreement was explained and the device handover list matches what the customer received.</p>
+                                            <div class="mt-3" x-data="signaturePadCapture($wire, 'foSignatureData')">
+                                                <canvas x-ref="canvas" class="h-40 w-full rounded-xl border border-dashed border-gray-300 bg-white"></canvas>
+                                                <div class="mt-2 flex justify-end">
+                                                    <button type="button" @click="clear()" class="text-xs font-semibold text-red-500 hover:text-red-600">Clear</button>
+                                                </div>
+                                            </div>
+                                            @error('foSignatureData') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                                        </div>
+
+                                        <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+                                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Asset Handover List <span class="text-red-500">*</span></label>
+                                            <input wire:model="assetHandoverList" type="file" accept=".pdf,image/*"
+                                                   class="mt-2 block w-full rounded-lg border border-gray-200 p-1 text-xs text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-orange-50 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-orange-700 hover:file:bg-orange-100" />
+                                            @error('assetHandoverList') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                                            <div wire:loading wire:target="assetHandoverList" class="mt-1 text-[10px] text-gray-400">Uploading handover list…</div>
+                                            <flux:field class="mt-3">
+                                                <flux:label>Handover Notes</flux:label>
+                                                <flux:textarea wire:model="assetHandoverNotes" rows="2" placeholder="Accessories, charger, receipt pack, or stock pack handed to the customer." />
+                                                <flux:error name="assetHandoverNotes" />
+                                            </flux:field>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endif
                             </div>
                             {{-- Application Summary --}}
                             <div class="border border-gray-100 dark:border-zinc-700 rounded-xl p-4 space-y-3 text-sm">
@@ -554,10 +951,13 @@
                                     <div><span class="text-gray-500">Deposit:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">TZS {{ number_format($depositAmount) }}</span></div>
                                     <div><span class="text-gray-500">Customer:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">{{ trim("$firstName $lastName") ?: '—' }}</span></div>
                                     <div><span class="text-gray-500">Phone:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $phone ?: '—' }}</span></div>
+                                    <div><span class="text-gray-500">Accessories:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">{{ count($deviceAccessories) ? count($deviceAccessories).' item(s)' : 'None' }}</span></div>
                                     <div><span class="text-gray-500">NIDA:</span> <span class="font-mono font-semibold text-gray-800 dark:text-gray-100">{{ $nidaNumber ?: '—' }}</span></div>
                                     <div><span class="text-gray-500">Monthly Income:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">TZS {{ number_format($monthlyIncome) }}</span></div>
                                     <div><span class="text-gray-500">NOK:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $nokName ?: '—' }} ({{ $nokPhone ?: '—' }})</span></div>
                                     <div><span class="text-gray-500">Repayment:</span> <span class="font-semibold text-gray-800 dark:text-gray-100 capitalize">{{ $preferredRepayment ?: '—' }}</span></div>
+                                    <div><span class="text-gray-500">Payment:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $paymentLabel }}</span></div>
+                                    <div><span class="text-gray-500">Agreement:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $agreementDecision === 'yes' ? 'Accepted' : ($agreementDecision === 'no' ? 'Declined' : 'Pending') }}</span></div>
                                 </div>
                                 <div class="pt-2 border-t border-gray-100 dark:border-zinc-700 flex gap-4 text-xs">
                                     @foreach(['Terms' => $termsAccepted, 'Data Consent' => $dataConsentAccepted, 'Call Consent' => $callConsentAccepted] as $label => $val)

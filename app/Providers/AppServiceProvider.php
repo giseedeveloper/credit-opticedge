@@ -3,11 +3,16 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use Spatie\Permission\Exceptions\PermissionDoesNotExist;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -39,7 +44,21 @@ class AppServiceProvider extends ServiceProvider
                 return false;
             }
 
-            return $user->hasRole('admin') ? true : null;
+            if ($user->hasRole('admin')) {
+                return true;
+            }
+
+            $module = Str::before($ability, '.');
+
+            if ($module === $ability) {
+                return null;
+            }
+
+            try {
+                return $user->hasPermissionTo("{$module}.all") ? true : null;
+            } catch (PermissionDoesNotExist) {
+                return null;
+            }
         });
     }
 
@@ -49,6 +68,14 @@ class AppServiceProvider extends ServiceProvider
     protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);
+
+        RateLimiter::for('api-login', function (Request $request): Limit {
+            return Limit::perMinute(10)->by($request->ip());
+        });
+
+        RateLimiter::for('webhooks', function (Request $request): Limit {
+            return Limit::perMinute(120)->by($request->ip());
+        });
 
         DB::prohibitDestructiveCommands(
             app()->isProduction(),

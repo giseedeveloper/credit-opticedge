@@ -12,12 +12,15 @@
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
-        <div>
+        <div class="flex items-start gap-4">
+            <x-fluent-icon name="chat-bubble-left-right" size="lg" palette="teal" />
+            <div>
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">SMS Logs</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Automated and manual SMS dispatch records</p>
+            </div>
         </div>
         <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40">
-            <flux:icon name="chat-bubble-left-right" class="size-4 text-blue-500" />
+            <x-fluent-icon name="chat-bubble-left-right" size="xs" palette="teal" />
             <span class="text-sm font-bold text-orange-500 dark:text-blue-400">{{ number_format($stats['total']) }} total messages</span>
         </div>
     </div>
@@ -27,7 +30,7 @@
         <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-white/20"><flux:icon name="chat-bubble-left-right" class="size-4" /></div>
+                <x-fluent-icon name="chat-bubble-left-right" size="sm" palette="teal" />
                 <span class="text-xs font-semibold text-white/80 uppercase tracking-wider">All Time</span>
             </div>
             <p class="text-3xl font-black">{{ number_format($stats['total']) }}</p>
@@ -35,7 +38,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600"><flux:icon name="sun" class="size-4" /></div>
+                <x-fluent-icon name="sun" size="sm" palette="amber" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Today</span>
             </div>
             <p class="text-2xl font-black text-gray-900 dark:text-white">{{ number_format($stats['today']) }}</p>
@@ -43,7 +46,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900/30 text-sky-600"><flux:icon name="calendar-days" class="size-4" /></div>
+                <x-fluent-icon name="calendar-days" size="sm" palette="blue" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">This Week</span>
             </div>
             <p class="text-2xl font-black text-gray-900 dark:text-white">{{ number_format($stats['this_week']) }}</p>
@@ -51,7 +54,7 @@
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 mb-3">
-                <div class="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-600"><flux:icon name="chart-bar" class="size-4" /></div>
+                <x-fluent-icon name="chart-bar" size="sm" palette="amber" />
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">This Month</span>
             </div>
             <p class="text-2xl font-black text-gray-900 dark:text-white">{{ number_format($stats['this_month']) }}</p>
@@ -60,7 +63,7 @@
     </div>
 
     {{-- Type breakdown mini-row --}}
-    @if($stats['bulk'] > 0 || $stats['automated'] > 0)
+    @if($stats['bulk'] > 0 || $stats['automated'] > 0 || $stats['welcome'] > 0 || $stats['system'] > 0)
     <div class="flex gap-3">
         <div class="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/30">
             <span class="w-2 h-2 rounded-full bg-blue-500"></span>
@@ -70,9 +73,13 @@
             <span class="w-2 h-2 rounded-full bg-orange-500"></span>
             <span class="text-xs font-bold text-orange-600 dark:text-orange-400">{{ number_format($stats['automated']) }} Automated</span>
         </div>
+        <div class="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($stats['welcome']) }} Welcome</span>
+        </div>
         <div class="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-zinc-800 rounded-xl border border-gray-100 dark:border-zinc-700">
             <span class="w-2 h-2 rounded-full bg-gray-400"></span>
-            <span class="text-xs font-bold text-gray-500">{{ number_format($stats['total'] - $stats['bulk'] - $stats['automated']) }} System</span>
+            <span class="text-xs font-bold text-gray-500">{{ number_format($stats['system']) }} System</span>
         </div>
     </div>
     @endif
@@ -210,7 +217,7 @@
                     default     => ['label' => 'System SMS',     'grad' => 'from-gray-600 to-gray-700'],
                 };
                 $dlSubjectLabel = class_basename($dl->subject_type ?? '');
-                $dlProps = $dl->properties->toArray();
+                $dlProps = collect($dl->properties)->toArray();
             @endphp
 
             {{-- Header --}}
@@ -275,13 +282,11 @@
                             </div>
                             @if($dl->subject)
                             <div class="text-right">
-                                @if(method_exists($dl->subject, 'getFullNameAttribute'))
-                                <p class="text-xs font-semibold text-gray-800 dark:text-gray-100">{{ $dl->subject->full_name ?? $dl->subject->name ?? '' }}</p>
-                                @elseif(property_exists($dl->subject, 'name'))
-                                <p class="text-xs font-semibold text-gray-800 dark:text-gray-100">{{ $dl->subject->name }}</p>
+                                @if(\App\Livewire\Communications\SmsLogs::subjectDisplayName($dl->subject))
+                                <p class="text-xs font-semibold text-gray-800 dark:text-gray-100">{{ \App\Livewire\Communications\SmsLogs::subjectDisplayName($dl->subject) }}</p>
                                 @endif
-                                @if(property_exists($dl->subject, 'phone') && $dl->subject->phone)
-                                <p class="text-[10px] text-gray-400">📱 {{ $dl->subject->phone }}</p>
+                                @if(\App\Livewire\Communications\SmsLogs::subjectDisplayPhone($dl->subject))
+                                <p class="text-[10px] text-gray-400">📱 {{ \App\Livewire\Communications\SmsLogs::subjectDisplayPhone($dl->subject) }}</p>
                                 @endif
                             </div>
                             @endif

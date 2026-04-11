@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Customer;
 use App\Models\Loan;
-use Illuminate\Support\Facades\DB;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class AnalyticsApiController extends Controller
 {
@@ -19,19 +18,19 @@ class AnalyticsApiController extends Controller
      */
     public function riskMap(): JsonResponse
     {
-        $nodes = Customer::whereHas('loans', function($query) {
+        $nodes = Customer::whereHas('loans', function ($query) {
             $query->whereIn('status', ['overdue', 'defaulted']);
         })->select('nida_number', 'latitude', 'longitude')
-          ->get()
-          ->map(function ($c) {
-              return [
-                  'lat' => $c->latitude,
-                  'lng' => $c->longitude,
-                  'weight' => 10 // Risk multiplier mapping
-              ];
-          });
+            ->get()
+            ->map(function ($c) {
+                return [
+                    'lat' => $c->latitude,
+                    'lng' => $c->longitude,
+                    'weight' => 10,
+                ];
+            });
 
-        return $this->successResponse($nodes, "High-risk defaulted physical coordinates mapped securely.");
+        return $this->successResponse($nodes, 'High-risk defaulted physical coordinates mapped securely.');
     }
 
     /**
@@ -39,29 +38,25 @@ class AnalyticsApiController extends Controller
      */
     public function profitabilityAnalysis(): JsonResponse
     {
-        // Total Base Capital Given
         $capitalDeployed = Loan::where('status', 'active')->sum('principal_amount');
-        
-        // Total Expected Returns
-        $expectedReturns = Loan::where('status', 'active')->sum('total_amount_due');
-        
-        // Actual Interest Recovered
-        $interestRecovered = DB::table('repayment_schedules')
-                               ->where('status', 'paid')
-                               ->sum('amount_paid');
 
-        // Base ROI Mathematics
+        $expectedReturns = Loan::where('status', 'active')->sum('total_payable');
+
+        $interestRecovered = DB::table('repayment_schedules')
+            ->where('status', 'paid')
+            ->sum('interest_component');
+
         $projectedRoi = 0;
         if ($capitalDeployed > 0) {
             $projectedRoi = round((($expectedReturns - $capitalDeployed) / $capitalDeployed) * 100, 2);
         }
 
         return $this->successResponse([
-            'capital_deployed' => "TZS " . number_format($capitalDeployed),
-            'expected_maturity_returns' => "TZS " . number_format($expectedReturns),
-            'interest_captured' => "TZS " . number_format($interestRecovered),
-            'projected_roi' => $projectedRoi . "%",
-            'currency' => 'TZS (Tanzanian Shillings)'
-        ], "Venture Capital macro profitability successfully computed.");
+            'capital_deployed' => 'TZS '.number_format((float) $capitalDeployed),
+            'expected_maturity_returns' => 'TZS '.number_format((float) $expectedReturns),
+            'interest_captured' => 'TZS '.number_format((float) $interestRecovered),
+            'projected_roi' => $projectedRoi.'%',
+            'currency' => 'TZS (Tanzanian Shillings)',
+        ], 'Venture Capital macro profitability successfully computed.');
     }
 }

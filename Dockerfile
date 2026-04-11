@@ -95,7 +95,7 @@ COPY --from=composer-builder /app              .
 COPY --from=node-builder     /app/public/build ./public/build
 
 # ── Permissions ────────────────────────────────────────────────────────────────
-RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
+RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs storage/app/public bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache public \
     && chmod -R 775 storage bootstrap/cache
 

@@ -10,8 +10,7 @@ class CustomerListScreen extends ConsumerStatefulWidget {
   const CustomerListScreen({super.key, this.initialTab});
 
   @override
-  ConsumerState<CustomerListScreen> createState() =>
-      _CustomerListScreenState();
+  ConsumerState<CustomerListScreen> createState() => _CustomerListScreenState();
 }
 
 class _CustomerListScreenState extends ConsumerState<CustomerListScreen>
@@ -31,8 +30,8 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen>
   @override
   void initState() {
     super.initState();
-    final initialIndex = _tabs.indexWhere(
-        (t) => t.$1 == (widget.initialTab ?? 'all'));
+    final initialIndex =
+        _tabs.indexWhere((t) => t.$1 == (widget.initialTab ?? 'all'));
     _tabController = TabController(
         length: _tabs.length,
         vsync: this,
@@ -87,9 +86,8 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen>
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: TextField(
                   controller: _searchCtrl,
-                  onChanged: (v) => ref
-                      .read(customerListProvider.notifier)
-                      .setSearch(v),
+                  onChanged: (v) =>
+                      ref.read(customerListProvider.notifier).setSearch(v),
                   decoration: InputDecoration(
                     hintText: 'Search name, phone, NIDA...',
                     hintStyle: const TextStyle(fontSize: 13),
@@ -137,11 +135,9 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen>
                 unselectedLabelColor: AppConstants.textSecondary,
                 indicatorColor: AppConstants.primary,
                 indicatorWeight: 2.5,
-                labelStyle: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w600),
-                tabs: _tabs
-                    .map((t) => Tab(text: t.$2))
-                    .toList(),
+                labelStyle:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                tabs: _tabs.map((t) => Tab(text: t.$2)).toList(),
               ),
             ],
           ),
@@ -153,24 +149,20 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen>
               ? _buildEmpty(state.selectedTab)
               : RefreshIndicator(
                   color: AppConstants.primary,
-                  onRefresh: () => ref
-                      .read(customerListProvider.notifier)
-                      .load(reset: true),
+                  onRefresh: () =>
+                      ref.read(customerListProvider.notifier).load(reset: true),
                   child: ListView.separated(
                     controller: _scrollCtrl,
                     padding: const EdgeInsets.all(16),
-                    itemCount:
-                        state.items.length + (state.hasMore ? 1 : 0),
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: 8),
+                    itemCount: state.items.length + (state.hasMore ? 1 : 0),
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, i) {
                       if (i == state.items.length) {
                         return const Padding(
                           padding: EdgeInsets.symmetric(vertical: 16),
                           child: Center(
                             child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppConstants.primary),
+                                strokeWidth: 2, color: AppConstants.primary),
                           ),
                         );
                       }
@@ -228,8 +220,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen>
           const SizedBox(height: 6),
           const Text(
             'Registered customers will appear here',
-            style: TextStyle(
-                fontSize: 13, color: AppConstants.textHint),
+            style: TextStyle(fontSize: 13, color: AppConstants.textHint),
           ),
         ],
       ),
@@ -301,21 +292,23 @@ class _CustomerCard extends StatelessWidget {
                       const Icon(Icons.phone_outlined,
                           size: 12, color: AppConstants.textHint),
                       const SizedBox(width: 4),
-                      Text(item.phone,
-                          style: const TextStyle(
-                              fontSize: 12,
-                              color: AppConstants.textSecondary)),
+                      Flexible(
+                        child: Text(item.phone,
+                            style: const TextStyle(
+                                fontSize: 12,
+                                color: AppConstants.textSecondary),
+                            overflow: TextOverflow.ellipsis),
+                      ),
                       if (item.branch != null) ...[
                         const SizedBox(width: 8),
                         const Icon(Icons.location_on_outlined,
                             size: 12, color: AppConstants.textHint),
                         const SizedBox(width: 2),
-                        Expanded(
+                        Flexible(
                           child: Text(
                             item.branch!,
                             style: const TextStyle(
-                                fontSize: 11,
-                                color: AppConstants.textHint),
+                                fontSize: 11, color: AppConstants.textHint),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -335,8 +328,7 @@ class _CustomerCard extends StatelessWidget {
                   Text(
                     'Auto: ${item.autoCheck}',
                     style: const TextStyle(
-                        fontSize: 9,
-                        color: AppConstants.textHint),
+                        fontSize: 9, color: AppConstants.textHint),
                   ),
                 ],
               ],

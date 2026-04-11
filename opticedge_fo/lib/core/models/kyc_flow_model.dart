@@ -63,10 +63,9 @@ class DeviceModelOption {
         brandId: json['brand_id']?.toString() ?? '',
         brandName: json['brand_name']?.toString() ?? '',
         name: json['name']?.toString() ?? '',
-        retailPrice: json['retail_price'] as num?,
+        retailPrice: _nullableNum(json['retail_price']),
         deviceSpecs: json['device_specs']?.toString() ?? '',
-        specifications:
-            json['specifications'] as Map<String, dynamic>? ?? const {},
+        specifications: _specificationsMap(json['specifications']),
       );
 }
 
@@ -116,7 +115,7 @@ class InventoryUnitOption {
         brandName: json['brand_name']?.toString() ?? '',
         modelName: json['model_name']?.toString() ?? '',
         deviceSpecs: json['device_specs']?.toString() ?? '',
-        recommendedCashPrice: json['recommended_cash_price'] as num?,
+        recommendedCashPrice: _nullableNum(json['recommended_cash_price']),
         imei1: json['imei_1']?.toString() ?? '',
         imei2: json['imei_2']?.toString(),
         serialNumber: json['serial_number']?.toString(),
@@ -264,4 +263,39 @@ class KycReleaseContext {
         inventoryUnitId: json['inventory_unit_id']?.toString(),
         inventoryUnitStatus: json['inventory_unit_status']?.toString(),
       );
+}
+
+/// Laravel often encodes decimals as JSON strings; plain [as num?] throws on String.
+num? _nullableNum(dynamic value) {
+  if (value == null) {
+    return null;
+  }
+  if (value is num) {
+    return value;
+  }
+  if (value is String) {
+    return num.tryParse(value);
+  }
+
+  return null;
+}
+
+/// [specifications] may be a map or (from legacy data) a non-map; avoid cast exceptions.
+Map<String, dynamic> _specificationsMap(dynamic value) {
+  if (value == null) {
+    return const {};
+  }
+  if (value is Map<String, dynamic>) {
+    return Map<String, dynamic>.from(value);
+  }
+  if (value is Map) {
+    final out = <String, dynamic>{};
+    value.forEach((dynamic key, dynamic v) {
+      out[key.toString()] = v;
+    });
+
+    return out;
+  }
+
+  return const {};
 }

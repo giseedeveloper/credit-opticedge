@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/constants.dart';
+import '../../../core/api/api_client.dart';
 import '../../../core/models/kyc_flow_model.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
@@ -101,6 +103,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
       return;
     }
 
+    FocusManager.instance.primaryFocus?.unfocus();
     _save();
     await ref.read(kycProvider.notifier).submitStep1();
   }
@@ -129,6 +132,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
     ].whereType<Object>().length;
 
     return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.all(20),
       child: Form(
         key: _formKey,
@@ -146,9 +150,10 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
               loading: () => const LinearProgressIndicator(
                 color: AppConstants.primary,
               ),
-              error: (_, __) => const Text(
-                'Failed to load device brands.',
-                style: TextStyle(color: AppConstants.error),
+              error: (error, _) => _asyncError(
+                title: 'Failed to load device brands.',
+                message: ApiClient.instance.parseError(error),
+                onRetry: () => ref.invalidate(deviceBrandsProvider),
               ),
               data: (brands) => _selectionCard(
                 title: '1. Pick the handset from stock',
@@ -156,42 +161,60 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                     'A linked stock unit keeps price, IMEI, and release tracking aligned.',
                 child: Column(
                   children: [
-                    DropdownButtonFormField<String>(
-                      initialValue:
+                    if (brands.isEmpty)
+                      _emptyScopeHint(
+                        title: 'No brands available',
+                        body:
+                            'Brands listed here come from inventory available to your account (branch/vendor scope). '
+                            'If this list is empty, there is no qualifying stock yet—add or receive units in the system, '
+                            'or ask a supervisor to confirm your branch/vendor assignment.',
+                        onRefresh: () =>
+                            ref.invalidate(deviceBrandsProvider),
+                      )
+                    else
+                      DropdownButtonFormField<String>(
+                        key: ValueKey<String?>(
                           state.brandId.isEmpty ? null : state.brandId,
-                      decoration: const InputDecoration(
-                        labelText: 'Brand',
-                        prefixIcon: Icon(Icons.category_outlined, size: 18),
-                      ),
-                      items: brands
-                          .map(
-                            (brand) => DropdownMenuItem<String>(
-                              value: brand.id,
-                              child: Text(brand.name),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        ref
-                            .read(kycProvider.notifier)
-                            .selectBrand(value?.trim() ?? '');
-                      },
-                      validator: (value) {
-                        if ((value ?? '').trim().isEmpty) {
-                          return 'Select a brand';
-                        }
+                        ),
+                        initialValue:
+                            state.brandId.isEmpty ? null : state.brandId,
+                        decoration: const InputDecoration(
+                          labelText: 'Brand',
+                          prefixIcon: Icon(Icons.category_outlined, size: 18),
+                        ),
+                        items: brands
+                            .map(
+                              (brand) => DropdownMenuItem<String>(
+                                value: brand.id,
+                                child: Text(brand.name),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          ref
+                              .read(kycProvider.notifier)
+                              .selectBrand(value?.trim() ?? '');
+                        },
+                        validator: (value) {
+                          if ((value ?? '').trim().isEmpty) {
+                            return 'Select a brand';
+                          }
 
-                        return null;
-                      },
-                    ),
+                          return null;
+                        },
+                      ),
+                    if (brands.isNotEmpty) ...[
                     const SizedBox(height: 14),
                     modelsAsync.when(
                       loading: () => const LinearProgressIndicator(
                         color: AppConstants.primary,
                       ),
-                      error: (_, __) => const Text(
-                        'Failed to load device models.',
-                        style: TextStyle(color: AppConstants.error),
+                      error: (error, _) => _asyncError(
+                        title: 'Failed to load device models.',
+                        message: ApiClient.instance.parseError(error),
+                        onRetry: () => ref.invalidate(
+                          deviceModelsProvider(state.brandId),
+                        ),
                       ),
                       data: (models) => DropdownButtonFormField<String>(
                         initialValue: state.phoneModelId.isEmpty
@@ -250,9 +273,17 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                       loading: () => const LinearProgressIndicator(
                         color: AppConstants.primary,
                       ),
-                      error: (_, __) => const Text(
-                        'Failed to load stock units.',
-                        style: TextStyle(color: AppConstants.error),
+                      error: (error, _) => _asyncError(
+                        title: 'Failed to load stock units.',
+                        message: ApiClient.instance.parseError(error),
+                        onRetry: () => ref.invalidate(
+                          inventoryUnitsProvider(
+                            (
+                              phoneModelId: state.phoneModelId,
+                              search: state.inventorySearch,
+                            ),
+                          ),
+                        ),
                       ),
                       data: (units) => DropdownButtonFormField<String>(
                         initialValue: state.inventoryUnitId.isEmpty
@@ -293,6 +324,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                         },
                       ),
                     ),
+                    ],
                     if (hasLinkedInventory) ...[
                       const SizedBox(height: 14),
                       Container(
@@ -637,6 +669,111 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                 color: AppConstants.textSecondary,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyScopeHint({
+    required String title,
+    required String body,
+    required VoidCallback onRefresh,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppConstants.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.inventory_2_outlined,
+                color: AppConstants.warning.withValues(alpha: 0.9),
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppConstants.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            body,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: AppConstants.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onRefresh,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Refresh'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _asyncError({
+    required String title,
+    required String message,
+    required VoidCallback onRetry,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.red.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppConstants.error,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            style: const TextStyle(color: AppConstants.textSecondary),
+          ),
+          if (kDebugMode) ...[
+            const SizedBox(height: 8),
+            Text(
+              'API: ${ApiClient.instance.activeBaseUrl}',
+              style: const TextStyle(
+                color: AppConstants.textHint,
+                fontSize: 12,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Retry'),
           ),
         ],
       ),

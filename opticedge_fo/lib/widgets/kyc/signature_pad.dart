@@ -38,7 +38,7 @@ class SignaturePadController extends ChangeNotifier {
   }
 
   Future<String?> exportAsDataUrl({
-    Size size = const Size(900, 320),
+    Size size = const Size(640, 220),
   }) async {
     if (!hasSignature) {
       return null;

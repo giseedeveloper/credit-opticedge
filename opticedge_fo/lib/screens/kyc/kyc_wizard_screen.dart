@@ -47,6 +47,8 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
   }
 
   void _toStep(int step) {
+    // Avoid Android IME racing with disposed TextInputConnections when the page changes.
+    FocusManager.instance.primaryFocus?.unfocus();
     _pageCtrl.animateToPage(
       step - 1,
       duration: const Duration(milliseconds: 350),
@@ -60,6 +62,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
       _toStep(draft.currentStep - 1);
       return false;
     }
+    FocusManager.instance.primaryFocus?.unfocus();
     return _showExitDialog();
   }
 
@@ -127,6 +130,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
               if (state.currentStep > 1) {
                 _toStep(state.currentStep - 1);
               } else {
+                FocusManager.instance.primaryFocus?.unfocus();
                 final shouldExit = await _showExitDialog();
                 if (!context.mounted) {
                   return;

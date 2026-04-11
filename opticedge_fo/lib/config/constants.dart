@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class AppConstants {
@@ -5,7 +6,32 @@ class AppConstants {
 
   static const String appName = 'Opticedge FO';
   static const String tagline = 'Fast. Secure. Verified.';
-  static const String baseUrl = 'https://credit.opticedgeafrica.net/api/v1';
+  static const String _productionBaseUrl =
+      'https://credit.opticedgeafrica.net/api/v1';
+  static const String _configuredBaseUrl =
+      String.fromEnvironment('API_BASE_URL', defaultValue: '');
+
+  static String get baseUrl => resolveBaseUrl(
+        isWeb: kIsWeb,
+        isDebug: kDebugMode,
+        currentUri: Uri.base,
+        configuredBaseUrl: _configuredBaseUrl,
+        targetPlatform: defaultTargetPlatform,
+      );
+
+  static String resolveBaseUrl({
+    required bool isWeb,
+    required bool isDebug,
+    required Uri currentUri,
+    String configuredBaseUrl = '',
+    TargetPlatform? targetPlatform,
+  }) {
+    if (configuredBaseUrl.trim().isNotEmpty) {
+      return configuredBaseUrl.trim();
+    }
+
+    return _productionBaseUrl;
+  }
 
   // Storage keys
   static const String tokenKey = 'fo_auth_token';

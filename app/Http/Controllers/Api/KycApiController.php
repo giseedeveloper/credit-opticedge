@@ -53,7 +53,7 @@ class KycApiController extends Controller
     public function deviceModels(Request $request, KycDeviceCatalogService $catalog): JsonResponse
     {
         $request->validate([
-            'brand_id' => ['nullable', 'exists:brands,id'],
+            'brand_id' => ['nullable', 'uuid', 'exists:brands,id'],
         ]);
 
         $models = $catalog->modelsFor($request->user(), $request->string('brand_id')->toString() ?: null)

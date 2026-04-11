@@ -425,8 +425,9 @@ class KycNotifier extends StateNotifier<KycDraftState> {
   }
 
   void selectBrand(String brandId) {
+    final trimmed = brandId.trim();
     state = state.copyWith(
-      brandId: brandId,
+      brandId: trimmed,
       phoneModelId: '',
       inventoryUnitId: '',
       inventorySearch: '',
@@ -956,13 +957,14 @@ final deviceBrandsProvider =
 final deviceModelsProvider =
     FutureProvider.family<List<DeviceModelOption>, String>(
         (ref, brandId) async {
-  if (brandId.isEmpty) {
+  final id = brandId.trim();
+  if (id.isEmpty) {
     return [];
   }
 
   final res = await ApiClient.instance.get(
     '/kyc/application/device/models',
-    queryParameters: {'brand_id': brandId},
+    queryParameters: {'brand_id': id},
   );
   final data = res.data['data'] as List<dynamic>;
   return data
@@ -972,14 +974,15 @@ final deviceModelsProvider =
 
 final inventoryUnitsProvider = FutureProvider.family<List<InventoryUnitOption>,
     ({String phoneModelId, String search})>((ref, args) async {
-  if (args.phoneModelId.isEmpty) {
+  final modelId = args.phoneModelId.trim();
+  if (modelId.isEmpty) {
     return [];
   }
 
   final res = await ApiClient.instance.get(
     '/kyc/application/device/inventory',
     queryParameters: {
-      'phone_model_id': args.phoneModelId,
+      'phone_model_id': modelId,
       if (args.search.trim().isNotEmpty) 'search': args.search.trim(),
     },
   );

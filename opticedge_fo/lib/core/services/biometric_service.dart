@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
 
@@ -7,8 +8,14 @@ class BiometricService {
 
   final _auth = LocalAuthentication();
 
+  static bool supportsCurrentPlatform({required bool isWeb}) => !isWeb;
+
   /// Check if biometrics are available on this device.
   Future<bool> get isAvailable async {
+    if (!supportsCurrentPlatform(isWeb: kIsWeb)) {
+      return false;
+    }
+
     try {
       final canCheck = await _auth.canCheckBiometrics;
       final isDeviceSupported = await _auth.isDeviceSupported();
@@ -20,6 +27,10 @@ class BiometricService {
 
   /// Returns the list of enrolled biometric types.
   Future<List<BiometricType>> get enrolledBiometrics async {
+    if (!supportsCurrentPlatform(isWeb: kIsWeb)) {
+      return [];
+    }
+
     try {
       return await _auth.getAvailableBiometrics();
     } on PlatformException {
@@ -29,7 +40,12 @@ class BiometricService {
 
   /// Authenticate the user with biometrics.
   /// Returns `true` if authentication succeeded.
-  Future<bool> authenticate({String reason = 'Authenticate to continue'}) async {
+  Future<bool> authenticate(
+      {String reason = 'Authenticate to continue'}) async {
+    if (!supportsCurrentPlatform(isWeb: kIsWeb)) {
+      return false;
+    }
+
     try {
       return await _auth.authenticate(
         localizedReason: reason,

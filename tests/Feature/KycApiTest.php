@@ -21,6 +21,7 @@ use Spatie\Permission\PermissionRegistrar;
 
 beforeEach(function () {
     app()[PermissionRegistrar::class]->forgetCachedPermissions();
+    Storage::fake('public');
     Permission::firstOrCreate(['name' => 'loans.create', 'guard_name' => 'web']);
     Permission::firstOrCreate(['name' => 'loans.view', 'guard_name' => 'web']);
     $this->branch = Branch::factory()->create();
@@ -45,6 +46,18 @@ beforeEach(function () {
     Config::set('services.selcom.api_key', 'TILL61163918-cd74f96661ab40dc986bfc87a448acd8');
     Config::set('services.selcom.api_secret', 'cfc165-ca2991-472f84-edd218-1fafe1-65');
     Sanctum::actingAs($this->agent);
+});
+
+it('public media streams public storage files with cors-friendly headers', function () {
+    Storage::disk('public')->put('kyc/headshot/test-headshot.jpg', 'fake-image-bytes');
+
+    $this->get('/api/v1/public-media?path=kyc/headshot/test-headshot.jpg')
+        ->assertOk()
+        ->assertHeader('Access-Control-Allow-Origin', '*');
+});
+
+it('public media rejects invalid traversal paths', function () {
+    $this->get('/api/v1/public-media?path=../.env')->assertNotFound();
 });
 
 // ─── Step 1: Device ───────────────────────────────────────────────────────────

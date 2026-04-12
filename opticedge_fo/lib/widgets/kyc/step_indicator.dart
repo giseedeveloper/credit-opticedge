@@ -7,6 +7,7 @@ class StepIndicator extends StatelessWidget {
   final int currentStep;
   final List<String> labels;
   final bool compact;
+  final bool onDarkBackground;
 
   const StepIndicator({
     super.key,
@@ -14,6 +15,7 @@ class StepIndicator extends StatelessWidget {
     required this.currentStep,
     required this.labels,
     this.compact = false,
+    this.onDarkBackground = false,
   });
 
   @override
@@ -24,6 +26,20 @@ class StepIndicator extends StatelessWidget {
     final badgeSize = compact ? 24.0 : 28.0;
     final stepFontSize = compact ? 9.0 : 10.0;
     final labelFontSize = compact ? 11.0 : 12.0;
+    final inactiveSurface = onDarkBackground
+        ? Colors.white.withValues(alpha: 0.12)
+        : AppConstants.surfaceMuted;
+    final inactiveBorder = onDarkBackground
+        ? Colors.white.withValues(alpha: 0.12)
+        : AppConstants.border;
+    final inactiveBadge =
+        onDarkBackground ? Colors.white.withValues(alpha: 0.08) : Colors.white;
+    final inactiveText = onDarkBackground
+        ? Colors.white.withValues(alpha: 0.96)
+        : AppConstants.textSecondary;
+    final inactiveStepText = onDarkBackground
+        ? Colors.white.withValues(alpha: 0.68)
+        : AppConstants.textHint;
 
     return SizedBox(
       height: pillHeight,
@@ -51,16 +67,16 @@ class StepIndicator extends StatelessWidget {
                       ],
                     )
                   : null,
-              color: isDone
-                  ? AppConstants.successSurface
-                  : Colors.white.withValues(alpha: 0.12),
+              color: isDone ? AppConstants.successSurface : inactiveSurface,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: isActive
-                    ? Colors.white.withValues(alpha: 0.18)
+                    ? (onDarkBackground
+                        ? Colors.white.withValues(alpha: 0.18)
+                        : AppConstants.primary.withValues(alpha: 0.16))
                     : isDone
                         ? AppConstants.success.withValues(alpha: 0.24)
-                        : Colors.white.withValues(alpha: 0.12),
+                        : inactiveBorder,
               ),
               boxShadow: isActive
                   ? [
@@ -83,7 +99,7 @@ class StepIndicator extends StatelessWidget {
                         ? Colors.white.withValues(alpha: 0.16)
                         : isDone
                             ? AppConstants.success
-                            : Colors.white.withValues(alpha: 0.08),
+                            : inactiveBadge,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -97,7 +113,9 @@ class StepIndicator extends StatelessWidget {
                               fontWeight: FontWeight.w800,
                               color: isActive
                                   ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.82),
+                                  : onDarkBackground
+                                      ? Colors.white.withValues(alpha: 0.82)
+                                      : AppConstants.textSecondary,
                             ),
                           ),
                   ),
@@ -115,7 +133,7 @@ class StepIndicator extends StatelessWidget {
                           ? Colors.white
                           : isDone
                               ? AppConstants.textPrimary
-                              : Colors.white.withValues(alpha: 0.96),
+                              : inactiveText,
                     ),
                   )
                 else
@@ -134,7 +152,7 @@ class StepIndicator extends StatelessWidget {
                               ? Colors.white.withValues(alpha: 0.88)
                               : isDone
                                   ? AppConstants.success
-                                  : Colors.white.withValues(alpha: 0.68),
+                                  : inactiveStepText,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -149,7 +167,7 @@ class StepIndicator extends StatelessWidget {
                               ? Colors.white
                               : isDone
                                   ? AppConstants.textPrimary
-                                  : Colors.white.withValues(alpha: 0.96),
+                                  : inactiveText,
                         ),
                       ),
                     ],

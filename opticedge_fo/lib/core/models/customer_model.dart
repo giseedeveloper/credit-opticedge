@@ -1,3 +1,4 @@
+import '../../config/constants.dart';
 import 'kyc_flow_model.dart';
 
 class CustomerListItem {
@@ -32,7 +33,8 @@ class CustomerListItem {
         kycStatus: json['kyc_status']?.toString() ?? 'draft',
         autoCheck: json['auto_check']?.toString(),
         branch: json['branch']?.toString(),
-        headshotUrl: json['headshot_url']?.toString(),
+        headshotUrl:
+            AppConstants.resolveMediaUrl(json['headshot_url']?.toString()),
         registeredAt: json['registered_at']?.toString() ?? '',
       );
 }
@@ -118,7 +120,9 @@ class CustomerDetail {
 
   factory CustomerDetail.fromJson(Map<String, dynamic> json) {
     final photosRaw = _jsonMap(json['photos']) ?? {};
-    final photos = photosRaw.map((k, v) => MapEntry(k, v?.toString()));
+    final photos = photosRaw.map(
+      (k, v) => MapEntry(k, AppConstants.resolveMediaUrl(v?.toString())),
+    );
 
     return CustomerDetail(
       id: json['id']?.toString() ?? '',

@@ -8,6 +8,7 @@ void main() {
     ApiClient.instance.init();
 
     expect(ApiClient.instance.activeBaseUrl, AppConstants.baseUrl);
+    expect(ApiClient.instance.dio.options.sendTimeout, isNull);
   });
 
   test('ApiClient surfaces interrupted upload errors clearly', () {

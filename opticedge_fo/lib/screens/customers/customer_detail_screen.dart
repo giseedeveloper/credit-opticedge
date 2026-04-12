@@ -259,24 +259,43 @@ class _DetailViewState extends ConsumerState<_DetailView> {
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: Colors.white.withValues(alpha: 0.22),
-                        backgroundImage: customer.photos['headshot'] != null
-                            ? NetworkImage(customer.photos['headshot']!)
-                            : null,
+                      Container(
+                        width: 56,
+                        height: 56,
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.22),
+                          shape: BoxShape.circle,
+                        ),
                         child: customer.photos['headshot'] == null
-                            ? Text(
-                                customer.fullName.isNotEmpty
-                                    ? customer.fullName[0].toUpperCase()
-                                    : '?',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
+                            ? Center(
+                                child: Text(
+                                  customer.fullName.isNotEmpty
+                                      ? customer.fullName[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                 ),
                               )
-                            : null,
+                            : Image.network(
+                                customer.photos['headshot']!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Center(
+                                  child: Text(
+                                    customer.fullName.isNotEmpty
+                                        ? customer.fullName[0].toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

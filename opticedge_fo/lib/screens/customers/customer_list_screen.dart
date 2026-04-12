@@ -245,7 +245,7 @@ class _CustomerCard extends StatelessWidget {
           border: Border.all(color: AppConstants.border),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withValues(alpha: 0.02),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -253,24 +253,9 @@ class _CustomerCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Avatar
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: AppConstants.primarySurface,
-              backgroundImage: item.headshotUrl != null
-                  ? NetworkImage(item.headshotUrl!)
-                  : null,
-              child: item.headshotUrl == null
-                  ? Text(
-                      item.fullName.isNotEmpty
-                          ? item.fullName[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppConstants.primary),
-                    )
-                  : null,
+            _CustomerAvatar(
+              name: item.fullName,
+              imageUrl: item.headshotUrl,
             ),
             const SizedBox(width: 12),
 
@@ -339,6 +324,56 @@ class _CustomerCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CustomerAvatar extends StatelessWidget {
+  final String name;
+  final String? imageUrl;
+
+  const _CustomerAvatar({
+    required this.name,
+    required this.imageUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: const BoxDecoration(
+        color: AppConstants.primarySurface,
+        shape: BoxShape.circle,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: imageUrl == null
+          ? Center(
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppConstants.primary,
+                ),
+              ),
+            )
+          : Image.network(
+              imageUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppConstants.primary,
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }

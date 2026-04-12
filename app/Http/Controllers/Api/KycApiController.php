@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * @group KYC — Agent Mobile App
@@ -34,6 +35,31 @@ use InvalidArgumentException;
 class KycApiController extends Controller
 {
     use ApiResponse;
+
+    public function publicMedia(Request $request): StreamedResponse
+    {
+        $validated = $request->validate([
+            'path' => ['required', 'string', 'max:500'],
+        ]);
+
+        $path = trim((string) $validated['path'], '/');
+
+        abort_if(
+            $path === ''
+            || str_contains($path, '..')
+            || str_starts_with($path, '/'),
+            404
+        );
+
+        abort_unless(Storage::disk('public')->exists($path), 404);
+
+        return Storage::disk('public')->response($path, null, [
+            'Access-Control-Allow-Origin' => '*',
+            'Access-Control-Allow-Methods' => 'GET, OPTIONS',
+            'Access-Control-Allow-Headers' => 'Origin, Content-Type, Accept, Authorization',
+            'Cache-Control' => 'public, max-age=3600',
+        ]);
+    }
 
     public function phoneCountries(KycPhoneService $phoneService): JsonResponse
     {
@@ -1200,7 +1226,7 @@ class KycApiController extends Controller
 
     private function photoUrl(?string $path): ?string
     {
-        return $path ? Storage::disk('public')->url($path) : null;
+        return $path ? route('api.kyc.public-media', ['path' => $path]) : null;
     }
 
     private function findAgentCustomerOrFail(string $customerId, array $with = []): Customer

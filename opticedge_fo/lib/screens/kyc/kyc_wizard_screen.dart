@@ -40,6 +40,16 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
     'Submit',
   ];
 
+  static const _stepIcons = [
+    Icons.qr_code_scanner_rounded,
+    Icons.badge_rounded,
+    Icons.call_rounded,
+    Icons.payments_outlined,
+    Icons.shield_outlined,
+    Icons.gavel_rounded,
+    Icons.verified_user_rounded,
+  ];
+
   static const _stepSummaries = [
     (
       title: 'Match the right handset',
@@ -226,9 +236,10 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
     final media = MediaQuery.of(context);
     final isKeyboardVisible = media.viewInsets.bottom > 0;
     final isCompactHeader = isKeyboardVisible || media.size.height < 860;
-    final showOutcomeBanner = !isCompactHeader && media.size.height >= 760;
+    final showOutcomeBanner = !isKeyboardVisible && media.size.height >= 700;
     final titleFontSize = isCompactHeader ? 20.0 : 24.0;
-    final headerPadding = isCompactHeader ? 16.0 : 20.0;
+    final headerPadding = isCompactHeader ? 15.0 : 18.0;
+    final currentStepIcon = _stepIcons[state.currentStep - 1];
 
     if (_pendingPageIndex != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -273,7 +284,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              stops: [0, 0.35, 0.36],
+              stops: [0, 0.23, 0.24],
             ),
           ),
           child: SafeArea(
@@ -282,9 +293,9 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                 Padding(
                   padding: EdgeInsets.fromLTRB(
                     18,
-                    isCompactHeader ? 8 : 10,
+                    isCompactHeader ? 8 : 12,
                     18,
-                    isCompactHeader ? 10 : 14,
+                    12,
                   ),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 240),
@@ -368,7 +379,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            letterSpacing: 0.2,
+                            letterSpacing: 0.3,
                             color: Color(0xFFDCE7F3),
                           ),
                         ),
@@ -384,7 +395,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                             color: Colors.white,
                           ),
                         ),
-                        SizedBox(height: isCompactHeader ? 8 : 10),
+                        SizedBox(height: isCompactHeader ? 6 : 8),
                         Text(
                           descriptor.subtitle,
                           maxLines: isCompactHeader ? 2 : 3,
@@ -425,49 +436,124 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                             ),
                           ],
                         ),
-                        SizedBox(height: isCompactHeader ? 10 : 14),
-                        if (showOutcomeBanner) ...[
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
+                        SizedBox(height: isCompactHeader ? 12 : 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
                               color: Colors.white.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: AppConstants.primaryLight
-                                        .withValues(alpha: 0.22),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.auto_awesome_rounded,
-                                    size: 18,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    descriptor.outcome,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      height: 1.45,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
-                          const SizedBox(height: 14),
-                        ],
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: AppConstants.primaryLight
+                                      .withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Icon(
+                                  currentStepIcon,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _stepLabels[state.currentStep - 1],
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Guided field capture for step ${state.currentStep}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white.withValues(
+                                          alpha: 0.72,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                    decoration: BoxDecoration(
+                      color: AppConstants.surface,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppConstants.primarySurface,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: const Text(
+                                'Step journey',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppConstants.primaryDark,
+                                ),
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${7 - state.currentStep} remaining',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppConstants.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
                         StepIndicator(
                           totalSteps: 7,
                           currentStep: state.currentStep,
@@ -494,17 +580,77 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                         ),
                       ],
                     ),
-                    child: PageView(
-                      controller: _pageCtrl,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: const [
-                        Step1DeviceScreen(),
-                        Step2IdentityScreen(),
-                        Step3ContactScreen(),
-                        Step4IncomeScreen(),
-                        Step5NokScreen(),
-                        Step6ConsentScreen(),
-                        Step7SubmitScreen(),
+                    child: Column(
+                      children: [
+                        if (showOutcomeBanner)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFFFFF7ED),
+                                    Color(0xFFFFFBF5),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: AppConstants.primary.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 34,
+                                    height: 34,
+                                    decoration: BoxDecoration(
+                                      color: AppConstants.primarySurface,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.auto_awesome_rounded,
+                                      size: 18,
+                                      color: AppConstants.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      descriptor.outcome,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        height: 1.45,
+                                        color: AppConstants.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        Expanded(
+                          child: PageView(
+                            controller: _pageCtrl,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: const [
+                              Step1DeviceScreen(),
+                              Step2IdentityScreen(),
+                              Step3ContactScreen(),
+                              Step4IncomeScreen(),
+                              Step5NokScreen(),
+                              Step6ConsentScreen(),
+                              Step7SubmitScreen(),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../config/constants.dart';
 import '../storage/secure_storage.dart';
 
@@ -19,7 +20,6 @@ class ApiClient {
       BaseOptions(
         baseUrl: AppConstants.baseUrl,
         connectTimeout: const Duration(seconds: 30),
-        sendTimeout: const Duration(seconds: 90),
         receiveTimeout: const Duration(seconds: 60),
         headers: {
           'Accept': 'application/json',
@@ -71,7 +71,11 @@ class ApiClient {
 
   Future<Response> post(String path, {dynamic data}) async {
     _ensureReady();
-    return _dio.post(path, data: data);
+    return _dio.post(
+      path,
+      data: data,
+      options: data == null ? null : _sendOptions(),
+    );
   }
 
   Future<Response> postForm(String path, FormData formData) async {
@@ -79,7 +83,14 @@ class ApiClient {
     return _dio.post(
       path,
       data: formData,
-      options: Options(contentType: 'multipart/form-data'),
+      options: _sendOptions(contentType: 'multipart/form-data'),
+    );
+  }
+
+  Options _sendOptions({String? contentType}) {
+    return Options(
+      contentType: contentType,
+      sendTimeout: kIsWeb ? null : const Duration(seconds: 90),
     );
   }
 

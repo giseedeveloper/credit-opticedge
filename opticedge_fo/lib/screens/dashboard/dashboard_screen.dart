@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
+import '../../core/models/dashboard_model.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/customer_provider.dart';
 import '../../core/l10n/app_strings.dart';
@@ -54,7 +55,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         },
         child: CustomScrollView(
           slivers: [
-            _buildAppBar(user),
+            _buildAppBar(user, dashAsync.valueOrNull),
             SliverPadding(
               padding: const EdgeInsets.all(20),
               sliver: SliverList(
@@ -104,248 +105,376 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return '${s.weekdays[now.weekday - 1]}, ${now.day} ${s.months[now.month - 1]}';
   }
 
-  SliverAppBar _buildAppBar(user) {
+  SliverAppBar _buildAppBar(user, DashboardStats? stats) {
     final s = S.of(ref);
+    final insight = stats ?? DashboardStats.empty;
+
     return SliverAppBar(
-      expandedHeight: 180,
+      expandedHeight: 290,
       pinned: true,
       elevation: 0,
-      backgroundColor: AppConstants.primary,
+      backgroundColor: AppConstants.heroStart,
       flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFEA580C),
-                Color(0xFFDC2626),
-                Color(0xFFC2410C),
-              ],
-              stops: [0.0, 0.5, 1.0],
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppConstants.heroStart,
+                    AppConstants.heroEnd,
+                    Color(0xFF10263F),
+                  ],
+                  stops: [0.0, 0.62, 1.0],
+                ),
+              ),
             ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Top row: greeting + actions
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _todayFormattedL10n(s),
-                              style: TextStyle(
+            Positioned(
+              top: -40,
+              right: -20,
+              child: Container(
+                width: 190,
+                height: 190,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppConstants.primaryLight.withValues(alpha: 0.12),
+                ),
+              ),
+            ),
+            Positioned(
+              left: -40,
+              bottom: 16,
+              child: Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF38BDF8).withValues(alpha: 0.10),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _todayFormattedL10n(s),
+                                style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                  fontWeight: FontWeight.w400),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${_greeting(s)}, ${user?.name.split(' ').first ?? 'FO'}',
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: -0.3,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Notification bell
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Stack(
-                          children: [
-                            const Center(
-                              child: Icon(Icons.notifications_outlined,
-                                  color: Colors.white, size: 22),
-                            ),
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF4ADE80),
-                                  shape: BoxShape.circle,
+                                  color: Colors.white.withValues(alpha: 0.78),
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      // Avatar
-                      GestureDetector(
-                        onTap: () => context.go('/profile'),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.25),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.3),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              user?.initials ?? 'FO',
-                              style: const TextStyle(
+                              const SizedBox(height: 8),
+                              Text(
+                                '${_greeting(s)}, ${user?.name.split(' ').first ?? 'FO'}',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.05,
                                   color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700),
-                            ),
+                                  letterSpacing: -0.8,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Branch + Online badge row
-                  Row(
-                    children: [
-                      if (user?.branch != null) ...[
-                        Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
+                        const SizedBox(width: 16),
+                        Row(
+                          children: [
+                            _heroActionButton(
+                              icon: Icons.notifications_none_rounded,
+                              dotColor: const Color(0xFF4ADE80),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.location_on_outlined,
-                                    color: Colors.white70, size: 13),
-                                const SizedBox(width: 4),
-                                Flexible(
-                                  child: Text(
-                                    user!.branch!.name,
-                                    style: const TextStyle(
-                                        color: Colors.white70, fontSize: 11),
-                                    overflow: TextOverflow.ellipsis,
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: () => context.go('/profile'),
+                              child: Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.34),
+                                    width: 1.5,
                                   ),
                                 ),
-                              ],
+                                child: Center(
+                                  child: Text(
+                                    user?.initials ?? 'FO',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        if (user?.branch != null)
+                          _heroChip(
+                            icon: Icons.location_on_outlined,
+                            label: user!.branch!.name,
+                          ),
+                        _heroChip(
+                          icon: Icons.circle,
+                          label: 'Online',
+                          iconColor: const Color(0xFF4ADE80),
+                        ),
+                        _heroChip(
+                          icon: Icons.inventory_2_outlined,
+                          label: '${insight.drafts} drafts',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    GestureDetector(
+                      onTap: () => context.go('/customers'),
+                      child: Container(
+                        height: 52,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.16),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                      ],
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF4ADE80).withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
+                        child: Row(
                           children: [
-                            Icon(Icons.circle,
-                                color: Color(0xFF4ADE80), size: 7),
-                            SizedBox(width: 5),
-                            Text('Online',
-                                style: TextStyle(
-                                    color: Color(0xFF4ADE80),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500)),
+                            const Icon(Icons.search_rounded,
+                                color: Colors.white, size: 20),
+                            const SizedBox(width: 12),
+                            Text(
+                              s.searchCustomers,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.82),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Search bar
-                  GestureDetector(
-                    onTap: () => context.go('/customers'),
-                    child: Container(
-                      height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                    ),
+                    const SizedBox(height: 18),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.12),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.search_rounded,
-                              color: Colors.white.withValues(alpha: 0.7),
-                              size: 18),
-                          const SizedBox(width: 10),
-                          Text(
-                            s.searchCustomers,
-                            style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.5),
-                                fontSize: 13),
+                          Expanded(
+                            child: _heroInsight(
+                              label: 'Pending review',
+                              value: '${insight.pending}',
+                              tone: const Color(0xFFFDE68A),
+                            ),
+                          ),
+                          Container(
+                            width: 1,
+                            height: 42,
+                            color: Colors.white.withValues(alpha: 0.16),
+                          ),
+                          Expanded(
+                            child: _heroInsight(
+                              label: 'Verified today',
+                              value: '${insight.verified}',
+                              tone: const Color(0xFF86EFAC),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildStatsGrid(stats) {
+  Widget _heroActionButton({
+    required IconData icon,
+    Color? dotColor,
+  }) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Stack(
+        children: [
+          Center(
+            child: Icon(icon, color: Colors.white, size: 22),
+          ),
+          if (dotColor != null)
+            Positioned(
+              top: 10,
+              right: 10,
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: dotColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroChip({
+    required IconData icon,
+    required String label,
+    Color? iconColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: icon == Icons.circle ? 8 : 14,
+            color: iconColor ?? Colors.white.withValues(alpha: 0.92),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroInsight({
+    required String label,
+    required String value,
+    required Color tone,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.72),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              color: tone,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsGrid(DashboardStats stats) {
     final s = S.of(ref);
     final items = [
       _StatData(
-          s.total,
-          stats.totalRegistered.toString(),
-          Icons.people_outline_rounded,
-          AppConstants.info,
-          const Color(0xFFEFF6FF)),
+        label: s.total,
+        value: stats.totalRegistered.toString(),
+        note: 'Customers onboarded',
+        icon: Icons.people_alt_outlined,
+        color: const Color(0xFF2F80ED),
+        background: const Color(0xFFF4F8FF),
+        accent: const Color(0xFFDCEAFF),
+      ),
       _StatData(
-          s.pending,
-          stats.pending.toString(),
-          Icons.hourglass_empty_rounded,
-          const Color(0xFFF59E0B),
-          const Color(0xFFFFFBEB)),
+        label: s.drafts,
+        value: stats.drafts.toString(),
+        note: 'Need completion',
+        icon: Icons.edit_note_rounded,
+        color: const Color(0xFFF59E0B),
+        background: const Color(0xFFFFF8EC),
+        accent: const Color(0xFFFFE9BF),
+      ),
       _StatData(
-          s.verified,
-          stats.verified.toString(),
-          Icons.check_circle_outline_rounded,
-          AppConstants.success,
-          const Color(0xFFECFDF5)),
-      _StatData(s.declined, stats.declined.toString(), Icons.cancel_outlined,
-          AppConstants.error, const Color(0xFFFEF2F2)),
+        label: s.pending,
+        value: stats.pending.toString(),
+        note: 'Waiting review',
+        icon: Icons.timelapse_rounded,
+        color: const Color(0xFF8B5CF6),
+        background: const Color(0xFFF6F1FF),
+        accent: const Color(0xFFE6DAFF),
+      ),
+      _StatData(
+        label: s.verified,
+        value: stats.verified.toString(),
+        note: 'Ready to release',
+        icon: Icons.verified_rounded,
+        color: AppConstants.success,
+        background: const Color(0xFFECFDF5),
+        accent: const Color(0xFFCFF8E3),
+      ),
     ];
 
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.6,
+      crossAxisSpacing: 14,
+      mainAxisSpacing: 14,
+      childAspectRatio: 1.08,
       children: items
           .asMap()
           .entries
@@ -363,23 +492,47 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     final actions = [
       if (canRegister)
-        _ActionData(s.registerCustomer, Icons.person_add_rounded,
-            AppConstants.primary, () => context.go('/kyc/new')),
-      _ActionData(s.myCustomers, Icons.people_rounded, AppConstants.info,
-          () => context.go('/customers')),
-      _ActionData(s.search, Icons.search_rounded, const Color(0xFF8B5CF6),
-          () => context.go('/customers')),
-      _ActionData(s.drafts, Icons.edit_note_rounded, AppConstants.warning,
-          () => context.go('/customers?tab=draft')),
+        _ActionData(
+          label: s.registerCustomer,
+          caption: 'Start a new KYC flow',
+          icon: Icons.person_add_alt_1_rounded,
+          color: AppConstants.primary,
+          surface: const Color(0xFFFFF4EC),
+          onTap: () => context.go('/kyc/new'),
+        ),
+      _ActionData(
+        label: s.myCustomers,
+        caption: 'Review active customers',
+        icon: Icons.groups_rounded,
+        color: const Color(0xFF2F80ED),
+        surface: const Color(0xFFF1F7FF),
+        onTap: () => context.go('/customers'),
+      ),
+      _ActionData(
+        label: s.search,
+        caption: 'Find by name, phone or NIDA',
+        icon: Icons.manage_search_rounded,
+        color: const Color(0xFF8B5CF6),
+        surface: const Color(0xFFF7F3FF),
+        onTap: () => context.go('/customers'),
+      ),
+      _ActionData(
+        label: s.drafts,
+        caption: 'Resume unfinished onboarding',
+        icon: Icons.inventory_2_rounded,
+        color: const Color(0xFFF59E0B),
+        surface: const Color(0xFFFFF9ED),
+        onTap: () => context.go('/customers?tab=draft'),
+      ),
     ];
 
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 2.4,
+      crossAxisSpacing: 14,
+      mainAxisSpacing: 14,
+      childAspectRatio: 1.22,
       children: actions.map((a) => _buildActionCard(a)).toList(),
     );
   }
@@ -388,32 +541,50 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return GestureDetector(
       onTap: action.onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: action.color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: action.color.withOpacity(0.2)),
+          color: action.surface,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: action.color.withValues(alpha: 0.16)),
+          boxShadow: [
+            BoxShadow(
+              color: action.color.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 46,
+              height: 46,
               decoration: BoxDecoration(
-                color: action.color.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
+                color: action.color.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(action.icon, color: action.color, size: 18),
+              child: Icon(action.icon, color: action.color, size: 24),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                action.label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: action.color,
-                ),
+            const Spacer(),
+            Text(
+              action.label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: action.color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              action.caption,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppConstants.textSecondary,
+                height: 1.35,
               ),
             ),
           ],
@@ -448,9 +619,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return Text(
       title,
       style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
+        fontSize: 18,
+        fontWeight: FontWeight.w800,
         color: Theme.of(context).textTheme.bodyLarge?.color,
+        letterSpacing: -0.4,
       ),
     );
   }
@@ -551,18 +723,39 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 class _StatData {
   final String label;
   final String value;
+  final String note;
   final IconData icon;
   final Color color;
-  final Color bg;
-  const _StatData(this.label, this.value, this.icon, this.color, this.bg);
+  final Color background;
+  final Color accent;
+
+  const _StatData({
+    required this.label,
+    required this.value,
+    required this.note,
+    required this.icon,
+    required this.color,
+    required this.background,
+    required this.accent,
+  });
 }
 
 class _ActionData {
   final String label;
+  final String caption;
   final IconData icon;
   final Color color;
+  final Color surface;
   final VoidCallback onTap;
-  const _ActionData(this.label, this.icon, this.color, this.onTap);
+
+  const _ActionData({
+    required this.label,
+    required this.caption,
+    required this.icon,
+    required this.color,
+    required this.surface,
+    required this.onTap,
+  });
 }
 
 class _AnimatedStatCard extends StatefulWidget {
@@ -606,11 +799,20 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> {
         child: Transform.translate(
           offset: Offset(0, _slide.value),
           child: Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: widget.data.bg,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: widget.data.color.withOpacity(0.15)),
+              color: widget.data.background,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: widget.data.color.withValues(alpha: 0.12),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.data.color.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -619,25 +821,61 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(widget.data.icon, color: widget.data.color, size: 22),
-                    Text(
-                      widget.data.value,
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: widget.data.accent,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        widget.data.icon,
                         color: widget.data.color,
-                        letterSpacing: -0.5,
+                        size: 24,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        widget.data.value,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: widget.data.color,
+                          letterSpacing: -0.6,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                Text(
-                  widget.data.label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: widget.data.color.withOpacity(0.8),
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.data.label,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: widget.data.color,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      widget.data.note,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppConstants.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -677,58 +915,56 @@ class _CustomerTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: cardColor,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: borderColor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: isDark
-                  ? AppConstants.primary.withValues(alpha: 0.15)
-                  : AppConstants.primarySurface,
-              backgroundImage:
-                  headshotUrl != null ? NetworkImage(headshotUrl!) : null,
-              child: headshotUrl == null
-                  ? Text(
-                      name.isNotEmpty ? name[0].toUpperCase() : '?',
-                      style: const TextStyle(
-                          color: AppConstants.primary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14),
-                    )
-                  : null,
+            _CustomerAvatar(
+              name: name,
+              imageUrl: headshotUrl,
+              isDark: isDark,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
                         color: theme.textTheme.bodyLarge?.color),
                   ),
+                  const SizedBox(height: 4),
                   Text(
                     phone,
                     style: TextStyle(
-                        fontSize: 11, color: theme.textTheme.bodyMedium?.color),
+                        fontSize: 12, color: theme.textTheme.bodyMedium?.color),
                   ),
                 ],
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                   color:
                       isDark ? statusColor.withValues(alpha: 0.15) : statusBg,
-                  borderRadius: BorderRadius.circular(20)),
+                  borderRadius: BorderRadius.circular(999)),
               child: Text(
                 statusLabel,
                 style: TextStyle(
@@ -737,12 +973,74 @@ class _CustomerTile extends StatelessWidget {
                     color: statusColor),
               ),
             ),
-            const SizedBox(width: 4),
-            Icon(Icons.chevron_right,
-                size: 16, color: theme.textTheme.bodySmall?.color),
+            const SizedBox(width: 8),
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: AppConstants.surfaceMuted,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.chevron_right_rounded,
+                  size: 18, color: theme.textTheme.bodySmall?.color),
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CustomerAvatar extends StatelessWidget {
+  final String name;
+  final String? imageUrl;
+  final bool isDark;
+
+  const _CustomerAvatar({
+    required this.name,
+    required this.imageUrl,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+    return Container(
+      width: 48,
+      height: 48,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppConstants.primary.withValues(alpha: 0.15)
+            : AppConstants.primarySurface,
+        shape: BoxShape.circle,
+      ),
+      child: imageUrl == null
+          ? Center(
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  color: AppConstants.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+            )
+          : Image.network(
+              imageUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: AppConstants.primary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }

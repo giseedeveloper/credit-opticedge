@@ -33,6 +33,36 @@ class AppConstants {
     return _productionBaseUrl;
   }
 
+  static Uri get apiBaseUri => Uri.parse(baseUrl);
+
+  static String get apiOrigin =>
+      '${apiBaseUri.scheme}://${apiBaseUri.authority}';
+
+  static String? resolveMediaUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.trim().isEmpty) {
+      return null;
+    }
+
+    final parsed = Uri.tryParse(rawUrl.trim());
+    if (parsed == null) {
+      return rawUrl;
+    }
+
+    const storageMarker = '/storage/';
+    final markerIndex = parsed.path.indexOf(storageMarker);
+
+    if (markerIndex == -1) {
+      return rawUrl;
+    }
+
+    final mediaPath = parsed.path.substring(markerIndex + storageMarker.length);
+    final proxyUri = Uri.parse('$apiOrigin/api/v1/public-media').replace(
+      queryParameters: {'path': mediaPath},
+    );
+
+    return proxyUri.toString();
+  }
+
   // Storage keys
   static const String tokenKey = 'fo_auth_token';
   static const String userKey = 'fo_user_data';

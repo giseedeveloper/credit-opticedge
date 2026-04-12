@@ -36,4 +36,15 @@ void main() {
 
     expect(baseUrl, 'https://api.example.com/v1');
   });
+
+  test('AppConstants converts storage URLs into the API media proxy URL', () {
+    final resolved = AppConstants.resolveMediaUrl(
+      'https://credit.opticedgeafrica.net/storage/kyc/headshot/avatar.jpg',
+    );
+
+    expect(
+      resolved,
+      'https://credit.opticedgeafrica.net/api/v1/public-media?path=kyc%2Fheadshot%2Favatar.jpg',
+    );
+  });
 }

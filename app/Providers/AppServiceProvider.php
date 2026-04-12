@@ -77,6 +77,10 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by($request->ip());
         });
 
+        RateLimiter::for('public-media', function (Request $request): Limit {
+            return Limit::perMinute(240)->by($request->ip());
+        });
+
         DB::prohibitDestructiveCommands(
             app()->isProduction(),
         );

@@ -31,6 +31,9 @@ Route::prefix('v1')->group(function () {
     Route::post('/payments/selcom/webhook', SelcomWebhookController::class)
         ->middleware('throttle:webhooks')
         ->name('api.payments.selcom.webhook');
+    Route::get('/public-media', [KycApiController::class, 'publicMedia'])
+        ->middleware('throttle:public-media')
+        ->name('api.kyc.public-media');
 
     // Protected Routes (Sanctum)
     Route::middleware('auth:sanctum')->group(function () {

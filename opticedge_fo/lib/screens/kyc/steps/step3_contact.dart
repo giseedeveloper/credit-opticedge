@@ -212,6 +212,7 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
               error: (_, __) => const Text('Failed to load branches',
                   style: TextStyle(color: AppConstants.error)),
               data: (branches) => DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _selectedBranch,
                 decoration: const InputDecoration(
                   hintText: 'Choose the branch serving this customer',
@@ -231,6 +232,7 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
             _label('Region', optional: true),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               initialValue: _selectedRegion,
               decoration: const InputDecoration(
                 hintText: 'Select region',

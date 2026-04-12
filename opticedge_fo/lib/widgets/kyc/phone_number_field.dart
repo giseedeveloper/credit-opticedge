@@ -74,6 +74,7 @@ class PhoneNumberField extends StatelessWidget {
             SizedBox(
               width: 146,
               child: DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: selectedOption?.iso,
                 menuMaxHeight: 320,
                 decoration: const InputDecoration(

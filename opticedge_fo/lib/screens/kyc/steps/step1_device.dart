@@ -168,14 +168,14 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                             'Brands listed here come from inventory available to your account (branch/vendor scope). '
                             'If this list is empty, there is no qualifying stock yet—add or receive units in the system, '
                             'or ask a supervisor to confirm your branch/vendor assignment.',
-                        onRefresh: () =>
-                            ref.invalidate(deviceBrandsProvider),
+                        onRefresh: () => ref.invalidate(deviceBrandsProvider),
                       )
                     else
                       DropdownButtonFormField<String>(
                         key: ValueKey<String?>(
                           state.brandId.isEmpty ? null : state.brandId,
                         ),
+                        isExpanded: true,
                         initialValue:
                             state.brandId.isEmpty ? null : state.brandId,
                         decoration: const InputDecoration(
@@ -204,126 +204,129 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                         },
                       ),
                     if (brands.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    modelsAsync.when(
-                      loading: () => const LinearProgressIndicator(
-                        color: AppConstants.primary,
-                      ),
-                      error: (error, _) => _asyncError(
-                        title: 'Failed to load device models.',
-                        message: ApiClient.instance.parseError(error),
-                        onRetry: () => ref.invalidate(
-                          deviceModelsProvider(state.brandId),
+                      const SizedBox(height: 14),
+                      modelsAsync.when(
+                        loading: () => const LinearProgressIndicator(
+                          color: AppConstants.primary,
                         ),
-                      ),
-                      data: (models) => DropdownButtonFormField<String>(
-                        initialValue: state.phoneModelId.isEmpty
-                            ? null
-                            : state.phoneModelId,
-                        decoration: const InputDecoration(
-                          labelText: 'Brand / Model',
-                          prefixIcon: Icon(Icons.smartphone_outlined, size: 18),
+                        error: (error, _) => _asyncError(
+                          title: 'Failed to load device models.',
+                          message: ApiClient.instance.parseError(error),
+                          onRetry: () => ref.invalidate(
+                            deviceModelsProvider(state.brandId),
+                          ),
                         ),
-                        items: models
-                            .map(
-                              (model) => DropdownMenuItem<String>(
-                                value: model.id,
-                                child: Text(
-                                  '${model.brandName} ${model.name}',
-                                  overflow: TextOverflow.ellipsis,
+                        data: (models) => DropdownButtonFormField<String>(
+                          isExpanded: true,
+                          initialValue: state.phoneModelId.isEmpty
+                              ? null
+                              : state.phoneModelId,
+                          decoration: const InputDecoration(
+                            labelText: 'Brand / Model',
+                            prefixIcon:
+                                Icon(Icons.smartphone_outlined, size: 18),
+                          ),
+                          items: models
+                              .map(
+                                (model) => DropdownMenuItem<String>(
+                                  value: model.id,
+                                  child: Text(
+                                    '${model.brandName} ${model.name}',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          final model =
-                              models.cast<DeviceModelOption?>().firstWhere(
-                                    (item) => item?.id == value,
-                                    orElse: () => null,
-                                  );
-                          ref.read(kycProvider.notifier).selectModel(model);
-                        },
-                        validator: (value) {
-                          if ((value ?? '').trim().isEmpty) {
-                            return 'Select a device model';
-                          }
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            final model =
+                                models.cast<DeviceModelOption?>().firstWhere(
+                                      (item) => item?.id == value,
+                                      orElse: () => null,
+                                    );
+                            ref.read(kycProvider.notifier).selectModel(model);
+                          },
+                          validator: (value) {
+                            if ((value ?? '').trim().isEmpty) {
+                              return 'Select a device model';
+                            }
 
-                          return null;
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _inventorySearch,
+                        onChanged: (value) {
+                          ref.read(kycProvider.notifier).update(
+                                (current) => current.copyWith(
+                                  inventorySearch: value,
+                                ),
+                              );
                         },
+                        decoration: const InputDecoration(
+                          labelText: 'Search stock unit',
+                          hintText: 'Search by IMEI or serial number',
+                          prefixIcon: Icon(Icons.search_rounded, size: 18),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _inventorySearch,
-                      onChanged: (value) {
-                        ref.read(kycProvider.notifier).update(
-                              (current) => current.copyWith(
-                                inventorySearch: value,
+                      const SizedBox(height: 14),
+                      unitsAsync.when(
+                        loading: () => const LinearProgressIndicator(
+                          color: AppConstants.primary,
+                        ),
+                        error: (error, _) => _asyncError(
+                          title: 'Failed to load stock units.',
+                          message: ApiClient.instance.parseError(error),
+                          onRetry: () => ref.invalidate(
+                            inventoryUnitsProvider(
+                              (
+                                phoneModelId: state.phoneModelId,
+                                search: state.inventorySearch,
                               ),
-                            );
-                      },
-                      decoration: const InputDecoration(
-                        labelText: 'Search stock unit',
-                        hintText: 'Search by IMEI or serial number',
-                        prefixIcon: Icon(Icons.search_rounded, size: 18),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    unitsAsync.when(
-                      loading: () => const LinearProgressIndicator(
-                        color: AppConstants.primary,
-                      ),
-                      error: (error, _) => _asyncError(
-                        title: 'Failed to load stock units.',
-                        message: ApiClient.instance.parseError(error),
-                        onRetry: () => ref.invalidate(
-                          inventoryUnitsProvider(
-                            (
-                              phoneModelId: state.phoneModelId,
-                              search: state.inventorySearch,
                             ),
                           ),
                         ),
-                      ),
-                      data: (units) => DropdownButtonFormField<String>(
-                        initialValue: state.inventoryUnitId.isEmpty
-                            ? null
-                            : state.inventoryUnitId,
-                        decoration: const InputDecoration(
-                          labelText: 'Available Inventory Unit',
-                          prefixIcon:
-                              Icon(Icons.inventory_2_outlined, size: 18),
-                        ),
-                        items: units
-                            .map(
-                              (unit) => DropdownMenuItem<String>(
-                                value: unit.id,
-                                child: Text(
-                                  '${unit.title} • ${unit.subtitle}',
-                                  overflow: TextOverflow.ellipsis,
+                        data: (units) => DropdownButtonFormField<String>(
+                          isExpanded: true,
+                          initialValue: state.inventoryUnitId.isEmpty
+                              ? null
+                              : state.inventoryUnitId,
+                          decoration: const InputDecoration(
+                            labelText: 'Available Inventory Unit',
+                            prefixIcon:
+                                Icon(Icons.inventory_2_outlined, size: 18),
+                          ),
+                          items: units
+                              .map(
+                                (unit) => DropdownMenuItem<String>(
+                                  value: unit.id,
+                                  child: Text(
+                                    '${unit.title} • ${unit.subtitle}',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          final unit =
-                              units.cast<InventoryUnitOption?>().firstWhere(
-                                    (item) => item?.id == value,
-                                    orElse: () => null,
-                                  );
-                          ref
-                              .read(kycProvider.notifier)
-                              .selectInventoryUnit(unit);
-                        },
-                        validator: (value) {
-                          if ((value ?? '').trim().isEmpty) {
-                            return 'Choose the stock unit to release later';
-                          }
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            final unit =
+                                units.cast<InventoryUnitOption?>().firstWhere(
+                                      (item) => item?.id == value,
+                                      orElse: () => null,
+                                    );
+                            ref
+                                .read(kycProvider.notifier)
+                                .selectInventoryUnit(unit);
+                          },
+                          validator: (value) {
+                            if ((value ?? '').trim().isEmpty) {
+                              return 'Choose the stock unit to release later';
+                            }
 
-                          return null;
-                        },
+                            return null;
+                          },
+                        ),
                       ),
-                    ),
                     ],
                     if (hasLinkedInventory) ...[
                       const SizedBox(height: 14),

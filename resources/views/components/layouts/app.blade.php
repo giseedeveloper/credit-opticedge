@@ -6,7 +6,12 @@
     <title>{{ config('app.name', 'Opticedge Credit') }}</title>
     
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-     
+
+    {{-- Guard against localStorage quota errors (breaks Flux UI / Livewire) --}}
+    <script>
+    (function(){var o=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){try{o.call(this,k,v)}catch(e){if(e instanceof DOMException&&(e.code===22||e.name==='QuotaExceededError')){this.clear();try{o.call(this,k,v)}catch(_){}}else{throw e}}}})();
+    </script>
+
     @livewireStyles
     <!-- ApexCharts CDN -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>

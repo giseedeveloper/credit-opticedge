@@ -241,24 +241,29 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: AppConstants.primarySurface,
-                    borderRadius: BorderRadius.circular(8),
+              Expanded(
+                child: Row(children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: AppConstants.primarySurface,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.person_outline_rounded,
+                        color: AppConstants.primary, size: 16),
                   ),
-                  child: const Icon(Icons.person_outline_rounded,
-                      color: AppConstants.primary, size: 16),
-                ),
-                const SizedBox(width: 8),
-                Text(title,
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppConstants.textPrimary)),
-              ]),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(title,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppConstants.textPrimary),
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                ]),
+              ),
               if (onRemove != null)
                 GestureDetector(
                   onTap: onRemove,

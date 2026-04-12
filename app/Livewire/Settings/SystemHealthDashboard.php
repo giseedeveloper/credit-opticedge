@@ -240,7 +240,14 @@ class SystemHealthDashboard extends Component
 
         /** @var TemporaryUploadedFile $file */
         $file = $this->customerAgreementUpload;
+
         $storedPath = $file->store('agreements', 'public');
+
+        if (! $storedPath) {
+            $this->addError('customerAgreementUpload', 'Failed to store the PDF. Check disk permissions or available space.');
+
+            return;
+        }
 
         SystemDocument::query()
             ->where('key', 'kyc_customer_agreement')

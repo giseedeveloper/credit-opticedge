@@ -225,25 +225,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   Row(
                     children: [
                       if (user?.branch != null) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.location_on_outlined,
-                                  color: Colors.white70, size: 13),
-                              const SizedBox(width: 4),
-                              Text(
-                                user!.branch!.name,
-                                style: const TextStyle(
-                                    color: Colors.white70, fontSize: 11),
-                              ),
-                            ],
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.location_on_outlined,
+                                    color: Colors.white70, size: 13),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    user!.branch!.name,
+                                    style: const TextStyle(
+                                        color: Colors.white70, fontSize: 11),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),

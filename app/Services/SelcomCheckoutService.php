@@ -48,7 +48,6 @@ class SelcomCheckoutService
             'buyer_phone' => $buyerPhone,
             'amount' => number_format((float) $payment->amount, 2, '.', ''),
             'currency' => $payment->currency,
-            'payment_methods' => 'MOBILEMONEYPULL',
             'webhook' => base64_encode($callbackUrl),
             'buyer_remarks' => "KYC draft {$payment->draft_reference}",
             'merchant_remarks' => 'OpticEdge customer onboarding deposit',

@@ -13,13 +13,22 @@ class Step4IncomeScreen extends ConsumerStatefulWidget {
 
 class _Step4State extends ConsumerState<Step4IncomeScreen> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _occupation, _employer, _workLoc,
-      _income, _expenses, _duration;
+  late TextEditingController _occupation,
+      _employer,
+      _workLoc,
+      _income,
+      _expenses,
+      _duration;
 
   final _cycles = ['daily', 'weekly', 'bi-weekly', 'monthly'];
   final _occupationChips = [
-    'Salaried', 'Self Employed', 'Business Owner', 'Freelancer',
-    'Farmer', 'Teacher', 'Driver',
+    'Salaried',
+    'Self Employed',
+    'Business Owner',
+    'Freelancer',
+    'Farmer',
+    'Teacher',
+    'Driver',
   ];
 
   @override
@@ -36,7 +45,14 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
 
   @override
   void dispose() {
-    for (final c in [_occupation, _employer, _workLoc, _income, _expenses, _duration]) {
+    for (final c in [
+      _occupation,
+      _employer,
+      _workLoc,
+      _income,
+      _expenses,
+      _duration
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -69,10 +85,9 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionHeader('Work & Income',
-                'Customer\'s employment and income details'),
+            _sectionHeader(
+                'Work & Income', 'Customer\'s employment and income details'),
             const SizedBox(height: 20),
-
             _label('Occupation Type', optional: true),
             const SizedBox(height: 8),
             Wrap(
@@ -84,8 +99,9 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
                   label: Text(chip),
                   selected: selected,
                   onSelected: (_) {
-                    ref.read(kycProvider.notifier).update(
-                        (s) => s.copyWith(occupation: chip));
+                    ref
+                        .read(kycProvider.notifier)
+                        .update((s) => s.copyWith(occupation: chip));
                     _occupation.text = chip;
                   },
                   selectedColor: AppConstants.primarySurface,
@@ -94,8 +110,7 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
                     color: selected
                         ? AppConstants.primary
                         : AppConstants.textSecondary,
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -108,22 +123,18 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
               }).toList(),
             ),
             const SizedBox(height: 12),
-            _field(_occupation, 'Or type occupation manually',
-                optional: true),
+            _field(_occupation, 'Or type occupation manually', optional: true),
             const SizedBox(height: 14),
-
             _field(_employer, 'Employer / Business Name', optional: true),
             const SizedBox(height: 14),
             _field(_workLoc, 'Work Location', optional: true),
             const SizedBox(height: 14),
-
             _field(_income, 'Monthly Income (TZS)',
                 required: true, keyboard: TextInputType.number),
             const SizedBox(height: 14),
             _field(_expenses, 'Monthly Expenses (TZS)',
                 optional: true, keyboard: TextInputType.number),
             const SizedBox(height: 14),
-
             _label('Income Payment Cycle'),
             const SizedBox(height: 8),
             Wrap(
@@ -142,8 +153,7 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
                     color: selected
                         ? AppConstants.primary
                         : AppConstants.textSecondary,
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -156,11 +166,9 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
               }).toList(),
             ),
             const SizedBox(height: 14),
-
-            _field(_duration, 'Duration at Work', optional: true,
-                hint: 'e.g. 2 years'),
+            _field(_duration, 'Duration at Work',
+                optional: true, hint: 'e.g. 2 years'),
             const SizedBox(height: 24),
-
             _sectionHeader('Business Photo', 'Photo of workplace or business'),
             const SizedBox(height: 12),
             SizedBox(
@@ -174,7 +182,6 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
                     .update((s) => s.copyWith(businessPhoto: f)),
               ),
             ),
-
             const SizedBox(height: 32),
             AppButton(
               label: 'Save & Continue',
@@ -205,33 +212,36 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
         ],
       );
 
-  Widget _label(String text, {bool optional = false}) => Row(children: [
-        Text(text,
-            style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppConstants.textPrimary)),
-        if (optional) ...[
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-                color: AppConstants.borderLight,
-                borderRadius: BorderRadius.circular(4)),
-            child: const Text('Optional',
-                style: TextStyle(
-                    fontSize: 9,
-                    color: AppConstants.textHint,
-                    fontWeight: FontWeight.w500)),
-          ),
+  Widget _label(String text, {bool optional = false}) => Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(text,
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppConstants.textPrimary)),
+          if (optional)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                  color: AppConstants.borderLight,
+                  borderRadius: BorderRadius.circular(4)),
+              child: const Text('Optional',
+                  style: TextStyle(
+                      fontSize: 9,
+                      color: AppConstants.textHint,
+                      fontWeight: FontWeight.w500)),
+            ),
         ],
-      ]);
+      );
 
   Widget _field(TextEditingController ctrl, String label,
-      {bool required = false,
-      bool optional = false,
-      String? hint,
-      TextInputType keyboard = TextInputType.text}) =>
+          {bool required = false,
+          bool optional = false,
+          String? hint,
+          TextInputType keyboard = TextInputType.text}) =>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _label(label, optional: optional || !required),
         const SizedBox(height: 6),

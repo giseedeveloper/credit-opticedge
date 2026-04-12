@@ -28,6 +28,7 @@ class KycWizardScreen extends ConsumerStatefulWidget {
 class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
   final PageController _pageCtrl = PageController();
   bool _bootstrappingDraft = true;
+  int? _pendingPageIndex;
 
   static const _stepLabels = [
     'Device',
@@ -94,6 +95,8 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
   }
 
   Future<void> _bootstrapWizard() async {
+    int? resumePageIndex;
+
     if (widget.draftCustomerId != null && widget.draftCustomerId!.isNotEmpty) {
       final loaded = await ref
           .read(kycProvider.notifier)
@@ -105,7 +108,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
 
       final currentState = ref.read(kycProvider);
       if (loaded) {
-        _pageCtrl.jumpToPage(currentState.currentStep - 1);
+        resumePageIndex = currentState.currentStep - 1;
       }
     } else {
       ref.read(kycProvider.notifier).reset();
@@ -114,6 +117,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
     if (mounted) {
       setState(() {
         _bootstrappingDraft = false;
+        _pendingPageIndex = resumePageIndex;
       });
     }
   }
@@ -126,11 +130,45 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
 
   void _toStep(int step) {
     FocusManager.instance.primaryFocus?.unfocus();
-    _pageCtrl.animateToPage(
-      step - 1,
-      duration: const Duration(milliseconds: 420),
-      curve: Curves.easeOutCubic,
-    );
+    _moveToPage(step - 1, animated: true);
+  }
+
+  void _moveToPage(int pageIndex, {required bool animated}) {
+    if (!_pageCtrl.hasClients) {
+      _pendingPageIndex = pageIndex;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _flushPendingPage(animated: animated);
+        }
+      });
+      return;
+    }
+
+    final currentPage = _pageCtrl.page?.round() ?? _pageCtrl.initialPage;
+    if (currentPage == pageIndex) {
+      return;
+    }
+
+    if (animated) {
+      _pageCtrl.animateToPage(
+        pageIndex,
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOutCubic,
+      );
+      return;
+    }
+
+    _pageCtrl.jumpToPage(pageIndex);
+  }
+
+  void _flushPendingPage({required bool animated}) {
+    final pageIndex = _pendingPageIndex;
+    if (pageIndex == null || !_pageCtrl.hasClients) {
+      return;
+    }
+
+    _pendingPageIndex = null;
+    _moveToPage(pageIndex, animated: animated);
   }
 
   Future<bool> _onWillPop() async {
@@ -185,6 +223,20 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
 
     final descriptor = _stepSummaries[state.currentStep - 1];
     final progress = state.currentStep / 7;
+    final media = MediaQuery.of(context);
+    final isKeyboardVisible = media.viewInsets.bottom > 0;
+    final isCompactHeader = isKeyboardVisible || media.size.height < 860;
+    final showOutcomeBanner = !isCompactHeader && media.size.height >= 760;
+    final titleFontSize = isCompactHeader ? 20.0 : 24.0;
+    final headerPadding = isCompactHeader ? 16.0 : 20.0;
+
+    if (_pendingPageIndex != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _flushPendingPage(animated: false);
+        }
+      });
+    }
 
     ref.listen(kycProvider, (previous, next) {
       if (next.stepSaved && next.currentStep != state.currentStep) {
@@ -228,10 +280,17 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
-                  child: Container(
+                  padding: EdgeInsets.fromLTRB(
+                    18,
+                    isCompactHeader ? 8 : 10,
+                    18,
+                    isCompactHeader ? 10 : 14,
+                  ),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeOutCubic,
                     width: double.infinity,
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(headerPadding),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
@@ -313,19 +372,23 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                             color: Color(0xFFDCE7F3),
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        SizedBox(height: isCompactHeader ? 4 : 6),
                         Text(
                           descriptor.title,
-                          style: const TextStyle(
-                            fontSize: 24,
+                          maxLines: isCompactHeader ? 2 : 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: titleFontSize,
                             fontWeight: FontWeight.w800,
                             height: 1.1,
                             color: Colors.white,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        SizedBox(height: isCompactHeader ? 8 : 10),
                         Text(
                           descriptor.subtitle,
+                          maxLines: isCompactHeader ? 2 : 3,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
@@ -333,7 +396,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                             color: Color(0xFFE5EEF8),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: isCompactHeader ? 12 : 16),
                         Row(
                           children: [
                             Expanded(
@@ -362,51 +425,54 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 14),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: AppConstants.primaryLight
-                                      .withValues(alpha: 0.22),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.auto_awesome_rounded,
-                                  size: 18,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  descriptor.outcome,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    height: 1.45,
+                        SizedBox(height: isCompactHeader ? 10 : 14),
+                        if (showOutcomeBanner) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: AppConstants.primaryLight
+                                        .withValues(alpha: 0.22),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.auto_awesome_rounded,
+                                    size: 18,
                                     color: Colors.white,
                                   ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    descriptor.outcome,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.45,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 14),
+                        ],
                         StepIndicator(
                           totalSteps: 7,
                           currentStep: state.currentStep,
                           labels: _stepLabels,
+                          compact: isCompactHeader,
                         ),
                       ],
                     ),

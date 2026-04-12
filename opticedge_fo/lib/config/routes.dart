@@ -126,7 +126,7 @@ class _MainShell extends ConsumerWidget {
         ),
         child: SafeArea(
           child: SizedBox(
-            height: 60,
+            height: 68,
             child: Row(
               children: [
                 _NavItem(
@@ -151,8 +151,8 @@ class _MainShell extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          width: 44,
-                          height: 44,
+                          width: 40,
+                          height: 40,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               colors: [Color(0xFFEA580C), Color(0xFFC2410C)],
@@ -172,13 +172,25 @@ class _MainShell extends ConsumerWidget {
                           child: const Icon(Icons.person_add_rounded,
                               color: Colors.white, size: 20),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          s.register,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFFEA580C),
+                        const SizedBox(height: 4),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                s.register,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFFEA580C),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -238,15 +250,27 @@ class _NavItem extends StatelessWidget {
               color:
                   selected ? const Color(0xFFEA580C) : const Color(0xFF9CA3AF),
             ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected
-                    ? const Color(0xFFEA580C)
-                    : const Color(0xFF9CA3AF),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: SizedBox(
+                width: double.infinity,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: selected
+                          ? const Color(0xFFEA580C)
+                          : const Color(0xFF9CA3AF),
+                    ),
+                  ),
+                ),
               ),
             ),
           ],

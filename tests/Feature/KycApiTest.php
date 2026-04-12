@@ -363,7 +363,17 @@ it('payment request sends a selcom prompt for the application draft', function (
     expect($customer->fresh()->deposit_payment_status)->toBe('pending')
         ->and($customer->fresh()->deposit_payment_reference)->toBe('SEL-REF-API-001');
 
-    Http::assertSent(fn (Request $request) => str_contains($request->url(), '/checkout/create-order-minimal'));
+    Http::assertSent(function (Request $request): bool {
+        if (! str_contains($request->url(), '/checkout/create-order-minimal')) {
+            return false;
+        }
+
+        $payload = json_decode($request->body(), true);
+
+        return is_array($payload)
+            && ! array_key_exists('payment_methods', $payload)
+            && ($payload['no_of_items'] ?? null) === 1;
+    });
     Http::assertSent(fn (Request $request) => str_contains($request->url(), '/checkout/wallet-payment'));
 });
 

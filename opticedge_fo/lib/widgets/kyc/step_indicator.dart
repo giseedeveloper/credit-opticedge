@@ -6,18 +6,27 @@ class StepIndicator extends StatelessWidget {
   final int totalSteps;
   final int currentStep;
   final List<String> labels;
+  final bool compact;
 
   const StepIndicator({
     super.key,
     required this.totalSteps,
     required this.currentStep,
     required this.labels,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final pillHeight = compact ? 42.0 : 52.0;
+    final horizontalPadding = compact ? 11.0 : 14.0;
+    final verticalPadding = compact ? 6.0 : 8.0;
+    final badgeSize = compact ? 24.0 : 28.0;
+    final stepFontSize = compact ? 9.0 : 10.0;
+    final labelFontSize = compact ? 11.0 : 12.0;
+
     return SizedBox(
-      height: 52,
+      height: pillHeight,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: totalSteps,
@@ -29,7 +38,10 @@ class StepIndicator extends StatelessWidget {
 
           return AnimatedContainer(
             duration: const Duration(milliseconds: 260),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: verticalPadding,
+            ),
             decoration: BoxDecoration(
               gradient: isActive
                   ? const LinearGradient(
@@ -64,8 +76,8 @@ class StepIndicator extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 28,
-                  height: 28,
+                  width: badgeSize,
+                  height: badgeSize,
                   decoration: BoxDecoration(
                     color: isActive
                         ? Colors.white.withValues(alpha: 0.16)
@@ -81,7 +93,7 @@ class StepIndicator extends StatelessWidget {
                         : Text(
                             '$stepNumber',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: compact ? 10 : 11,
                               fontWeight: FontWeight.w800,
                               color: isActive
                                   ? Colors.white
@@ -91,37 +103,57 @@ class StepIndicator extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Step $stepNumber',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: isActive
-                            ? Colors.white.withValues(alpha: 0.88)
-                            : isDone
-                                ? AppConstants.success
-                                : Colors.white.withValues(alpha: 0.68),
-                      ),
+                if (compact)
+                  Text(
+                    labels[index],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: labelFontSize,
+                      fontWeight: FontWeight.w700,
+                      color: isActive
+                          ? Colors.white
+                          : isDone
+                              ? AppConstants.textPrimary
+                              : Colors.white.withValues(alpha: 0.96),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      labels[index],
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: isActive
-                            ? Colors.white
-                            : isDone
-                                ? AppConstants.textPrimary
-                                : Colors.white.withValues(alpha: 0.96),
+                  )
+                else
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Step $stepNumber',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: stepFontSize,
+                          fontWeight: FontWeight.w700,
+                          color: isActive
+                              ? Colors.white.withValues(alpha: 0.88)
+                              : isDone
+                                  ? AppConstants.success
+                                  : Colors.white.withValues(alpha: 0.68),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 2),
+                      Text(
+                        labels[index],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: labelFontSize,
+                          fontWeight: FontWeight.w700,
+                          color: isActive
+                              ? Colors.white
+                              : isDone
+                                  ? AppConstants.textPrimary
+                                  : Colors.white.withValues(alpha: 0.96),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           );

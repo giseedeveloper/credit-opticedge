@@ -114,134 +114,157 @@ class PhotoPickerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => _showOptions(context),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 240),
-        height: 100,
-        decoration: BoxDecoration(
-          gradient: file != null
-              ? null
-              : LinearGradient(
-                  colors: [
-                    Colors.white,
-                    AppConstants.primarySurface.withValues(alpha: 0.72),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompactTile =
+              constraints.maxWidth < 120 || constraints.maxHeight < 110;
+
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 240),
+            height: 100,
+            decoration: BoxDecoration(
+              gradient: file != null
+                  ? null
+                  : LinearGradient(
+                      colors: [
+                        Colors.white,
+                        AppConstants.primarySurface.withValues(alpha: 0.72),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+              border: Border.all(
+                color:
+                    file != null ? AppConstants.success : AppConstants.border,
+                width: file != null ? 1.5 : 1,
+              ),
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 18,
+                  offset: const Offset(0, 10),
                 ),
-          border: Border.all(
-            color: file != null ? AppConstants.success : AppConstants.border,
-            width: file != null ? 1.5 : 1,
-          ),
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
+              ],
             ),
-          ],
-        ),
-        child: file != null
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(21),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.file(file!, fit: BoxFit.cover),
-                    Positioned(
-                      left: 10,
-                      bottom: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.56),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          label,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+            child: file != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(21),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.file(file!, fit: BoxFit.cover),
+                        Positioned(
+                          left: 10,
+                          bottom: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.56),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              label,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(
-                            color: AppConstants.success,
-                            shape: BoxShape.circle),
-                        child: const Icon(Icons.check,
-                            color: Colors.white, size: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppConstants.surface,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(
-                      Icons.document_scanner_outlined,
-                      color: AppConstants.primary,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppConstants.textPrimary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Tap to scan or attach',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: AppConstants.textSecondary,
-                    ),
-                  ),
-                  if (required)
-                    Container(
-                      margin: const EdgeInsets.only(top: 5),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppConstants.errorSurface,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: const Text(
-                        'Required',
-                        style: TextStyle(
-                          fontSize: 9,
-                          color: AppConstants.error,
-                          fontWeight: FontWeight.w700,
+                        Positioned(
+                          top: 6,
+                          right: 6,
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(
+                                color: AppConstants.success,
+                                shape: BoxShape.circle),
+                            child: const Icon(Icons.check,
+                                color: Colors.white, size: 12),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                ],
-              ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: isCompactTile ? 36 : 44,
+                          height: isCompactTile ? 36 : 44,
+                          decoration: BoxDecoration(
+                            color: AppConstants.surface,
+                            borderRadius: BorderRadius.circular(
+                              isCompactTile ? 14 : 16,
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.document_scanner_outlined,
+                            color: AppConstants.primary,
+                            size: isCompactTile ? 20 : 24,
+                          ),
+                        ),
+                        SizedBox(height: isCompactTile ? 6 : 8),
+                        Text(
+                          label,
+                          maxLines: isCompactTile ? 2 : 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: isCompactTile ? 10 : 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppConstants.textPrimary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (!isCompactTile) ...[
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Tap to scan or attach',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppConstants.textSecondary,
+                            ),
+                          ),
+                        ],
+                        if (required && !isCompactTile)
+                          Container(
+                            margin: const EdgeInsets.only(top: 5),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppConstants.errorSurface,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: const Text(
+                              'Required',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: AppConstants.error,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+          );
+        },
       ),
     );
   }

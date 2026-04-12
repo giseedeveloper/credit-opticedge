@@ -5,7 +5,6 @@ namespace App\Livewire\Kyc;
 use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\Verification;
-use Illuminate\Database\Eloquent\Builder;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -275,7 +274,7 @@ class CustomerProfiles extends Component
                 'assetReleasedBy',
                 'inventoryUnit.phoneModel.brand',
                 'registeredBy',
-                'selcomPaymentRequests' => fn (Builder $query) => $query->latest('paid_at')->latest(),
+                'selcomPaymentRequests' => fn ($query) => $query->latest('paid_at')->latest(),
                 'loans' => fn ($q) => $q->latest()->take(5),
             ])->find($this->detailCustomerId)
             : null;

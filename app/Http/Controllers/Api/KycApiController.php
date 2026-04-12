@@ -18,9 +18,11 @@ use App\Services\SelcomCheckoutService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 /**
  * @group KYC — Agent Mobile App
@@ -393,20 +395,24 @@ class KycApiController extends Controller
             ], 'This application already has a successful deposit payment.');
         }
 
-        $payment = $selcom->createDraftPayment(
-            $customer->application_draft_reference,
-            $paymentPhone['e164'],
-            (float) $customer->deposit_amount,
-            auth()->id()
-        );
+        try {
+            $payment = $selcom->createDraftPayment(
+                $customer->application_draft_reference,
+                $paymentPhone['e164'],
+                (float) $customer->deposit_amount,
+                auth()->id()
+            );
 
-        $payment = $selcom->initiateWalletPush($payment, [
-            'name' => $customer->full_name !== '' ? $customer->full_name : 'OpticEdge Customer',
-            'phone' => $paymentPhone['e164'],
-            'email' => $customer->email ?: null,
-        ], route('api.payments.selcom.webhook'));
+            $payment = $selcom->initiateWalletPush($payment, [
+                'name' => $customer->full_name !== '' ? $customer->full_name : 'OpticEdge Customer',
+                'phone' => $paymentPhone['e164'],
+                'email' => $customer->email ?: null,
+            ], route('api.payments.selcom.webhook'));
 
-        $payment = $selcom->attachToCustomer($payment, $customer->fresh());
+            $payment = $selcom->attachToCustomer($payment, $customer->fresh());
+        } catch (InvalidArgumentException $exception) {
+            return $this->handleSelcomException($exception, $customer->id);
+        }
 
         return $this->successResponse([
             'payment' => $this->serializePaymentSummary($payment),
@@ -426,8 +432,12 @@ class KycApiController extends Controller
             return $this->errorResponse('No payment prompt has been started for this application yet.', 404);
         }
 
-        $payment = $selcom->syncPaymentStatus($payment);
-        $payment = $selcom->attachToCustomer($payment, $customer->fresh());
+        try {
+            $payment = $selcom->syncPaymentStatus($payment);
+            $payment = $selcom->attachToCustomer($payment, $customer->fresh());
+        } catch (InvalidArgumentException $exception) {
+            return $this->handleSelcomException($exception, $customer->id);
+        }
 
         return $this->successResponse([
             'payment' => $this->serializePaymentSummary($payment),
@@ -1018,6 +1028,19 @@ class KycApiController extends Controller
             ->latest('paid_at')
             ->latest()
             ->first();
+    }
+
+    private function handleSelcomException(InvalidArgumentException $exception, string $customerId): JsonResponse
+    {
+        $message = $exception->getMessage();
+        $status = str_contains(strtolower($message), 'not configured') ? 503 : 422;
+
+        Log::warning('Selcom checkout request failed.', [
+            'customer_id' => $customerId,
+            'message' => $message,
+        ]);
+
+        return $this->errorResponse($message, $status);
     }
 
     private function storeSignatureDataUrl(?string $dataUrl, string $directory): ?string

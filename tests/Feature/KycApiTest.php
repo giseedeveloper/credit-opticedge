@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\InventoryUnit;
 use App\Models\Permission;
 use App\Models\PhoneModel;
+use App\Models\SelcomPaymentRequest;
 use App\Models\SystemDocument;
 use App\Models\User;
 use App\Models\Verification;
@@ -309,6 +310,27 @@ it('payment request sends a selcom prompt for the application draft', function (
     Http::assertSent(fn (Request $request) => str_contains($request->url(), '/checkout/wallet-payment'));
 });
 
+it('payment request returns a clear configuration error when selcom credentials are missing', function () {
+    Config::set('services.selcom.vendor', null);
+    Config::set('services.selcom.api_key', null);
+    Config::set('services.selcom.api_secret', null);
+
+    $customer = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'application_draft_reference' => 'draft-api-no-selcom',
+        'first_name' => 'Amina',
+        'last_name' => 'Juma',
+        'phone' => '+255712345678',
+        'deposit_amount' => 50000,
+    ]);
+
+    $this->postJson("/api/v1/kyc/application/{$customer->id}/payment/request", [
+        'payment_phone' => '0712345678',
+        'payment_phone_country' => 'TZ',
+    ])->assertStatus(503)
+        ->assertJsonPath('message', 'Selcom Checkout is not configured. Set SELCOM_VENDOR, SELCOM_API_KEY, and SELCOM_API_SECRET in the backend .env file first.');
+});
+
 // ─── Step 7: Submit ───────────────────────────────────────────────────────────
 
 it('step7 submits application with payment, agreement and signatures', function () {
@@ -338,7 +360,7 @@ it('step7 submits application with payment, agreement and signatures', function 
         'consent_timestamp' => now(),
     ]);
 
-    \App\Models\SelcomPaymentRequest::factory()->create([
+    SelcomPaymentRequest::factory()->create([
         'customer_id' => $customer->id,
         'initiated_by' => $this->agent->id,
         'draft_reference' => 'draft-api-002',
@@ -412,7 +434,7 @@ it('applicationStatus returns payment, agreement and release context', function 
         'asset_release_status' => 'pending',
     ]);
 
-    \App\Models\SelcomPaymentRequest::factory()->create([
+    SelcomPaymentRequest::factory()->create([
         'customer_id' => $customer->id,
         'initiated_by' => $this->agent->id,
         'draft_reference' => 'draft-api-003',
@@ -448,7 +470,7 @@ it('customer detail includes payment, agreement and release data', function () {
         'asset_release_status' => 'pending',
     ]);
 
-    \App\Models\SelcomPaymentRequest::factory()->create([
+    SelcomPaymentRequest::factory()->create([
         'customer_id' => $customer->id,
         'initiated_by' => $this->agent->id,
         'draft_reference' => 'draft-api-004',

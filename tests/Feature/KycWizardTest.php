@@ -12,6 +12,7 @@ use App\Models\SystemDocument;
 use App\Models\User;
 use App\Models\Verification;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
@@ -71,6 +72,22 @@ it('autofills device identifiers when a stock unit is selected', function () {
         ->assertSet('imeiNumber', $this->inventoryUnit->imei_1)
         ->assertSet('serialNumber', $this->inventoryUnit->serial_number)
         ->assertSet('deviceSpecs', 'Tecno - Camon 30 - 8GB/256GB/Black');
+});
+
+it('shows a clear validation error when selcom checkout is not configured', function () {
+    actingAs($this->fo);
+
+    Config::set('services.selcom.vendor', null);
+    Config::set('services.selcom.api_key', null);
+    Config::set('services.selcom.api_secret', null);
+
+    Livewire::test(VerificationWizard::class)
+        ->set('draftReference', 'draft-livewire-no-selcom')
+        ->set('depositAmount', '50000')
+        ->set('phone', '0712345678')
+        ->set('paymentPhone', '0712345678')
+        ->call('initiateDepositPayment')
+        ->assertHasErrors(['paymentPhone']);
 });
 
 it('fills imei and serial from a scanned device image payload', function () {

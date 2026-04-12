@@ -210,7 +210,9 @@ class SystemHealthDashboard extends Component
 
         $selcomConfig = app(SelcomCheckoutService::class)->configurationSummary();
         $this->selcomConfigured = $selcomConfig['configured'];
-        $this->selcomStatus = $this->selcomConfigured ? 'Checkout credentials configured' : 'Vendor, API key, or secret missing';
+        $this->selcomStatus = $this->selcomConfigured
+            ? 'Checkout credentials configured'
+            : 'Set SELCOM_VENDOR, SELCOM_API_KEY, and SELCOM_API_SECRET in .env';
         $this->selcomVendor = $selcomConfig['vendor'] ?: 'N/A';
 
         // ── Business counts ───────────────────────────────────────

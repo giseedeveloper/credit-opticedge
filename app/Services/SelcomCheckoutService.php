@@ -219,7 +219,7 @@ class SelcomCheckoutService
     protected function ensureConfigured(): void
     {
         if (! $this->isConfigured()) {
-            throw new InvalidArgumentException('Selcom credentials are not configured.');
+            throw new InvalidArgumentException('Selcom Checkout is not configured. Set SELCOM_VENDOR, SELCOM_API_KEY, and SELCOM_API_SECRET in the backend .env file first.');
         }
     }
 

@@ -17,6 +17,7 @@ use App\Services\SelcomCheckoutService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -726,20 +727,26 @@ class VerificationWizard extends Component
             return;
         }
 
-        $payment = $selcom->createDraftPayment(
-            $this->draftReference,
-            $this->paymentPhone !== '' ? $this->paymentPhone : $this->phone,
-            (float) $this->depositAmount,
-            auth()->id()
-        );
+        try {
+            $payment = $selcom->createDraftPayment(
+                $this->draftReference,
+                $this->paymentPhone !== '' ? $this->paymentPhone : $this->phone,
+                (float) $this->depositAmount,
+                auth()->id()
+            );
 
-        $payment = $selcom->initiateWalletPush($payment, [
-            'name' => trim("{$this->firstName} {$this->middleName} {$this->lastName}") !== ''
-                ? trim("{$this->firstName} {$this->middleName} {$this->lastName}")
-                : 'OpticEdge Customer',
-            'phone' => $this->paymentPhone !== '' ? $this->paymentPhone : $this->phone,
-            'email' => $this->email !== '' ? $this->email : null,
-        ], route('api.payments.selcom.webhook'));
+            $payment = $selcom->initiateWalletPush($payment, [
+                'name' => trim("{$this->firstName} {$this->middleName} {$this->lastName}") !== ''
+                    ? trim("{$this->firstName} {$this->middleName} {$this->lastName}")
+                    : 'OpticEdge Customer',
+                'phone' => $this->paymentPhone !== '' ? $this->paymentPhone : $this->phone,
+                'email' => $this->email !== '' ? $this->email : null,
+            ], route('api.payments.selcom.webhook'));
+        } catch (InvalidArgumentException $exception) {
+            throw ValidationException::withMessages([
+                'paymentPhone' => $exception->getMessage(),
+            ]);
+        }
 
         $this->hydratePaymentBadge($payment);
         $this->dispatch('toast', message: 'Payment prompt sent. Ask the customer to approve it on their phone.', type: 'success');
@@ -757,7 +764,13 @@ class VerificationWizard extends Component
             ]);
         }
 
-        $payment = $selcom->syncPaymentStatus($payment);
+        try {
+            $payment = $selcom->syncPaymentStatus($payment);
+        } catch (InvalidArgumentException $exception) {
+            throw ValidationException::withMessages([
+                'paymentPhone' => $exception->getMessage(),
+            ]);
+        }
         $this->hydratePaymentBadge($payment);
 
         $this->dispatch('toast', message: $payment->isCompleted()

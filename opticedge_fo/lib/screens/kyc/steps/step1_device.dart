@@ -130,6 +130,18 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
       state.deviceBoxPhoto,
       state.devicePhoto,
     ].whereType<Object>().length;
+    final deviceSetupCount = [
+      state.brandId.isNotEmpty,
+      state.phoneModelId.isNotEmpty,
+      state.inventoryUnitId.isNotEmpty,
+    ].where((item) => item).length;
+    final identifierCount = [
+      state.deviceSpecs.isNotEmpty,
+      state.imeiNumber.isNotEmpty,
+      state.serialNumber.isNotEmpty,
+      state.cashPrice.isNotEmpty,
+      state.depositAmount.isNotEmpty,
+    ].where((item) => item).length;
 
     return SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -145,6 +157,13 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
             ),
             const SizedBox(height: 18),
             _introCard(),
+            const SizedBox(height: 18),
+            _scanOverviewCard(
+              deviceSetupCount: deviceSetupCount,
+              identifierCount: identifierCount,
+              attachedPhotos: attachedPhotos,
+              hasLinkedInventory: hasLinkedInventory,
+            ).animate().fadeIn(duration: 260.ms).slideY(begin: 0.08, end: 0),
             const SizedBox(height: 18),
             brandsAsync.when(
               loading: () => const LinearProgressIndicator(
@@ -330,37 +349,10 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                     ],
                     if (hasLinkedInventory) ...[
                       const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF0FDF4),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppConstants.success.withValues(alpha: 0.16),
-                          ),
-                        ),
-                        child: const Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.verified_outlined,
-                              color: AppConstants.success,
-                              size: 18,
-                            ),
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Great. Price and identifiers are now tied to the selected stock unit so later approval and asset release stay clean.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  height: 1.5,
-                                  color: AppConstants.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ).animate().fadeIn().slideY(begin: 0.12, end: 0),
+                      _linkedInventorySnapshot(state)
+                          .animate()
+                          .fadeIn()
+                          .slideY(begin: 0.12, end: 0),
                     ],
                   ],
                 ),
@@ -526,6 +518,8 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                   'Take clear close-up shots of the IMEI sticker, box, and device body so review is fast and clean.',
               child: Column(
                 children: [
+                  _scanLane(attachedPhotos: attachedPhotos, state: state),
+                  const SizedBox(height: 14),
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -671,6 +665,390 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                 height: 1.55,
                 color: AppConstants.textSecondary,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _scanOverviewCard({
+    required int deviceSetupCount,
+    required int identifierCount,
+    required int attachedPhotos,
+    required bool hasLinkedInventory,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF103454), Color(0xFF1F5A88)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppConstants.heroEnd.withValues(alpha: 0.2),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.qr_code_scanner_rounded,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Device Scan Experience',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      hasLinkedInventory
+                          ? 'Handset is linked to stock. You can now verify stickers and supporting photos with confidence.'
+                          : 'Start with the exact handset from stock, then confirm identifiers and capture the scan evidence.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.45,
+                        color: Colors.white.withValues(alpha: 0.82),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _overviewMetric(
+                  label: 'Handset Setup',
+                  value: '$deviceSetupCount/3',
+                  icon: Icons.inventory_2_outlined,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _overviewMetric(
+                  label: 'Identifiers',
+                  value: '$identifierCount/5',
+                  icon: Icons.confirmation_number_outlined,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _overviewMetric(
+                  label: 'Photo Evidence',
+                  value: '$attachedPhotos/3',
+                  icon: Icons.photo_camera_back_outlined,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _overviewMetric({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: Colors.white),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withValues(alpha: 0.78),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _linkedInventorySnapshot(KycDraftState state) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppConstants.successSurface, AppConstants.surfaceRaised],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppConstants.success.withValues(alpha: 0.16),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.verified_outlined,
+                  color: AppConstants.success,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Stock-linked handset is ready',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppConstants.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Price, IMEI, and future asset release are now tied to one inventory unit so approval stays clean.',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: AppConstants.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _snapshotChip(
+                icon: Icons.smartphone_outlined,
+                label: state.deviceSpecs.isNotEmpty
+                    ? state.deviceSpecs
+                    : 'Device linked',
+              ),
+              if (state.imeiNumber.isNotEmpty)
+                _snapshotChip(
+                  icon: Icons.qr_code_2_rounded,
+                  label: state.imeiNumber,
+                ),
+              if (state.serialNumber.isNotEmpty)
+                _snapshotChip(
+                  icon: Icons.tag_outlined,
+                  label: state.serialNumber,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _snapshotChip({
+    required IconData icon,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppConstants.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppConstants.success),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppConstants.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _scanLane({
+    required int attachedPhotos,
+    required KycDraftState state,
+  }) {
+    final steps = [
+      (
+        title: 'Sticker',
+        hint: 'IMEI lines visible',
+        icon: Icons.qr_code_scanner_rounded,
+        done: state.imeiPhoto != null,
+      ),
+      (
+        title: 'Box',
+        hint: 'Retail label captured',
+        icon: Icons.inventory_2_outlined,
+        done: state.deviceBoxPhoto != null,
+      ),
+      (
+        title: 'Device',
+        hint: 'Body condition shown',
+        icon: Icons.smartphone_outlined,
+        done: state.devicePhoto != null,
+      ),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceMuted,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppConstants.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Scan lane',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppConstants.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$attachedPhotos/3 ready',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppConstants.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              for (var index = 0; index < steps.length; index++) ...[
+                Expanded(
+                  child: _scanStage(
+                    title: steps[index].title,
+                    hint: steps[index].hint,
+                    icon: steps[index].icon,
+                    done: steps[index].done,
+                  ),
+                ),
+                if (index < steps.length - 1)
+                  Container(
+                    width: 18,
+                    height: 2,
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    color: steps[index].done
+                        ? AppConstants.success
+                        : AppConstants.border,
+                  ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _scanStage({
+    required String title,
+    required String hint,
+    required IconData icon,
+    required bool done,
+  }) {
+    return AnimatedContainer(
+      duration: 220.ms,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: done ? AppConstants.successSurface : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: done ? AppConstants.success : AppConstants.border,
+          width: done ? 1.4 : 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            done ? Icons.check_circle_rounded : icon,
+            size: 18,
+            color: done ? AppConstants.success : AppConstants.textSecondary,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: AppConstants.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            hint,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 10,
+              height: 1.35,
+              color: AppConstants.textSecondary,
             ),
           ),
         ],

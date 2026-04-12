@@ -9,6 +9,7 @@ use App\Models\PhoneModel;
 use App\Models\SelcomPaymentRequest;
 use App\Models\SystemDocument;
 use App\Models\User;
+use App\Models\Vendor;
 use App\Models\Verification;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
@@ -75,6 +76,38 @@ it('step1 creates a draft customer and returns customer_id', function () {
     expect($draft)->not->toBeNull()
         ->and($draft?->device_accessories)->toHaveCount(2)
         ->and($draft?->store_offer_notes)->toBe('Weekend promo included a free protector.');
+});
+
+it('step1 auto-links vendor store context from the selected stock unit', function () {
+    $vendor = Vendor::factory()->create([
+        'branch_id' => $this->branch->id,
+        'name' => 'Mlimani Dealer Store',
+    ]);
+
+    $vendorUnit = InventoryUnit::factory()->create([
+        'phone_model_id' => $this->phoneModel->id,
+        'branch_id' => $this->branch->id,
+        'vendor_id' => $vendor->id,
+        'status' => 'vendor_stock',
+        'imei_1' => '223456789012345',
+        'serial_number' => 'SN-VENDOR-001',
+    ]);
+
+    $this->postJson('/api/v1/kyc/application/step1', [
+        'brand_id' => $this->brand->id,
+        'phone_model_id' => $this->phoneModel->id,
+        'inventory_unit_id' => $vendorUnit->id,
+        'deposit_amount' => 65000,
+        'preferred_repayment' => 'weekly',
+    ])->assertOk();
+
+    $draft = Customer::query()->whereKey(
+        Customer::query()->latest()->value('id')
+    )->first();
+
+    expect($draft)->not->toBeNull()
+        ->and($draft?->vendor_id)->toBe($vendor->id)
+        ->and($draft?->branch_id)->toBe($this->branch->id);
 });
 
 it('step1 rejects invalid IMEI', function () {
@@ -213,6 +246,30 @@ it('step3 saves contact and location', function () {
     expect($draft->fresh()->phone)->toBe('+255712345678');
     expect($draft->fresh()->phone_metadata['phone']['country_iso'])->toBe('TZ');
     expect($draft->fresh()->region)->toBe('Dar es Salaam');
+});
+
+it('step3 keeps the vendor branch context without forcing branch reselection', function () {
+    $vendor = Vendor::factory()->create([
+        'branch_id' => $this->branch->id,
+        'name' => 'Kijitonyama Vendor',
+    ]);
+
+    $draft = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'vendor_id' => $vendor->id,
+        'branch_id' => $this->branch->id,
+        'phone' => '_draft_'.uniqid(),
+    ]);
+
+    $this->postJson("/api/v1/kyc/application/{$draft->id}/step3", [
+        'phone' => '0712345678',
+        'phone_country' => 'TZ',
+        'region' => 'Dar es Salaam',
+        'district' => 'Ilala',
+    ])->assertOk()->assertJsonPath('data.step', 3);
+
+    expect($draft->fresh()->branch_id)->toBe($this->branch->id)
+        ->and($draft->fresh()->vendor_id)->toBe($vendor->id);
 });
 
 // ─── Step 5: NOK ─────────────────────────────────────────────────────────────
@@ -486,6 +543,31 @@ it('customer detail includes payment, agreement and release data', function () {
         ->assertJsonPath('data.payment.status', 'completed')
         ->assertJsonPath('data.agreement.accepted', true)
         ->assertJsonPath('data.release.status', 'pending');
+});
+
+it('customer detail exposes resume metadata and vendor context for draft editing', function () {
+    $vendor = Vendor::factory()->create([
+        'branch_id' => $this->branch->id,
+        'name' => 'Sinza Dealer',
+    ]);
+
+    $customer = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'branch_id' => $this->branch->id,
+        'vendor_id' => $vendor->id,
+        'first_name' => 'Asha',
+        'last_name' => 'Moshi',
+        'nida_number' => '12345678901234567890',
+        'phone' => '+255712345678',
+        'monthly_income' => 420000,
+    ]);
+
+    $this->getJson("/api/v1/kyc/customers/{$customer->id}")
+        ->assertOk()
+        ->assertJsonPath('data.kyc_status', 'draft')
+        ->assertJsonPath('data.can_resume_draft', true)
+        ->assertJsonPath('data.resume_step', 5)
+        ->assertJsonPath('data.vendor.name', 'Sinza Dealer');
 });
 
 it('release asset marks the stock unit as assigned', function () {

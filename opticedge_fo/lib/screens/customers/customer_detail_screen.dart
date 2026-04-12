@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../config/constants.dart';
 import '../../core/api/api_client.dart';
@@ -95,6 +96,7 @@ class _DetailViewState extends ConsumerState<_DetailView> {
   Widget build(BuildContext context) {
     final verification = customer.verification;
     final isReleased = customer.release?.status == 'released';
+    final canResumeDraft = customer.canResumeDraft;
 
     return Scaffold(
       backgroundColor: AppConstants.background,
@@ -117,6 +119,10 @@ class _DetailViewState extends ConsumerState<_DetailView> {
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 if (verification != null) _buildStatusBanner(verification),
+                if (canResumeDraft) ...[
+                  if (verification != null) const SizedBox(height: 12),
+                  _resumeDraftCard(context),
+                ],
                 if (customer.release?.status == 'released') ...[
                   const SizedBox(height: 12),
                   _releasedBanner(),
@@ -483,6 +489,7 @@ class _DetailViewState extends ConsumerState<_DetailView> {
         _infoRow('Date of Birth', customer.dateOfBirth),
         _infoRow('NIDA Number', customer.nidaNumber),
         _infoRow('Branch', customer.branch?['name']?.toString()),
+        _infoRow('Vendor / Store', customer.vendor?['name']?.toString()),
         _infoRow('Application Source', customer.applicationSource),
         _infoRow('Registered At', customer.registeredAt),
       ],
@@ -517,6 +524,7 @@ class _DetailViewState extends ConsumerState<_DetailView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _infoRow('Brand', device['brand_name']?.toString()),
+        _infoRow('Model', device['model_name']?.toString()),
         _infoRow('Specs', device['specs']?.toString()),
         _infoRow('IMEI 1', device['imei_1']?.toString()),
         _infoRow('IMEI 2', device['imei_2']?.toString()),
@@ -878,6 +886,57 @@ class _DetailViewState extends ConsumerState<_DetailView> {
           ),
         ],
       ],
+    );
+  }
+
+  Widget _resumeDraftCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppConstants.infoSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppConstants.info.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.edit_note_rounded,
+                color: AppConstants.info,
+                size: 18,
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Draft application can continue',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppConstants.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This file is still in draft flow. Continue from step ${customer.resumeStep} to update or finish the application cleanly.',
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: AppConstants.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          AppButton(
+            label: 'Resume Draft',
+            icon: Icons.arrow_forward_rounded,
+            onPressed: () => context.go('/kyc/new?draft=${widget.customerId}'),
+          ),
+        ],
+      ),
     );
   }
 

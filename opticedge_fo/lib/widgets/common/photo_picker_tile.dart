@@ -114,23 +114,62 @@ class PhotoPickerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => _showOptions(context),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 240),
         height: 100,
         decoration: BoxDecoration(
-          color: file != null ? Colors.transparent : AppConstants.borderLight,
+          gradient: file != null
+              ? null
+              : LinearGradient(
+                  colors: [
+                    Colors.white,
+                    AppConstants.primarySurface.withValues(alpha: 0.72),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
           border: Border.all(
             color: file != null ? AppConstants.success : AppConstants.border,
             width: file != null ? 1.5 : 1,
           ),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: file != null
             ? ClipRRect(
-                borderRadius: BorderRadius.circular(13),
+                borderRadius: BorderRadius.circular(21),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     Image.file(file!, fit: BoxFit.cover),
+                    Positioned(
+                      left: 10,
+                      bottom: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.56),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          label,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
                     Positioned(
                       top: 6,
                       right: 6,
@@ -149,28 +188,57 @@ class PhotoPickerTile extends StatelessWidget {
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.add_photo_alternate_outlined,
-                    color: AppConstants.primary,
-                    size: 28,
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppConstants.surface,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(
+                      Icons.document_scanner_outlined,
+                      color: AppConstants.primary,
+                      size: 24,
+                    ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     label,
                     style: const TextStyle(
                       fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: AppConstants.textSecondary,
+                      fontWeight: FontWeight.w700,
+                      color: AppConstants.textPrimary,
                     ),
                     textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Tap to scan or attach',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: AppConstants.textSecondary,
+                    ),
+                  ),
                   if (required)
-                    const Text(
-                      'Required',
-                      style: TextStyle(
+                    Container(
+                      margin: const EdgeInsets.only(top: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppConstants.errorSurface,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Text(
+                        'Required',
+                        style: TextStyle(
                           fontSize: 9,
                           color: AppConstants.error,
-                          fontWeight: FontWeight.w500),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                 ],
               ),

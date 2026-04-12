@@ -90,8 +90,15 @@ class SignaturePad extends StatelessWidget {
         return Container(
           height: height,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
+            gradient: const LinearGradient(
+              colors: [
+                Colors.white,
+                AppConstants.surfaceMuted,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: controller.hasSignature
                   ? AppConstants.success
@@ -100,14 +107,14 @@ class SignaturePad extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(17),
+            borderRadius: BorderRadius.circular(23),
             child: GestureDetector(
               onPanStart: (details) {
                 controller.startStroke(details.localPosition);
@@ -138,9 +145,19 @@ class SignaturePad extends StatelessWidget {
                               'Sign here with your finger',
                               style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
                                 color: AppConstants.textSecondary,
                               ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'The signature will be attached to the customer agreement.',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: AppConstants.textHint,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
@@ -178,7 +195,7 @@ class _SignaturePainter extends CustomPainter {
       }
 
       final baselinePaint = Paint()
-        ..color = AppConstants.primary.withValues(alpha: 0.35)
+        ..color = AppConstants.primary.withValues(alpha: 0.28)
         ..strokeWidth = 1.5;
       final baselineY = size.height - 32;
       canvas.drawLine(

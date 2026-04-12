@@ -132,6 +132,17 @@ class KycDeviceCatalogService
             ->exists();
     }
 
+    /**
+     * @return array{branch_id: ?string, vendor_id: ?string}
+     */
+    public function scopeContextFor(User $user): array
+    {
+        return [
+            'branch_id' => $user->branch_id,
+            'vendor_id' => $this->resolveVendorId($user),
+        ];
+    }
+
     public function scopedInventoryQuery(User $user): Builder
     {
         $query = InventoryUnit::query()

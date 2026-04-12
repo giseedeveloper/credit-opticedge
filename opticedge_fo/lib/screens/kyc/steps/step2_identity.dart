@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../config/constants.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
@@ -7,48 +9,58 @@ import '../../../widgets/common/photo_picker_tile.dart';
 
 class Step2IdentityScreen extends ConsumerStatefulWidget {
   const Step2IdentityScreen({super.key});
+
   @override
   ConsumerState<Step2IdentityScreen> createState() => _Step2State();
 }
 
 class _Step2State extends ConsumerState<Step2IdentityScreen> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _first, _middle, _last, _nida, _dob;
+  late TextEditingController _first;
+  late TextEditingController _middle;
+  late TextEditingController _last;
+  late TextEditingController _nida;
+  late TextEditingController _dob;
 
-  final _idTypes = ['nida', 'voters_id', 'passport', 'driving_license'];
-  final _genders = ['male', 'female'];
+  final _idTypes = const ['nida', 'voters_id', 'passport', 'driving_license'];
+  final _genders = const ['male', 'female'];
 
   @override
   void initState() {
     super.initState();
-    final s = ref.read(kycProvider);
-    _first = TextEditingController(text: s.firstName);
-    _middle = TextEditingController(text: s.middleName);
-    _last = TextEditingController(text: s.lastName);
-    _nida = TextEditingController(text: s.nidaNumber);
-    _dob = TextEditingController(text: s.dateOfBirth);
+    final state = ref.read(kycProvider);
+    _first = TextEditingController(text: state.firstName);
+    _middle = TextEditingController(text: state.middleName);
+    _last = TextEditingController(text: state.lastName);
+    _nida = TextEditingController(text: state.nidaNumber);
+    _dob = TextEditingController(text: state.dateOfBirth);
   }
 
   @override
   void dispose() {
-    for (final c in [_first, _middle, _last, _nida, _dob]) {
-      c.dispose();
+    for (final controller in [_first, _middle, _last, _nida, _dob]) {
+      controller.dispose();
     }
     super.dispose();
   }
 
   void _save() {
-    ref.read(kycProvider.notifier).update((s) => s.copyWith(
-          firstName: _first.text.trim(),
-          middleName: _middle.text.trim(),
-          lastName: _last.text.trim(),
-          nidaNumber: _nida.text.trim(),
-          dateOfBirth: _dob.text.trim(),
-        ));
+    ref.read(kycProvider.notifier).update(
+          (state) => state.copyWith(
+            firstName: _first.text.trim(),
+            middleName: _middle.text.trim(),
+            lastName: _last.text.trim(),
+            nidaNumber: _nida.text.trim(),
+            dateOfBirth: _dob.text.trim(),
+          ),
+        );
   }
 
   Future<void> _next() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
     _save();
     await ref.read(kycProvider.notifier).submitStep2();
   }
@@ -70,6 +82,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
         child: child!,
       ),
     );
+
     if (picked != null) {
       _dob.text =
           '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
@@ -79,184 +92,253 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(kycProvider);
+    final capturedPhotos = [
+      state.idFrontPhoto,
+      state.idBackPhoto,
+      state.headshotPhoto,
+      state.clientFoPhoto,
+    ].whereType<Object>().length;
+    final completedSignals = [
+      state.firstName.isNotEmpty,
+      state.lastName.isNotEmpty,
+      state.nidaNumber.isNotEmpty,
+      state.dateOfBirth.isNotEmpty,
+      state.idFrontPhoto != null,
+      state.idBackPhoto != null,
+      state.headshotPhoto != null,
+      state.clientFoPhoto != null,
+    ].where((item) => item).length;
+    final completion = completedSignals / 8;
+    final completionPercent = (completion * 100).round();
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionHeader('Personal Identity', 'Customer\'s personal details and ID'),
-            const SizedBox(height: 20),
+            _sectionHeader(
+              'Identity & Evidence',
+              'Jaza taarifa za utambulisho kwa mpangilio safi, kisha piga picha zinazofanya review ipite haraka bila kurudishwa.',
+            ),
+            const SizedBox(height: 18),
+            _progressHero(
+              completionPercent: completionPercent,
+              capturedPhotos: capturedPhotos,
+              selectedIdType: state.idType,
+            ).animate().fadeIn(duration: 260.ms).slideY(begin: 0.08, end: 0),
+            const SizedBox(height: 16),
+            _card(
+              title: '1. Personal details',
+              subtitle:
+                  'Majina na profile basics ziwe sawa kabisa na kitambulisho kinachotumika.',
+              child: Column(
+                children: [
+                  _field(
+                    _first,
+                    'First Name',
+                    icon: Icons.badge_outlined,
+                    required: true,
+                    hint: 'Enter the customer first name',
+                  ),
+                  const SizedBox(height: 12),
+                  _field(
+                    _middle,
+                    'Middle Name',
+                    icon: Icons.person_outline_rounded,
+                    optional: true,
+                    hint: 'Optional middle name',
+                  ),
+                  const SizedBox(height: 12),
+                  _field(
+                    _last,
+                    'Last Name',
+                    icon: Icons.badge_outlined,
+                    required: true,
+                    hint: 'Enter the customer surname',
+                  ),
+                  const SizedBox(height: 16),
+                  _label('Gender'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: _genders.map((gender) {
+                      final selected = state.gender == gender;
+                      final isMale = gender == 'male';
 
-            _field(_first, 'First Name', required: true),
-            const SizedBox(height: 14),
-            _field(_middle, 'Middle Name', optional: true),
-            const SizedBox(height: 14),
-            _field(_last, 'Last Name', required: true),
-            const SizedBox(height: 14),
-
-            _label('Gender'),
-            const SizedBox(height: 8),
-            Row(
-              children: _genders.map((g) {
-                final selected = state.gender == g;
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
-                      onTap: () => ref
-                          .read(kycProvider.notifier)
-                          .update((s) => s.copyWith(gender: g)),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? AppConstants.primarySurface
-                              : AppConstants.borderLight,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: selected
-                                ? AppConstants.primary
-                                : AppConstants.border,
-                            width: selected ? 1.5 : 1,
+                      return Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            right: isMale ? 10 : 0,
+                            left: isMale ? 0 : 0,
+                          ),
+                          child: _optionTile(
+                            selected: selected,
+                            title: isMale ? 'Male' : 'Female',
+                            subtitle: isMale
+                                ? 'Matches official ID'
+                                : 'Matches official ID',
+                            icon: isMale
+                                ? Icons.male_rounded
+                                : Icons.female_rounded,
+                            onTap: () {
+                              ref.read(kycProvider.notifier).update(
+                                    (current) => current.copyWith(
+                                      gender: gender,
+                                    ),
+                                  );
+                            },
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              g == 'male'
-                                  ? Icons.male_rounded
-                                  : Icons.female_rounded,
-                              color: selected
-                                  ? AppConstants.primary
-                                  : AppConstants.textSecondary,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              g[0].toUpperCase() + g.substring(1),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: selected
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                                color: selected
-                                    ? AppConstants.primary
-                                    : AppConstants.textSecondary,
-                              ),
-                            ),
-                          ],
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0),
+            const SizedBox(height: 16),
+            _card(
+              title: '2. ID details',
+              subtitle:
+                  'Select the document type used today, then enter the number exactly as shown.',
+              child: Column(
+                children: [
+                  GestureDetector(
+                    onTap: _pickDate,
+                    child: AbsorbPointer(
+                      child: TextFormField(
+                        controller: _dob,
+                        decoration: const InputDecoration(
+                          labelText: 'Date of Birth',
+                          hintText: 'YYYY-MM-DD',
+                          prefixIcon:
+                              Icon(Icons.calendar_today_rounded, size: 18),
                         ),
                       ),
                     ),
                   ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 14),
+                  const SizedBox(height: 14),
+                  _label('ID Type'),
+                  const SizedBox(height: 8),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 1.55,
+                    children: _idTypes.map((type) {
+                      final selected = state.idType == type;
 
-            _label('Date of Birth', optional: true),
-            const SizedBox(height: 6),
-            GestureDetector(
-              onTap: _pickDate,
-              child: AbsorbPointer(
-                child: TextFormField(
-                  controller: _dob,
-                  decoration: const InputDecoration(
-                    hintText: 'YYYY-MM-DD',
-                    suffixIcon: Icon(Icons.calendar_today_rounded,
-                        size: 18, color: AppConstants.textSecondary),
+                      return _optionTile(
+                        selected: selected,
+                        title: _idTypeTitle(type),
+                        subtitle: type == 'nida'
+                            ? 'National identity'
+                            : type == 'passport'
+                                ? 'Travel document'
+                                : type == 'voters_id'
+                                    ? 'Voter registration'
+                                    : 'Driver identity',
+                        icon: _idTypeIcon(type),
+                        compact: true,
+                        onTap: () {
+                          ref.read(kycProvider.notifier).update(
+                                (current) => current.copyWith(idType: type),
+                              );
+                        },
+                      );
+                    }).toList(),
                   ),
-                ),
+                  const SizedBox(height: 14),
+                  _field(
+                    _nida,
+                    'NIDA / ID Number',
+                    icon: Icons.credit_card_outlined,
+                    required: true,
+                    hint: 'Enter the ID number exactly as shown',
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 14),
-
-            _label('ID Type'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _idTypes.map((t) {
-                final selected = state.idType == t;
-                final label = t.replaceAll('_', ' ').toUpperCase();
-                return ChoiceChip(
-                  label: Text(label),
-                  selected: selected,
-                  onSelected: (_) => ref
-                      .read(kycProvider.notifier)
-                      .update((s) => s.copyWith(idType: t)),
-                  selectedColor: AppConstants.primarySurface,
-                  labelStyle: TextStyle(
-                    fontSize: 11,
-                    color: selected
-                        ? AppConstants.primary
-                        : AppConstants.textSecondary,
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.w400,
+            ).animate().fadeIn(delay: 120.ms).slideY(begin: 0.06, end: 0),
+            const SizedBox(height: 16),
+            _card(
+              title: '3. Capture verification evidence',
+              subtitle:
+                  'Clear photos reduce back-and-forth. Keep the frame bright, full, and readable.',
+              child: Column(
+                children: [
+                  _evidenceBanner(capturedPhotos: capturedPhotos),
+                  const SizedBox(height: 14),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 1.05,
+                    children: [
+                      PhotoPickerTile(
+                        label: 'ID Front',
+                        required: true,
+                        file: state.idFrontPhoto,
+                        onPicked: (file) => ref
+                            .read(kycProvider.notifier)
+                            .update((current) =>
+                                current.copyWith(idFrontPhoto: file)),
+                      ),
+                      PhotoPickerTile(
+                        label: 'ID Back',
+                        required: true,
+                        file: state.idBackPhoto,
+                        onPicked: (file) => ref
+                            .read(kycProvider.notifier)
+                            .update((current) =>
+                                current.copyWith(idBackPhoto: file)),
+                      ),
+                      PhotoPickerTile(
+                        label: 'Headshot Photo',
+                        required: true,
+                        file: state.headshotPhoto,
+                        onPicked: (file) => ref
+                            .read(kycProvider.notifier)
+                            .update((current) =>
+                                current.copyWith(headshotPhoto: file)),
+                      ),
+                      PhotoPickerTile(
+                        label: 'Client + FO Photo',
+                        file: state.clientFoPhoto,
+                        onPicked: (file) => ref
+                            .read(kycProvider.notifier)
+                            .update((current) =>
+                                current.copyWith(clientFoPhoto: file)),
+                      ),
+                    ],
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: BorderSide(
-                        color: selected
-                            ? AppConstants.primary
-                            : AppConstants.border),
+                  const SizedBox(height: 12),
+                  const Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _HintChip(
+                        icon: Icons.wb_sunny_outlined,
+                        label: 'Use bright light',
+                      ),
+                      _HintChip(
+                        icon: Icons.crop_free_rounded,
+                        label: 'Keep edges visible',
+                      ),
+                      _HintChip(
+                        icon: Icons.visibility_outlined,
+                        label: 'Text must be readable',
+                      ),
+                    ],
                   ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 14),
-
-            _field(_nida, 'NIDA / ID Number', required: true),
-            const SizedBox(height: 24),
-
-            _sectionHeader('Photos', 'Clear photos required for verification'),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.5,
-              children: [
-                PhotoPickerTile(
-                  label: 'ID Front',
-                  required: true,
-                  file: state.idFrontPhoto,
-                  onPicked: (f) => ref
-                      .read(kycProvider.notifier)
-                      .update((s) => s.copyWith(idFrontPhoto: f)),
-                ),
-                PhotoPickerTile(
-                  label: 'ID Back',
-                  required: true,
-                  file: state.idBackPhoto,
-                  onPicked: (f) => ref
-                      .read(kycProvider.notifier)
-                      .update((s) => s.copyWith(idBackPhoto: f)),
-                ),
-                PhotoPickerTile(
-                  label: 'Headshot Photo',
-                  required: true,
-                  file: state.headshotPhoto,
-                  onPicked: (f) => ref
-                      .read(kycProvider.notifier)
-                      .update((s) => s.copyWith(headshotPhoto: f)),
-                ),
-                PhotoPickerTile(
-                  label: 'Client + FO Photo',
-                  file: state.clientFoPhoto,
-                  onPicked: (f) => ref
-                      .read(kycProvider.notifier)
-                      .update((s) => s.copyWith(clientFoPhoto: f)),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 32),
+                ],
+              ),
+            ).animate().fadeIn(delay: 180.ms).slideY(begin: 0.06, end: 0),
+            const SizedBox(height: 30),
             AppButton(
               label: 'Save & Continue',
               width: double.infinity,
@@ -271,55 +353,466 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
     );
   }
 
-  Widget _sectionHeader(String title, String subtitle) => Column(
+  Widget _sectionHeader(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: AppConstants.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: const TextStyle(
+            fontSize: 12,
+            height: 1.5,
+            color: AppConstants.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _progressHero({
+    required int completionPercent,
+    required int capturedPhotos,
+    required String selectedIdType,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF103454), Color(0xFF1E5987)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppConstants.heroEnd.withValues(alpha: 0.22),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppConstants.textPrimary)),
-          const SizedBox(height: 2),
-          Text(subtitle,
-              style: const TextStyle(
-                  fontSize: 12, color: AppConstants.textSecondary)),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.verified_user_outlined,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Identity Confidence',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$completionPercent% ready • $capturedPhotos/4 evidence items captured',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.82),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _heroChip(
+                label: _idTypeTitle(selectedIdType),
+                icon: Icons.badge_outlined,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: completionPercent / 100,
+              minHeight: 10,
+              backgroundColor: Colors.white.withValues(alpha: 0.12),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppConstants.primaryLight,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Guide the customer calmly, confirm names against the ID, then capture the photos before moving on.',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.5,
+              color: Colors.white,
+            ),
+          ),
         ],
-      );
+      ),
+    );
+  }
 
-  Widget _label(String text, {bool optional = false}) => Row(children: [
-        Text(text,
+  Widget _heroChip({
+    required String label,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(
+            label,
             style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppConstants.textPrimary)),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _card({
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppConstants.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppConstants.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: AppConstants.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: AppConstants.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _evidenceBanner({required int capturedPhotos}) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppConstants.infoSurface, AppConstants.surfaceRaised],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppConstants.info.withValues(alpha: 0.14)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.document_scanner_outlined,
+              color: AppConstants.info,
+            ),
+          )
+              .animate(onPlay: (controller) => controller.repeat(reverse: true))
+              .shimmer(duration: 1400.ms, color: Colors.white54),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  capturedPhotos == 0
+                      ? 'No evidence photo captured yet'
+                      : '$capturedPhotos of 4 evidence items ready',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppConstants.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Front and back ID are required. Headshot and client + FO photo complete the verification story.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.45,
+                    color: AppConstants.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _label(String text, {bool optional = false}) {
+    return Row(
+      children: [
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppConstants.textPrimary,
+          ),
+        ),
         if (optional) ...[
           const SizedBox(width: 6),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-                color: AppConstants.borderLight,
-                borderRadius: BorderRadius.circular(4)),
-            child: const Text('Optional',
-                style: TextStyle(
-                    fontSize: 9,
-                    color: AppConstants.textHint,
-                    fontWeight: FontWeight.w500)),
+              color: AppConstants.surfaceMuted,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: const Text(
+              'Optional',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: AppConstants.textHint,
+              ),
+            ),
           ),
         ],
-      ]);
+      ],
+    );
+  }
 
-  Widget _field(TextEditingController ctrl, String label,
-      {bool required = false, bool optional = false}) =>
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _label(label, optional: optional || !required),
-        const SizedBox(height: 6),
+  Widget _field(
+    TextEditingController controller,
+    String label, {
+    required IconData icon,
+    String? hint,
+    bool required = false,
+    bool optional = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _label(label, optional: optional),
+        const SizedBox(height: 8),
         TextFormField(
-          controller: ctrl,
-          decoration: InputDecoration(hintText: label),
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: Icon(icon, size: 18),
+          ),
           validator: required
-              ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null
+              ? (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Required';
+                  }
+
+                  return null;
+                }
               : null,
         ),
-      ]);
+      ],
+    );
+  }
+
+  Widget _optionTile({
+    required bool selected,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+    bool compact = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: AnimatedContainer(
+        duration: 220.ms,
+        padding: EdgeInsets.all(compact ? 12 : 14),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppConstants.primarySurface
+              : AppConstants.surfaceMuted,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: selected ? AppConstants.primary : AppConstants.border,
+            width: selected ? 1.4 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: compact ? 40 : 44,
+              height: compact ? 40 : 44,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                icon,
+                color: selected
+                    ? AppConstants.primary
+                    : AppConstants.textSecondary,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppConstants.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      height: 1.4,
+                      color: AppConstants.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              selected
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              size: 18,
+              color: selected ? AppConstants.primary : AppConstants.textHint,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _idTypeTitle(String value) {
+    switch (value) {
+      case 'voters_id':
+        return 'Voter ID';
+      case 'driving_license':
+        return 'Driving License';
+      case 'passport':
+        return 'Passport';
+      default:
+        return 'NIDA';
+    }
+  }
+
+  IconData _idTypeIcon(String value) {
+    switch (value) {
+      case 'voters_id':
+        return Icons.how_to_vote_outlined;
+      case 'driving_license':
+        return Icons.directions_car_outlined;
+      case 'passport':
+        return Icons.flight_takeoff_outlined;
+      default:
+        return Icons.credit_card_outlined;
+    }
+  }
+}
+
+class _HintChip extends StatelessWidget {
+  const _HintChip({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceMuted,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppConstants.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppConstants.info),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppConstants.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -70,7 +70,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/kyc/new',
-            builder: (_, __) => const KycWizardScreen(),
+            builder: (_, state) => KycWizardScreen(
+              draftCustomerId: state.uri.queryParameters['draft'],
+            ),
           ),
           GoRoute(
             path: '/profile',
@@ -160,8 +162,8 @@ class _MainShell extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(14),
                             boxShadow: [
                               BoxShadow(
-                                color:
-                                    const Color(0xFFEA580C).withOpacity(0.35),
+                                color: const Color(0xFFEA580C)
+                                    .withValues(alpha: 0.35),
                                 blurRadius: 8,
                                 offset: const Offset(0, 3),
                               ),

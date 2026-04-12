@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/constants.dart';
 import '../api/api_client.dart';
+import '../models/customer_model.dart';
 import '../models/dashboard_model.dart';
 import '../models/kyc_flow_model.dart';
 
@@ -916,6 +917,103 @@ class KycNotifier extends StateNotifier<KycDraftState> {
     state = const KycDraftState();
   }
 
+  Future<bool> loadExistingDraft(String customerId) async {
+    state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+
+    try {
+      final response =
+          await ApiClient.instance.get('/kyc/customers/$customerId');
+      final detail = CustomerDetail.fromJson(
+        response.data['data'] as Map<String, dynamic>,
+      );
+
+      state = KycDraftState(
+        customerId: detail.id,
+        currentStep: detail.resumeStep,
+        brandId: detail.device['brand_id']?.toString() ?? '',
+        phoneModelId: detail.device['phone_model_id']?.toString() ?? '',
+        inventoryUnitId: detail.device['inventory_unit_id']?.toString() ?? '',
+        deviceSpecs: detail.device['specs']?.toString() ?? '',
+        imeiNumber: detail.device['imei_1']?.toString() ?? '',
+        imei2: detail.device['imei_2']?.toString() ?? '',
+        serialNumber: detail.device['serial_number']?.toString() ?? '',
+        cashPrice: detail.device['cash_price']?.toString() ?? '',
+        depositAmount: detail.device['deposit_amount']?.toString() ?? '',
+        preferredRepayment:
+            _repaymentFromApi(detail.device['preferred_repayment']?.toString()),
+        includeScreenProtector:
+            _hasAccessory(detail.device, 'screen_protector'),
+        includePhoneCover: _hasAccessory(detail.device, 'phone_cover'),
+        storeOfferNotes: detail.device['store_offer_notes']?.toString() ?? '',
+        firstName: detail.firstName,
+        middleName: detail.middleName ?? '',
+        lastName: detail.lastName,
+        gender: detail.gender ?? 'male',
+        dateOfBirth: detail.dateOfBirth ?? '',
+        nidaNumber: detail.nidaNumber ?? '',
+        idType: detail.idType ?? 'nida',
+        phone: detail.phone,
+        phoneCountry:
+            detail.phoneMetadata['phone']?['country_iso']?.toString() ?? 'TZ',
+        altPhone: detail.altPhone ?? '',
+        altPhoneCountry:
+            detail.phoneMetadata['alt_phone']?['country_iso']?.toString() ??
+                'TZ',
+        email: detail.email ?? '',
+        branchId: detail.branch?['id']?.toString() ?? '',
+        address: detail.address ?? '',
+        landmark: detail.landmark ?? '',
+        region: detail.region ?? '',
+        district: detail.district ?? '',
+        occupation: detail.income['occupation']?.toString() ?? '',
+        employer: detail.income['employer']?.toString() ?? '',
+        workLocation: detail.income['work_location']?.toString() ?? '',
+        monthlyIncome: detail.income['monthly_income']?.toString() ?? '',
+        monthlyExpenses: detail.income['monthly_expenses']?.toString() ?? '',
+        incomePaymentCycle: _incomeCycleFromApi(
+          detail.income['income_payment_cycle']?.toString(),
+        ),
+        durationAtWork: detail.income['duration_at_work']?.toString() ?? '',
+        nokName: detail.nok['nok_name']?.toString() ?? '',
+        nokPhone: detail.nok['nok_phone']?.toString() ?? '',
+        nokPhoneCountry:
+            detail.phoneMetadata['nok_phone']?['country_iso']?.toString() ??
+                'TZ',
+        nokRelationship: detail.nok['nok_relationship']?.toString() ?? '',
+        nok2Name: detail.nok['nok2_name']?.toString() ?? '',
+        nok2Phone: detail.nok['nok2_phone']?.toString() ?? '',
+        nok2PhoneCountry:
+            detail.phoneMetadata['nok2_phone']?['country_iso']?.toString() ??
+                'TZ',
+        nok2Relationship: detail.nok['nok2_relationship']?.toString() ?? '',
+        termsAccepted: detail.consent['terms_accepted'] == true,
+        dataConsentAccepted: detail.consent['data_consent_accepted'] == true,
+        callConsentAccepted: detail.consent['call_consent_accepted'] == true,
+        paymentPhone: detail.payment?.phone ?? detail.phone,
+        paymentPhoneCountry:
+            detail.phoneMetadata['payment_phone']?['country_iso']?.toString() ??
+                detail.phoneMetadata['phone']?['country_iso']?.toString() ??
+                'TZ',
+        agreementDecision: detail.agreement?.accepted == true ? 'yes' : '',
+        foNotes: detail.foNotes ?? '',
+        applicationSource: detail.applicationSource ?? 'walk_in',
+        assetHandoverNotes: detail.agreement?.handoverNotes ?? '',
+        paymentContext: detail.payment,
+        agreementContext: detail.agreement,
+        releaseContext: detail.release,
+        isSubmitting: false,
+      );
+
+      return true;
+    } catch (error) {
+      state = state.copyWith(
+        isSubmitting: false,
+        error: ApiClient.instance.parseError(error),
+      );
+      return false;
+    }
+  }
+
   String _repaymentForApi(String raw) {
     switch (raw) {
       case 'bi-weekly':
@@ -933,6 +1031,45 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       return '+${raw.substring(0, 3)} ${raw.substring(3, 6)} ${raw.substring(6, 9)} ${raw.substring(9)}';
     }
     return raw;
+  }
+
+  String _repaymentFromApi(String? raw) {
+    switch (raw) {
+      case 'biweekly':
+        return 'bi-weekly';
+      case 'monthly':
+      case 'weekly':
+        return raw!;
+      default:
+        return 'weekly';
+    }
+  }
+
+  String _incomeCycleFromApi(String? raw) {
+    switch (raw) {
+      case 'weekly':
+      case 'biweekly':
+      case 'monthly':
+      case 'irregular':
+        return raw!;
+      default:
+        return 'monthly';
+    }
+  }
+
+  bool _hasAccessory(Map<String, dynamic> device, String code) {
+    final accessories = device['accessories'];
+    if (accessories is! List) {
+      return false;
+    }
+
+    return accessories.any((item) {
+      if (item is! Map) {
+        return false;
+      }
+
+      return item['code']?.toString() == code;
+    });
   }
 }
 

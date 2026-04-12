@@ -130,6 +130,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     final customerSignature =
         await _customerSignatureController.exportAsDataUrl();
     final foSignature = await _foSignatureController.exportAsDataUrl();
+    final currentState = ref.read(kycProvider);
 
     ref.read(kycProvider.notifier).update(
           (state) => state.copyWith(
@@ -142,10 +143,18 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           ),
         );
 
-    if ((customerSignature ?? ref.read(kycProvider).customerSignatureData)
+    final hasCustomerSignature =
+        (customerSignature ?? currentState.customerSignatureData)
+                .trim()
+                .isNotEmpty ||
+            (currentState.agreementContext?.customerSignatureUrl?.isNotEmpty ??
+                false);
+    final hasFoSignature = (foSignature ?? currentState.foSignatureData)
             .trim()
-            .isEmpty ||
-        (foSignature ?? ref.read(kycProvider).foSignatureData).trim().isEmpty) {
+            .isNotEmpty ||
+        (currentState.agreementContext?.foSignatureUrl?.isNotEmpty ?? false);
+
+    if (!hasCustomerSignature || !hasFoSignature) {
       if (!context.mounted) {
         return false;
       }
@@ -189,7 +198,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
       return;
     }
 
-    if (state.assetHandoverList == null) {
+    if (state.assetHandoverList == null &&
+        !(state.agreementContext?.handoverListUrl?.isNotEmpty ?? false)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Attach the asset handover checklist first.'),
@@ -226,84 +236,118 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: Colors.white,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Customer Agreement',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: AppConstants.textPrimary,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Customer Agreement',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppConstants.textPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              document.title,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppConstants.textPrimary,
-              ),
-            ),
-            if ((document.originalName ?? '').isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                document.originalName!,
-                style: const TextStyle(
+              const SizedBox(height: 8),
+              const Text(
+                'Use this preview to guide the customer slowly before asking for the decision and signatures.',
+                style: TextStyle(
                   fontSize: 12,
+                  height: 1.5,
                   color: AppConstants.textSecondary,
                 ),
+              ),
+              const SizedBox(height: 16),
+              _agreementPreviewSheetCard(document),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppConstants.infoSurface,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: AppConstants.info.withValues(alpha: 0.14),
+                  ),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'What FO should confirm aloud',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppConstants.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      '1. Starting payment has been received successfully.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.5,
+                        color: AppConstants.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      '2. Customer understands the handset, repayment, and obligations.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.5,
+                        color: AppConstants.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      '3. Customer is free to ask questions before choosing yes or no.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.5,
+                        color: AppConstants.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppConstants.borderLight,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: SelectableText(
+                  document.url,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.45,
+                    color: AppConstants.textSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              AppButton(
+                label: 'Copy Agreement Link',
+                width: double.infinity,
+                icon: Icons.copy_rounded,
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: document.url));
+                  if (!context.mounted) {
+                    return;
+                  }
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Agreement link copied to clipboard.'),
+                      backgroundColor: AppConstants.success,
+                    ),
+                  );
+                },
               ),
             ],
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppConstants.borderLight,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: SelectableText(
-                document.url,
-                style: const TextStyle(
-                  fontSize: 12,
-                  height: 1.45,
-                  color: AppConstants.textSecondary,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Current app build can copy and share the agreement link cleanly. For full in-app PDF preview we need a PDF viewer package added to the mobile app.',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.5,
-                color: AppConstants.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            AppButton(
-              label: 'Copy Agreement Link',
-              width: double.infinity,
-              icon: Icons.copy_rounded,
-              onPressed: () async {
-                await Clipboard.setData(ClipboardData(text: document.url));
-                if (!context.mounted) {
-                  return;
-                }
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Agreement link copied to clipboard.'),
-                    backgroundColor: AppConstants.success,
-                  ),
-                );
-              },
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -324,6 +368,10 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     final agreementContext = state.agreementContext;
     final releaseContext = state.releaseContext;
     final paymentReady = paymentContext?.isCompleted == true;
+    final signatureReady = (state.customerSignatureData.isNotEmpty ||
+            (agreementContext?.customerSignatureUrl?.isNotEmpty ?? false)) &&
+        (state.foSignatureData.isNotEmpty ||
+            (agreementContext?.foSignatureUrl?.isNotEmpty ?? false));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -338,6 +386,15 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           _foScriptCard(),
           const SizedBox(height: 16),
           _summaryCard(state),
+          const SizedBox(height: 16),
+          _closingFlowCard(
+            paymentReady: paymentReady,
+            agreementReady:
+                agreementContext?.activeDocument != null && paymentReady,
+            signatureReady: signatureReady,
+            handoverReady: state.assetHandoverList != null ||
+                (agreementContext?.handoverListUrl?.isNotEmpty ?? false),
+          ).animate().fadeIn(duration: 260.ms).slideY(begin: 0.08, end: 0),
           const SizedBox(height: 16),
           _card(
             title: '1. Collect the starting deposit',
@@ -376,6 +433,42 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                 ),
                 const SizedBox(height: 14),
                 _paymentStatusCard(paymentContext, state.depositAmount),
+                if (state.error != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppConstants.errorSurface,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: AppConstants.error.withValues(alpha: 0.18),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          color: AppConstants.error,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            state.error!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.45,
+                              fontWeight: FontWeight.w600,
+                              color: AppConstants.error,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 14),
                 Row(
                   children: [
@@ -425,65 +518,9 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                     ),
                   )
                 else
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppConstants.borderLight,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Icon(
-                            Icons.picture_as_pdf_outlined,
-                            color: AppConstants.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                agreementContext!.activeDocument!.title,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppConstants.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                paymentReady
-                                    ? 'Payment is already successful. You can now present the agreement to the customer.'
-                                    : 'Complete payment first, then present this agreement.',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  height: 1.45,
-                                  color: AppConstants.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              AppButton(
-                                label: 'View Agreement Details',
-                                outlined: true,
-                                icon: Icons.visibility_outlined,
-                                onPressed: () => _showAgreementDialog(
-                                  agreementContext,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                  _agreementHero(
+                    agreementContext: agreementContext!,
+                    paymentReady: paymentReady,
                   ),
                 const SizedBox(height: 14),
                 _decisionTile(
@@ -532,6 +569,17 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _signatureFlowLane(
+                  hasCustomerSignature:
+                      state.customerSignatureData.isNotEmpty ||
+                          (agreementContext?.customerSignatureUrl?.isNotEmpty ??
+                              false),
+                  hasFoSignature: state.foSignatureData.isNotEmpty ||
+                      (agreementContext?.foSignatureUrl?.isNotEmpty ?? false),
+                  hasChecklist: state.assetHandoverList != null ||
+                      (agreementContext?.handoverListUrl?.isNotEmpty ?? false),
+                ),
+                const SizedBox(height: 14),
                 _signatureCard(
                   title: 'Customer Signature',
                   subtitle:
@@ -572,38 +620,80 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                   ),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    SizedBox(
-                      width: 132,
-                      child: PhotoPickerTile(
-                        label: 'Checklist',
-                        file: state.assetHandoverList,
-                        onPicked: (file) => ref
-                            .read(kycProvider.notifier)
-                            .setPhoto('handover', file),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _handoverNotesCtrl,
-                        maxLines: 4,
-                        onChanged: (value) {
-                          ref.read(kycProvider.notifier).update(
-                                (current) => current.copyWith(
-                                  assetHandoverNotes: value.trim(),
-                                ),
-                              );
-                        },
-                        decoration: const InputDecoration(
-                          labelText: 'Handover Notes',
-                          hintText:
-                              'List what was handed to the customer or note any special explanation given.',
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final useColumn = constraints.maxWidth < 380;
+
+                    if (useColumn) {
+                      return Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            height: 124,
+                            child: PhotoPickerTile(
+                              label: 'Checklist',
+                              file: state.assetHandoverList,
+                              onPicked: (file) => ref
+                                  .read(kycProvider.notifier)
+                                  .setPhoto('handover', file),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _handoverNotesCtrl,
+                            maxLines: 4,
+                            onChanged: (value) {
+                              ref.read(kycProvider.notifier).update(
+                                    (current) => current.copyWith(
+                                      assetHandoverNotes: value.trim(),
+                                    ),
+                                  );
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Handover Notes',
+                              hintText:
+                                  'List what was handed to the customer or note any special explanation given.',
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        SizedBox(
+                          width: 144,
+                          height: 124,
+                          child: PhotoPickerTile(
+                            label: 'Checklist',
+                            file: state.assetHandoverList,
+                            onPicked: (file) => ref
+                                .read(kycProvider.notifier)
+                                .setPhoto('handover', file),
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _handoverNotesCtrl,
+                            maxLines: 4,
+                            onChanged: (value) {
+                              ref.read(kycProvider.notifier).update(
+                                    (current) => current.copyWith(
+                                      assetHandoverNotes: value.trim(),
+                                    ),
+                                  );
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Handover Notes',
+                              hintText:
+                                  'List what was handed to the customer or note any special explanation given.',
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -803,6 +893,117 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     );
   }
 
+  Widget _closingFlowCard({
+    required bool paymentReady,
+    required bool agreementReady,
+    required bool signatureReady,
+    required bool handoverReady,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF103454), Color(0xFF1F5A88)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppConstants.heroEnd.withValues(alpha: 0.2),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Final Mile Flow',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Deposit, agreement, signatures, na handover proof vikikaa sawa hapa, submit ya mwisho inakuwa safi na ya kuaminika.',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: Colors.white.withValues(alpha: 0.82),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _flowStageChip(
+                label: 'Payment',
+                ready: paymentReady,
+                icon: Icons.payments_outlined,
+              ),
+              _flowStageChip(
+                label: 'Agreement',
+                ready: agreementReady,
+                icon: Icons.picture_as_pdf_outlined,
+              ),
+              _flowStageChip(
+                label: 'Signatures',
+                ready: signatureReady,
+                icon: Icons.draw_outlined,
+              ),
+              _flowStageChip(
+                label: 'Handover',
+                ready: handoverReady,
+                icon: Icons.inventory_2_outlined,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _flowStageChip({
+    required String label,
+    required bool ready,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: ready
+            ? Colors.white.withValues(alpha: 0.16)
+            : Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            ready ? Icons.check_circle_rounded : icon,
+            size: 14,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _card({
     required String title,
     required String subtitle,
@@ -849,6 +1050,233 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     );
   }
 
+  Widget _agreementHero({
+    required KycAgreementContext agreementContext,
+    required bool paymentReady,
+  }) {
+    final document = agreementContext.activeDocument!;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppConstants.surfaceRaised, AppConstants.infoSurface],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppConstants.border),
+      ),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppConstants.border),
+                ),
+                child: const Icon(
+                  Icons.picture_as_pdf_outlined,
+                  color: AppConstants.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      document.title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppConstants.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      paymentReady
+                          ? 'Payment is successful. You can now show the agreement, guide the customer, and record the decision.'
+                          : 'Finish the payment first. Agreement presentation unlocks immediately after successful payment.',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.45,
+                        color: AppConstants.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _agreementPreviewSheetCard(document),
+          const SizedBox(height: 12),
+          AppButton(
+            label: 'View Agreement Preview',
+            outlined: true,
+            icon: Icons.visibility_outlined,
+            onPressed: () => _showAgreementDialog(agreementContext),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _agreementPreviewSheetCard(KycDocumentOption document) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppConstants.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppConstants.primarySurface,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.description_outlined,
+                  color: AppConstants.primary,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Agreement preview',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppConstants.textPrimary,
+                  ),
+                ),
+              ),
+              if ((document.mimeType ?? '').isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppConstants.surfaceMuted,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    document.mimeType!,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppConstants.textHint,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppConstants.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  document.title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppConstants.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 72,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: AppConstants.primary,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Preview focus',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppConstants.textHint,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '• Device and deposit confirmation',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.45,
+                    color: AppConstants.textSecondary,
+                  ),
+                ),
+                const Text(
+                  '• Customer obligations and payment expectations',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.45,
+                    color: AppConstants.textSecondary,
+                  ),
+                ),
+                const Text(
+                  '• Signature and handover acknowledgement',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.45,
+                    color: AppConstants.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if ((document.originalName ?? '').isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              document.originalName!,
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppConstants.textHint,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _paymentStatusCard(
     KycPaymentContext? paymentContext,
     String depositAmount,
@@ -873,6 +1301,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     final pendingSummary = hasPrompt
         ? 'Prompt sent to ${paymentContext.phone ?? '-'}${paymentContext.reference != null ? ' • Ref ${paymentContext.reference}' : ''}.'
         : 'Deposit required before final submission.';
+    final confirmedAmount = paymentContext?.amount ?? depositAmount;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -881,43 +1310,111 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.16)),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            isComplete
-                ? Icons.check_circle_outline
-                : hasPrompt
-                    ? Icons.hourglass_top_rounded
-                    : Icons.phone_iphone_outlined,
-            color: color,
-            size: 20,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  isComplete
+                      ? Icons.check_circle_outline
+                      : hasPrompt
+                          ? Icons.hourglass_top_rounded
+                          : Icons.phone_iphone_outlined,
+                  color: color,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: color,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isComplete
+                          ? 'Deposit of TZS $confirmedAmount was confirmed successfully.'
+                          : pendingSummary,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.45,
+                        color: AppConstants.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (hasPrompt) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
+                if ((paymentContext.phone ?? '').isNotEmpty)
+                  _statusTag(
+                    icon: Icons.phone_android_outlined,
+                    label: paymentContext.phone!,
                     color: color,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isComplete
-                      ? 'Deposit of TZS ${paymentContext?.amount ?? depositAmount} was confirmed successfully.'
-                      : pendingSummary,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    height: 1.45,
-                    color: AppConstants.textSecondary,
+                if ((paymentContext.reference ?? '').isNotEmpty)
+                  _statusTag(
+                    icon: Icons.receipt_long_outlined,
+                    label: paymentContext.reference!,
+                    color: color,
                   ),
+                _statusTag(
+                  icon: Icons.payments_outlined,
+                  label: 'TZS ${paymentContext.amount ?? depositAmount}',
+                  color: color,
                 ),
               ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _statusTag({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppConstants.textSecondary,
             ),
           ),
         ],
@@ -1021,6 +1518,83 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _signatureFlowLane({
+    required bool hasCustomerSignature,
+    required bool hasFoSignature,
+    required bool hasChecklist,
+  }) {
+    final stages = [
+      (
+        label: 'Customer signs',
+        icon: Icons.draw_outlined,
+        done: hasCustomerSignature,
+      ),
+      (
+        label: 'FO signs',
+        icon: Icons.edit_note_rounded,
+        done: hasFoSignature,
+      ),
+      (
+        label: 'Checklist attached',
+        icon: Icons.inventory_outlined,
+        done: hasChecklist,
+      ),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppConstants.surfaceMuted,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppConstants.border),
+      ),
+      child: Row(
+        children: [
+          for (var index = 0; index < stages.length; index++) ...[
+            Expanded(
+              child: Column(
+                children: [
+                  Icon(
+                    stages[index].done
+                        ? Icons.check_circle_rounded
+                        : stages[index].icon,
+                    size: 18,
+                    color: stages[index].done
+                        ? AppConstants.success
+                        : AppConstants.textSecondary,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    stages[index].label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: stages[index].done
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      color: stages[index].done
+                          ? AppConstants.textPrimary
+                          : AppConstants.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (index < stages.length - 1)
+              Container(
+                width: 18,
+                height: 2,
+                margin: const EdgeInsets.symmetric(horizontal: 6),
+                color: stages[index].done
+                    ? AppConstants.success
+                    : AppConstants.border,
+              ),
+          ],
+        ],
+      ),
     );
   }
 

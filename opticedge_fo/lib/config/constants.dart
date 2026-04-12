@@ -39,21 +39,30 @@ class AppConstants {
   static const String draftPrefix = 'kyc_draft_';
 
   // Colors
-  static const Color primary = Color(0xFFEA580C);
-  static const Color primaryLight = Color(0xFFF97316);
-  static const Color primaryDark = Color(0xFFC2410C);
-  static const Color primarySurface = Color(0xFFFFF7ED);
-  static const Color success = Color(0xFF10B981);
+  static const Color primary = Color(0xFFF36D34);
+  static const Color primaryLight = Color(0xFFFF8B5B);
+  static const Color primaryDark = Color(0xFFD7561E);
+  static const Color primarySurface = Color(0xFFFFF1E8);
+  static const Color success = Color(0xFF12B981);
   static const Color error = Color(0xFFEF4444);
   static const Color warning = Color(0xFFF59E0B);
-  static const Color info = Color(0xFF3B82F6);
-  static const Color textPrimary = Color(0xFF111827);
-  static const Color textSecondary = Color(0xFF6B7280);
-  static const Color textHint = Color(0xFF9CA3AF);
-  static const Color background = Color(0xFFF9FAFB);
+  static const Color info = Color(0xFF2F80ED);
+  static const Color ink = Color(0xFF0E1826);
+  static const Color heroStart = Color(0xFF103454);
+  static const Color heroEnd = Color(0xFF1F5A88);
+  static const Color textPrimary = Color(0xFF111B2A);
+  static const Color textSecondary = Color(0xFF607087);
+  static const Color textHint = Color(0xFF94A3B8);
+  static const Color background = Color(0xFFF2F5F9);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color border = Color(0xFFE5E7EB);
-  static const Color borderLight = Color(0xFFF3F4F6);
+  static const Color surfaceRaised = Color(0xFFFDFEFF);
+  static const Color surfaceMuted = Color(0xFFF6F8FB);
+  static const Color border = Color(0xFFE2E8F0);
+  static const Color borderLight = Color(0xFFF1F5F9);
+  static const Color successSurface = Color(0xFFECFDF5);
+  static const Color errorSurface = Color(0xFFFEF2F2);
+  static const Color warningSurface = Color(0xFFFFF7ED);
+  static const Color infoSurface = Color(0xFFEFF6FF);
 
   // Status colors
   static const Map<String, Color> statusColors = {

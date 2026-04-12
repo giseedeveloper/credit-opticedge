@@ -57,6 +57,7 @@ class CustomerDetail {
   final double? latitude;
   final double? longitude;
   final Map<String, dynamic>? branch;
+  final Map<String, dynamic>? vendor;
   final Map<String, dynamic> device;
   final Map<String, dynamic> income;
   final Map<String, dynamic> nok;
@@ -72,6 +73,8 @@ class CustomerDetail {
   final KycAgreementContext? agreement;
   final KycReleaseContext? release;
   final bool canReleaseAsset;
+  final bool canResumeDraft;
+  final int resumeStep;
 
   const CustomerDetail({
     required this.id,
@@ -93,6 +96,7 @@ class CustomerDetail {
     this.latitude,
     this.longitude,
     this.branch,
+    this.vendor,
     this.device = const {},
     this.income = const {},
     this.nok = const {},
@@ -108,11 +112,14 @@ class CustomerDetail {
     this.agreement,
     this.release,
     this.canReleaseAsset = false,
+    this.canResumeDraft = false,
+    this.resumeStep = 2,
   });
 
   factory CustomerDetail.fromJson(Map<String, dynamic> json) {
-    final photosRaw = json['photos'] as Map<String, dynamic>? ?? {};
+    final photosRaw = _jsonMap(json['photos']) ?? {};
     final photos = photosRaw.map((k, v) => MapEntry(k, v?.toString()));
+
     return CustomerDetail(
       id: json['id']?.toString() ?? '',
       fullName: json['full_name']?.toString() ?? '',
@@ -130,32 +137,75 @@ class CustomerDetail {
       landmark: json['landmark']?.toString(),
       region: json['region']?.toString(),
       district: json['district']?.toString(),
-      latitude: (json['latitude'] as num?)?.toDouble(),
-      longitude: (json['longitude'] as num?)?.toDouble(),
-      branch: json['branch'] as Map<String, dynamic>?,
-      device: json['device'] as Map<String, dynamic>? ?? {},
-      income: json['income'] as Map<String, dynamic>? ?? {},
-      nok: json['nok'] as Map<String, dynamic>? ?? {},
-      consent: json['consent'] as Map<String, dynamic>? ?? {},
-      phoneMetadata: json['phone_metadata'] as Map<String, dynamic>? ?? {},
+      latitude: _nullableDouble(json['latitude']),
+      longitude: _nullableDouble(json['longitude']),
+      branch: _jsonMap(json['branch']),
+      vendor: _jsonMap(json['vendor']),
+      device: _jsonMap(json['device']) ?? {},
+      income: _jsonMap(json['income']) ?? {},
+      nok: _jsonMap(json['nok']) ?? {},
+      consent: _jsonMap(json['consent']) ?? {},
+      phoneMetadata: _jsonMap(json['phone_metadata']) ?? {},
       photos: photos,
       foNotes: json['fo_notes']?.toString(),
       applicationSource: json['application_source']?.toString(),
       kycStatus: json['kyc_status']?.toString() ?? 'draft',
       registeredAt: json['registered_at']?.toString() ?? '',
-      verification: json['verification'] as Map<String, dynamic>?,
-      payment: json['payment'] is Map<String, dynamic>
-          ? KycPaymentContext.fromJson(json['payment'] as Map<String, dynamic>)
+      verification: _jsonMap(json['verification']),
+      payment: _jsonMap(json['payment']) != null
+          ? KycPaymentContext.fromJson(_jsonMap(json['payment'])!)
           : null,
-      agreement: json['agreement'] is Map<String, dynamic>
-          ? KycAgreementContext.fromJson(
-              json['agreement'] as Map<String, dynamic>,
-            )
+      agreement: _jsonMap(json['agreement']) != null
+          ? KycAgreementContext.fromJson(_jsonMap(json['agreement'])!)
           : null,
-      release: json['release'] is Map<String, dynamic>
-          ? KycReleaseContext.fromJson(json['release'] as Map<String, dynamic>)
+      release: _jsonMap(json['release']) != null
+          ? KycReleaseContext.fromJson(_jsonMap(json['release'])!)
           : null,
       canReleaseAsset: json['can_release_asset'] == true,
+      canResumeDraft: json['can_resume_draft'] == true,
+      resumeStep: _nullableInt(json['resume_step']) ?? 2,
     );
   }
+}
+
+Map<String, dynamic>? _jsonMap(dynamic value) {
+  if (value is Map<String, dynamic>) {
+    return value;
+  }
+  if (value is Map) {
+    return Map<String, dynamic>.from(value);
+  }
+
+  return null;
+}
+
+double? _nullableDouble(dynamic value) {
+  if (value == null) {
+    return null;
+  }
+  if (value is num) {
+    return value.toDouble();
+  }
+  if (value is String) {
+    return double.tryParse(value);
+  }
+
+  return null;
+}
+
+int? _nullableInt(dynamic value) {
+  if (value == null) {
+    return null;
+  }
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  if (value is String) {
+    return int.tryParse(value);
+  }
+
+  return null;
 }

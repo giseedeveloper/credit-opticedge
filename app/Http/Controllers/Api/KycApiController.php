@@ -139,6 +139,7 @@ class KycApiController extends Controller
         ]);
 
         $normalizedAccessories = $this->normalizeAccessories($validated['accessories'] ?? [], $accessoryOffers);
+        $scopeContext = $catalog->scopeContextFor($request->user());
 
         $deviceSelection = $this->resolveDeviceSelection(
             $request,
@@ -151,6 +152,8 @@ class KycApiController extends Controller
         $draft = Customer::create([
             'registered_by' => auth()->id(),
             'application_draft_reference' => (string) Str::uuid(),
+            'branch_id' => $deviceSelection['branch_id'] ?? $scopeContext['branch_id'],
+            'vendor_id' => $deviceSelection['vendor_id'] ?? $scopeContext['vendor_id'],
             'phone_model_id' => $deviceSelection['phone_model_id'],
             'inventory_unit_id' => $deviceSelection['inventory_unit_id'],
             'device_specs' => $deviceSelection['device_specs'],
@@ -196,11 +199,29 @@ class KycApiController extends Controller
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'nida_number' => ['required', 'string', 'size:20', 'unique:customers,nida_number,'.$customer->id],
             'id_type' => ['required', 'in:nida,passport,driving_license,voter_card'],
-            'id_front_photo' => ['required', 'image', 'max:5120'],
-            'id_back_photo' => ['required', 'image', 'max:5120'],
-            'headshot_photo' => ['required', 'image', 'max:5120'],
+            'id_front_photo' => ['nullable', 'image', 'max:5120'],
+            'id_back_photo' => ['nullable', 'image', 'max:5120'],
+            'headshot_photo' => ['nullable', 'image', 'max:5120'],
             'client_fo_photo' => ['nullable', 'image', 'max:5120'],
         ]);
+
+        $missingPhotoErrors = [];
+
+        if (! $request->hasFile('id_front_photo') && ! $customer->id_front_photo_path) {
+            $missingPhotoErrors['id_front_photo'] = 'ID front photo is required.';
+        }
+
+        if (! $request->hasFile('id_back_photo') && ! $customer->id_back_photo_path) {
+            $missingPhotoErrors['id_back_photo'] = 'ID back photo is required.';
+        }
+
+        if (! $request->hasFile('headshot_photo') && ! $customer->headshot_photo_path) {
+            $missingPhotoErrors['headshot_photo'] = 'Headshot photo is required.';
+        }
+
+        if ($missingPhotoErrors !== []) {
+            throw ValidationException::withMessages($missingPhotoErrors);
+        }
 
         $customer->update([
             'first_name' => ucfirst(strtolower(trim($validated['first_name']))),
@@ -210,10 +231,10 @@ class KycApiController extends Controller
             'date_of_birth' => $validated['date_of_birth'] ?? null,
             'nida_number' => strtoupper(trim($validated['nida_number'])),
             'id_type' => $validated['id_type'],
-            'id_front_photo_path' => $this->storeFile($request, 'id_front_photo', 'id_front'),
-            'id_back_photo_path' => $this->storeFile($request, 'id_back_photo', 'id_back'),
-            'headshot_photo_path' => $this->storeFile($request, 'headshot_photo', 'headshot'),
-            'client_fo_photo_path' => $this->storeFile($request, 'client_fo_photo', 'client_fo'),
+            'id_front_photo_path' => $this->storeFile($request, 'id_front_photo', 'id_front') ?? $customer->id_front_photo_path,
+            'id_back_photo_path' => $this->storeFile($request, 'id_back_photo', 'id_back') ?? $customer->id_back_photo_path,
+            'headshot_photo_path' => $this->storeFile($request, 'headshot_photo', 'headshot') ?? $customer->headshot_photo_path,
+            'client_fo_photo_path' => $this->storeFile($request, 'client_fo_photo', 'client_fo') ?? $customer->client_fo_photo_path,
         ]);
 
         return $this->successResponse(['customer_id' => $customer->id, 'step' => 2], 'Step 2 (Identity) saved.');
@@ -225,7 +246,7 @@ class KycApiController extends Controller
     // ──────────────────────────────────────────────────────────────
     public function step3Contact(Request $request, string $customerId, KycPhoneService $phoneService): JsonResponse
     {
-        $customer = $this->findAgentCustomerOrFail($customerId);
+        $customer = $this->findAgentCustomerOrFail($customerId, ['vendor']);
 
         $validated = $request->validate([
             'phone' => ['required', 'string', 'min:7', 'max:20'],
@@ -233,7 +254,7 @@ class KycApiController extends Controller
             'alt_phone' => ['nullable', 'string', 'min:7', 'max:20'],
             'alt_phone_country' => ['nullable', 'string'],
             'email' => ['nullable', 'email'],
-            'branch_id' => ['required', 'exists:branches,id'],
+            'branch_id' => ['nullable', 'exists:branches,id'],
             'address' => ['nullable', 'string', 'max:255'],
             'landmark' => ['nullable', 'string', 'max:255'],
             'region' => ['nullable', 'string', 'max:80'],
@@ -243,13 +264,29 @@ class KycApiController extends Controller
         ]);
 
         $contactPhones = $this->normalizeContactPhones($customer, $validated, $phoneService);
+        $lockedBranchId = $customer->vendor?->branch_id ?: $customer->branch_id ?: $request->user()->branch_id;
+        $requestedBranchId = $validated['branch_id'] ?? null;
+
+        if ($customer->vendor?->branch_id && $requestedBranchId && $requestedBranchId !== $customer->vendor->branch_id) {
+            throw ValidationException::withMessages([
+                'branch_id' => 'This application is already tied to the selected vendor store branch and cannot be moved to a different branch.',
+            ]);
+        }
+
+        $resolvedBranchId = $requestedBranchId ?: $lockedBranchId;
+
+        if (! $resolvedBranchId) {
+            throw ValidationException::withMessages([
+                'branch_id' => 'Select the branch that will serve this customer.',
+            ]);
+        }
 
         $customer->update([
             'phone' => $contactPhones['phone'],
             'alt_phone' => $contactPhones['alt_phone'],
             'phone_metadata' => $contactPhones['phone_metadata'],
             'email' => isset($validated['email']) ? strtolower(trim($validated['email'])) : null,
-            'branch_id' => $validated['branch_id'],
+            'branch_id' => $resolvedBranchId,
             'address' => $validated['address'] ?? null,
             'landmark' => $validated['landmark'] ?? null,
             'region' => $validated['region'] ?? null,
@@ -464,11 +501,29 @@ class KycApiController extends Controller
             'fo_notes' => ['nullable', 'string', 'max:1000'],
             'application_source' => ['nullable', 'in:walk_in,referral,vendor,social_media,agent'],
             'agreement_decision' => ['required', 'in:yes,no'],
-            'customer_signature' => ['required', 'string'],
-            'fo_signature' => ['required', 'string'],
-            'asset_handover_list' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'customer_signature' => ['nullable', 'string'],
+            'fo_signature' => ['nullable', 'string'],
+            'asset_handover_list' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
             'asset_handover_notes' => ['nullable', 'string', 'max:500'],
         ]);
+
+        $finalStepErrors = [];
+
+        if (! filled($validated['customer_signature'] ?? null) && ! $customer->customer_signature_path) {
+            $finalStepErrors['customer_signature'] = 'Customer signature is required.';
+        }
+
+        if (! filled($validated['fo_signature'] ?? null) && ! $customer->fo_signature_path) {
+            $finalStepErrors['fo_signature'] = 'FO signature is required.';
+        }
+
+        if (! $request->hasFile('asset_handover_list') && ! $customer->asset_handover_list_path) {
+            $finalStepErrors['asset_handover_list'] = 'Asset handover checklist is required.';
+        }
+
+        if ($finalStepErrors !== []) {
+            throw ValidationException::withMessages($finalStepErrors);
+        }
 
         $missing = [];
         if (! $customer->nida_number) {
@@ -519,9 +574,9 @@ class KycApiController extends Controller
             'agreement_accepted' => true,
             'agreement_presented_at' => now(),
             'agreement_decision_at' => now(),
-            'customer_signature_path' => $this->storeSignatureDataUrl($validated['customer_signature'], 'customer-signatures'),
-            'fo_signature_path' => $this->storeSignatureDataUrl($validated['fo_signature'], 'fo-signatures'),
-            'asset_handover_list_path' => $this->storeFile($request, 'asset_handover_list', 'handover'),
+            'customer_signature_path' => $this->storeSignatureDataUrl($validated['customer_signature'] ?? null, 'customer-signatures') ?? $customer->customer_signature_path,
+            'fo_signature_path' => $this->storeSignatureDataUrl($validated['fo_signature'] ?? null, 'fo-signatures') ?? $customer->fo_signature_path,
+            'asset_handover_list_path' => $this->storeFile($request, 'asset_handover_list', 'handover') ?? $customer->asset_handover_list_path,
             'asset_handover_notes' => $validated['asset_handover_notes'] ?? null,
             'deposit_payment_status' => $successfulPayment->status,
             'deposit_payment_amount' => $successfulPayment->amount,
@@ -682,6 +737,7 @@ class KycApiController extends Controller
             'latestVerification.reviewedBy',
             'verifications',
             'branch',
+            'vendor',
             'phoneModel.brand',
             'inventoryUnit',
             'agreementDocument',
@@ -692,6 +748,8 @@ class KycApiController extends Controller
         $v = $customer->latestVerification;
         $activeAgreement = $this->activeAgreementDocument();
         $latestPayment = $this->latestDraftPaymentFor($customer);
+        $isDraftApplication = $customer->verifications->isEmpty();
+        $resumeStep = $this->determineResumeStep($customer);
 
         return $this->successResponse([
             'id' => $customer->id,
@@ -715,8 +773,11 @@ class KycApiController extends Controller
             'latitude' => $customer->latitude,
             'longitude' => $customer->longitude,
             'branch' => $customer->branch ? ['id' => $customer->branch->id, 'name' => $customer->branch->name] : null,
+            'vendor' => $customer->vendor ? ['id' => $customer->vendor->id, 'name' => $customer->vendor->name] : null,
             'device' => [
+                'brand_id' => $customer->phoneModel?->brand?->id,
                 'brand_name' => $customer->phoneModel?->brand?->name,
+                'model_name' => $customer->phoneModel?->name,
                 'phone_model_id' => $customer->phone_model_id,
                 'inventory_unit_id' => $customer->inventory_unit_id,
                 'specs' => $customer->device_specs,
@@ -774,9 +835,11 @@ class KycApiController extends Controller
             ],
             'fo_notes' => $customer->fo_notes,
             'application_source' => $customer->application_source,
-            'kyc_status' => $customer->kyc_status,
+            'kyc_status' => $v?->status ?? 'draft',
             'registered_at' => $customer->created_at->toDateTimeString(),
             'can_release_asset' => $customer->isReadyForAssetRelease(),
+            'can_resume_draft' => $isDraftApplication,
+            'resume_step' => $resumeStep,
             'verification' => $v ? [
                 'id' => $v->id,
                 'status' => $v->status,
@@ -1300,6 +1363,8 @@ class KycApiController extends Controller
         return [
             'phone_model_id' => $phoneModel?->id,
             'inventory_unit_id' => $inventoryUnit?->id,
+            'branch_id' => $inventoryUnit?->branch_id,
+            'vendor_id' => $inventoryUnit?->vendor_id,
             'device_specs' => $phoneModel ? $catalog->buildDeviceSpecs($phoneModel) : trim((string) $validated['device_specs']),
             'imei_number' => $imeiNumber,
             'imei_2' => $imei2 ?: null,
@@ -1307,5 +1372,49 @@ class KycApiController extends Controller
             'cash_price' => $cashPrice,
             'device_scan_metadata' => $scanMetadata,
         ];
+    }
+
+    private function determineResumeStep(Customer $customer): int
+    {
+        if (
+            $customer->agreement_accepted
+            || filled($customer->customer_signature_path)
+            || filled($customer->fo_signature_path)
+            || filled($customer->asset_handover_list_path)
+            || filled($customer->fo_notes)
+            || filled($customer->application_source)
+        ) {
+            return 7;
+        }
+
+        if ($customer->terms_accepted && $customer->data_consent_accepted && $customer->call_consent_accepted) {
+            return 7;
+        }
+
+        if (filled($customer->nok_name) && filled($customer->nok_phone) && filled($customer->nok_relationship)) {
+            return 6;
+        }
+
+        if (! is_null($customer->monthly_income)) {
+            return 5;
+        }
+
+        if (
+            filled($customer->phone)
+            && ! str_starts_with($customer->phone, '_draft_')
+            && filled($customer->branch_id)
+        ) {
+            return 4;
+        }
+
+        if (
+            filled($customer->nida_number)
+            && $customer->first_name !== '_draft_'
+            && $customer->last_name !== '_draft_'
+        ) {
+            return 3;
+        }
+
+        return 2;
     }
 }

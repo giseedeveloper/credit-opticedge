@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../config/constants.dart';
 import '../../core/providers/kyc_provider.dart';
 import '../../widgets/kyc/step_indicator.dart';
@@ -13,7 +14,12 @@ import 'steps/step6_consent.dart';
 import 'steps/step7_submit.dart';
 
 class KycWizardScreen extends ConsumerStatefulWidget {
-  const KycWizardScreen({super.key});
+  final String? draftCustomerId;
+
+  const KycWizardScreen({
+    super.key,
+    this.draftCustomerId,
+  });
 
   @override
   ConsumerState<KycWizardScreen> createState() => _KycWizardScreenState();
@@ -21,6 +27,7 @@ class KycWizardScreen extends ConsumerStatefulWidget {
 
 class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
   final PageController _pageCtrl = PageController();
+  bool _bootstrappingDraft = true;
 
   static const _stepLabels = [
     'Device',
@@ -32,12 +39,83 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
     'Submit',
   ];
 
+  static const _stepSummaries = [
+    (
+      title: 'Match the right handset',
+      subtitle:
+          'Lock the exact device, confirm the deposit, and capture trusted evidence from the very first tap.',
+      outcome: 'Build confidence before the customer shares deeper details.',
+    ),
+    (
+      title: 'Confirm identity cleanly',
+      subtitle:
+          'Collect names, DOB, ID type, and sharp supporting photos without making the moment feel bureaucratic.',
+      outcome: 'Reduce rework by capturing complete identity evidence once.',
+    ),
+    (
+      title: 'Capture the best contact path',
+      subtitle:
+          'Record the number, branch, and location details that will keep reminders, payment prompts, and follow-up aligned.',
+      outcome: 'Make the rest of the journey easier for both FO and customer.',
+    ),
+    (
+      title: 'Understand repayment ability',
+      subtitle:
+          'Use simple language to document income and work context while the customer still feels in control.',
+      outcome:
+          'Support faster lending decisions with cleaner affordability data.',
+    ),
+    (
+      title: 'Secure reliable next-of-kin details',
+      subtitle:
+          'Guide the customer gently to the most trusted NOK contacts instead of rushing through the relationship fields.',
+      outcome: 'Strengthen recovery readiness without creating tension.',
+    ),
+    (
+      title: 'Record consent with clarity',
+      subtitle:
+          'Keep the legal step warm and understandable so the customer knows exactly what they are agreeing to.',
+      outcome: 'Clear consent lowers disputes later in the journey.',
+    ),
+    (
+      title: 'Close the journey with assurance',
+      subtitle:
+          'Collect payment, present the agreement, capture signatures, and submit with a calm finish that feels premium.',
+      outcome: 'The customer leaves feeling onboarded, not processed.',
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(kycProvider.notifier).reset();
+      _bootstrapWizard();
     });
+  }
+
+  Future<void> _bootstrapWizard() async {
+    if (widget.draftCustomerId != null && widget.draftCustomerId!.isNotEmpty) {
+      final loaded = await ref
+          .read(kycProvider.notifier)
+          .loadExistingDraft(widget.draftCustomerId!);
+
+      if (!mounted) {
+        return;
+      }
+
+      final currentState = ref.read(kycProvider);
+      if (loaded) {
+        _pageCtrl.jumpToPage(currentState.currentStep - 1);
+      }
+    } else {
+      ref.read(kycProvider.notifier).reset();
+    }
+
+    if (mounted) {
+      setState(() {
+        _bootstrappingDraft = false;
+      });
+    }
   }
 
   @override
@@ -47,12 +125,11 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
   }
 
   void _toStep(int step) {
-    // Avoid Android IME racing with disposed TextInputConnections when the page changes.
     FocusManager.instance.primaryFocus?.unfocus();
     _pageCtrl.animateToPage(
       step - 1,
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeInOut,
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
     );
   }
 
@@ -71,18 +148,22 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
           context: context,
           builder: (_) => AlertDialog(
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             title: const Text('Exit Registration?'),
             content: const Text(
-                'Progress saved on server will be kept, but unsaved local data will be lost.'),
+              'Progress saved on the server stays safe, but local unsaved edits will be lost.',
+            ),
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Continue')),
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Stay here'),
+              ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Exit',
-                    style: TextStyle(color: AppConstants.error)),
+                child: const Text(
+                  'Exit',
+                  style: TextStyle(color: AppConstants.error),
+                ),
               ),
             ],
           ),
@@ -93,19 +174,28 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(kycProvider);
+    if (_bootstrappingDraft) {
+      return const Scaffold(
+        backgroundColor: AppConstants.background,
+        body: Center(
+          child: CircularProgressIndicator(color: AppConstants.primary),
+        ),
+      );
+    }
 
-    ref.listen(kycProvider, (_, next) {
+    final descriptor = _stepSummaries[state.currentStep - 1];
+    final progress = state.currentStep / 7;
+
+    ref.listen(kycProvider, (previous, next) {
       if (next.stepSaved && next.currentStep != state.currentStep) {
         _toStep(next.currentStep);
       }
-      if (next.error != null) {
+
+      if (next.error != null && next.error != previous?.error) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.error!),
             backgroundColor: AppConstants.error,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
       }
@@ -114,57 +204,248 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
-        if (didPop) return;
+        if (didPop) {
+          return;
+        }
         await _onWillPop();
       },
       child: Scaffold(
         backgroundColor: AppConstants.background,
-        appBar: AppBar(
-          title: Text(
-            'New Customer — Step ${state.currentStep} of 7',
-            style: const TextStyle(fontSize: 15),
-          ),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-            onPressed: () async {
-              if (state.currentStep > 1) {
-                _toStep(state.currentStep - 1);
-              } else {
-                FocusManager.instance.primaryFocus?.unfocus();
-                final shouldExit = await _showExitDialog();
-                if (!context.mounted) {
-                  return;
-                }
-                if (shouldExit) {
-                  context.pop();
-                }
-              }
-            },
-          ),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(58),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: StepIndicator(
-                totalSteps: 7,
-                currentStep: state.currentStep,
-                labels: _stepLabels,
-              ),
+        body: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppConstants.heroStart,
+                AppConstants.heroEnd,
+                AppConstants.background,
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: [0, 0.35, 0.36],
             ),
           ),
-        ),
-        body: PageView(
-          controller: _pageCtrl,
-          physics: const NeverScrollableScrollPhysics(),
-          children: const [
-            Step1DeviceScreen(),
-            Step2IdentityScreen(),
-            Step3ContactScreen(),
-            Step4IncomeScreen(),
-            Step5NokScreen(),
-            Step6ConsentScreen(),
-            Step7SubmitScreen(),
-          ],
+          child: SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withValues(alpha: 0.14),
+                          Colors.white.withValues(alpha: 0.06),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.10),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            InkWell(
+                              borderRadius: BorderRadius.circular(18),
+                              onTap: () async {
+                                if (state.currentStep > 1) {
+                                  _toStep(state.currentStep - 1);
+                                  return;
+                                }
+
+                                FocusManager.instance.primaryFocus?.unfocus();
+                                final shouldExit = await _showExitDialog();
+                                if (!context.mounted) {
+                                  return;
+                                }
+                                if (shouldExit) {
+                                  context.pop();
+                                }
+                              },
+                              child: Ink(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: const Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                'Step ${state.currentStep} of 7',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'OpticEdge FO KYC',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
+                            color: Color(0xFFDCE7F3),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          descriptor.title,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            height: 1.1,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          descriptor.subtitle,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            height: 1.45,
+                            color: Color(0xFFE5EEF8),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(999),
+                                child: LinearProgressIndicator(
+                                  minHeight: 8,
+                                  value: progress,
+                                  backgroundColor:
+                                      Colors.white.withValues(alpha: 0.14),
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                    AppConstants.primaryLight,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              '${(progress * 100).round()}%',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: AppConstants.primaryLight
+                                      .withValues(alpha: 0.22),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.auto_awesome_rounded,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  descriptor.outcome,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.45,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        StepIndicator(
+                          totalSteps: 7,
+                          currentStep: state.currentStep,
+                          labels: _stepLabels,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppConstants.surface,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(32),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 22,
+                          offset: const Offset(0, -10),
+                        ),
+                      ],
+                    ),
+                    child: PageView(
+                      controller: _pageCtrl,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: const [
+                        Step1DeviceScreen(),
+                        Step2IdentityScreen(),
+                        Step3ContactScreen(),
+                        Step4IncomeScreen(),
+                        Step5NokScreen(),
+                        Step6ConsentScreen(),
+                        Step7SubmitScreen(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

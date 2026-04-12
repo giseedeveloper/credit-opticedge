@@ -189,7 +189,7 @@ class KycPaymentContext {
         paymentStatus: json['payment_status']?.toString() ?? '',
         result: json['result']?.toString(),
         resultCode: json['resultcode']?.toString(),
-        amount: json['amount'] as num?,
+        amount: _nullableNum(json['amount']),
         phone: json['phone']?.toString(),
         reference: json['reference']?.toString(),
         orderId: json['order_id']?.toString(),

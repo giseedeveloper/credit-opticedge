@@ -12,15 +12,17 @@ class ApiClient {
   Future<void> init() async {
     if (_initialized) return;
 
-    _dio = Dio(BaseOptions(
-      baseUrl: AppConstants.effectiveBaseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-    ));
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: AppConstants.baseUrl,
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      ),
+    );
 
     _initialized = true;
   }
@@ -32,7 +34,10 @@ class ApiClient {
     );
   }
 
-  Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) async {
+  Future<Response> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
     await _ensureInit();
     final opts = await _authOptions();
     return _dio.get(path, queryParameters: queryParameters, options: opts);

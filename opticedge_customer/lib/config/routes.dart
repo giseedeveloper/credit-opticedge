@@ -13,7 +13,7 @@ import '../screens/splash/splash_screen.dart';
 class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
   RouterNotifier(this._ref) {
-    _ref.listen<AuthState>(authProvider, (_, __) => notifyListeners());
+    _ref.listen<AuthState>(authProvider, (_, _) => notifyListeners());
   }
 
   String? redirect(BuildContext context, GoRouterState state) {
@@ -46,16 +46,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: notifier.redirect,
     initialLocation: '/',
     routes: [
-      GoRoute(path: '/', builder: (_, __) => const SplashScreen()),
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      GoRoute(path: '/', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
-          GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-          GoRoute(path: '/schedule', builder: (_, __) => const ScheduleScreen()),
-          GoRoute(path: '/pay', builder: (_, __) => const PayScreen()),
-          GoRoute(path: '/device', builder: (_, __) => const DeviceScreen()),
-          GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+          GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+          GoRoute(path: '/schedule', builder: (_, _) => const ScheduleScreen()),
+          GoRoute(path: '/pay', builder: (_, _) => const PayScreen()),
+          GoRoute(path: '/device', builder: (_, _) => const DeviceScreen()),
+          GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
         ],
       ),
     ],

@@ -43,6 +43,8 @@ Route::prefix('v1')->group(function () {
     // Customer Portal (Phone + PIN auth)
     // ──────────────────────────────────────────────────────────
     Route::prefix('customer')->group(function () {
+        Route::post('/check-phone', [CustomerAuthController::class, 'checkPhone'])->middleware('throttle:api-login');
+        Route::post('/set-pin', [CustomerAuthController::class, 'setPin'])->middleware('throttle:api-login');
         Route::post('/login', [CustomerAuthController::class, 'login'])->middleware('throttle:api-login');
 
         Route::middleware('auth:sanctum')->group(function () {

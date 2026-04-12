@@ -24,7 +24,9 @@ class _DeviceNotifier extends StateNotifier<_DeviceState> {
   }
 }
 
-final _deviceProvider = StateNotifierProvider<_DeviceNotifier, _DeviceState>((ref) {
+final _deviceProvider = StateNotifierProvider<_DeviceNotifier, _DeviceState>((
+  ref,
+) {
   return _DeviceNotifier();
 });
 
@@ -51,25 +53,28 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : state.error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(state.error!, style: const TextStyle(color: AppConstants.danger)),
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: () => ref.read(_deviceProvider.notifier).load(),
-                        child: const Text('Jaribu Tena'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    state.error!,
+                    style: const TextStyle(color: AppConstants.error),
                   ),
-                )
-              : state.data == null
-                  ? const Center(child: Text('Hakuna taarifa za kifaa'))
-                  : RefreshIndicator(
-                      onRefresh: () => ref.read(_deviceProvider.notifier).load(),
-                      child: _buildContent(context, state.data!),
-                    ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => ref.read(_deviceProvider.notifier).load(),
+                    child: const Text('Jaribu Tena'),
+                  ),
+                ],
+              ),
+            )
+          : state.data == null
+          ? const Center(child: Text('Hakuna taarifa za kifaa'))
+          : RefreshIndicator(
+              onRefresh: () => ref.read(_deviceProvider.notifier).load(),
+              child: _buildContent(context, state.data!),
+            ),
     );
   }
 
@@ -93,12 +98,18 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
                     color: AppConstants.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Icon(Icons.phone_android, size: 40, color: AppConstants.primary),
+                  child: const Icon(
+                    Icons.phone_android,
+                    size: 40,
+                    color: AppConstants.primary,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   '${brand?['name'] ?? ''} ${model?['name'] ?? ''}',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 if (model?['storage'] != null || model?['ram'] != null) ...[
@@ -124,16 +135,31 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Taarifa za Kifaa', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  'Taarifa za Kifaa',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const Divider(height: 20),
                 _InfoRow('IMEI', d['imei'] ?? '-'),
                 if (d['imei_2'] != null) _InfoRow('IMEI 2', d['imei_2']),
-                if (d['serial_number'] != null) _InfoRow('Serial Number', d['serial_number']),
-                _InfoRow('Bei ya Pesa Taslimu', 'TZS ${_fmtAmount(d['cash_price'])}'),
+                if (d['serial_number'] != null)
+                  _InfoRow('Serial Number', d['serial_number']),
+                _InfoRow(
+                  'Bei ya Pesa Taslimu',
+                  'TZS ${_fmtAmount(d['cash_price'])}',
+                ),
                 _InfoRow('Amana', 'TZS ${_fmtAmount(d['deposit_amount'])}'),
                 _InfoRow('Malipo', _repaymentLabel(d['preferred_repayment'])),
-                _InfoRow('Hali', d['asset_release_status'] == 'released' ? 'Imepewa' : 'Inasubiri'),
-                if (d['asset_released_at'] != null) _InfoRow('Tarehe ya Kupewa', d['asset_released_at']),
+                _InfoRow(
+                  'Hali',
+                  d['asset_release_status'] == 'released'
+                      ? 'Imepewa'
+                      : 'Inasubiri',
+                ),
+                if (d['asset_released_at'] != null)
+                  _InfoRow('Tarehe ya Kupewa', d['asset_released_at']),
               ],
             ),
           ),
@@ -144,14 +170,19 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
         if (d['agreement'] != null)
           Card(
             child: ListTile(
-              leading: const Icon(Icons.description_rounded, color: AppConstants.primary),
+              leading: const Icon(
+                Icons.description_rounded,
+                color: AppConstants.primary,
+              ),
               title: Text(d['agreement']['title'] ?? 'Mkataba'),
               subtitle: const Text('Bonyeza kuona mkataba'),
               trailing: const Icon(Icons.open_in_new, size: 18),
               onTap: () {
                 // Could open PDF viewer
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Mkataba utafunguliwa hivi karibuni')),
+                  const SnackBar(
+                    content: Text('Mkataba utafunguliwa hivi karibuni'),
+                  ),
                 );
               },
             ),
@@ -163,10 +194,9 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
   String _fmtAmount(dynamic v) {
     if (v == null) return '0';
     final d = double.tryParse(v.toString()) ?? 0;
-    return d.toStringAsFixed(0).replaceAllMapped(
-          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]},',
-        );
+    return d
+        .toStringAsFixed(0)
+        .replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
   }
 
   String _repaymentLabel(dynamic v) {
@@ -191,9 +221,20 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Flexible(child: Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 13))),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+            ),
+          ),
           const SizedBox(width: 12),
-          Flexible(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13), textAlign: TextAlign.end)),
+          Flexible(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              textAlign: TextAlign.end,
+            ),
+          ),
         ],
       ),
     );

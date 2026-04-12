@@ -43,11 +43,12 @@ class _PayScreenState extends ConsumerState<PayScreen> {
       return;
     }
     FocusScope.of(context).unfocus();
-    final phone = _phoneCtrl.text.trim().isNotEmpty ? _phoneCtrl.text.trim() : null;
-    final success = await ref.read(paymentProvider.notifier).requestPayment(
-          amount: amount,
-          phone: phone,
-        );
+    final phone = _phoneCtrl.text.trim().isNotEmpty
+        ? _phoneCtrl.text.trim()
+        : null;
+    final success = await ref
+        .read(paymentProvider.notifier)
+        .requestPayment(amount: amount, phone: phone);
     if (success && mounted) {
       _showStatusSheet();
     }
@@ -91,13 +92,20 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                       ),
                       Text(
                         'TZS ${_currencyFmt.format(loan.loan!.remainingBalance)}',
-                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppConstants.primary),
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: AppConstants.primary,
+                        ),
                       ),
                       if (nextAmount != null) ...[
                         const Divider(height: 20),
                         Text(
                           'Malipo yajayo: TZS ${_currencyFmt.format(nextAmount)}',
-                          style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ],
@@ -107,7 +115,10 @@ class _PayScreenState extends ConsumerState<PayScreen> {
             const SizedBox(height: 24),
 
             // Amount
-            Text('Kiasi cha Kulipa (TZS)', style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              'Kiasi cha Kulipa (TZS)',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _amountCtrl,
@@ -125,7 +136,11 @@ class _PayScreenState extends ConsumerState<PayScreen> {
               Wrap(
                 spacing: 8,
                 children: [
-                  _QuickAmountChip(label: 'Installment', amount: nextAmount, controller: _amountCtrl),
+                  _QuickAmountChip(
+                    label: 'Installment',
+                    amount: nextAmount,
+                    controller: _amountCtrl,
+                  ),
                   if (loan.loan!.remainingBalance != nextAmount)
                     _QuickAmountChip(
                       label: 'Yote',
@@ -137,7 +152,10 @@ class _PayScreenState extends ConsumerState<PayScreen> {
             const SizedBox(height: 20),
 
             // Phone (optional)
-            Text('Namba ya M-Pesa (hiari)', style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              'Namba ya M-Pesa (hiari)',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _phoneCtrl,
@@ -157,10 +175,16 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppConstants.danger.withValues(alpha: 0.1),
+                    color: AppConstants.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(payment.error!, style: const TextStyle(color: AppConstants.danger, fontSize: 13)),
+                  child: Text(
+                    payment.error!,
+                    style: const TextStyle(
+                      color: AppConstants.error,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
               ),
 
@@ -168,7 +192,14 @@ class _PayScreenState extends ConsumerState<PayScreen> {
             ElevatedButton.icon(
               onPressed: payment.isRequesting ? null : _submit,
               icon: payment.isRequesting
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Icon(Icons.send_rounded),
               label: Text(payment.isRequesting ? 'Inatuma...' : 'Tuma Malipo'),
             ),
@@ -183,7 +214,11 @@ class _QuickAmountChip extends StatelessWidget {
   final String label;
   final double amount;
   final TextEditingController controller;
-  const _QuickAmountChip({required this.label, required this.amount, required this.controller});
+  const _QuickAmountChip({
+    required this.label,
+    required this.amount,
+    required this.controller,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -207,21 +242,42 @@ class _PaymentStatusSheet extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (payment.isCompleted) ...[
-            const Icon(Icons.check_circle, color: AppConstants.accent, size: 64),
+            const Icon(
+              Icons.check_circle,
+              color: AppConstants.success,
+              size: 64,
+            ),
             const SizedBox(height: 16),
-            const Text('Malipo Yamefanikiwa!',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppConstants.accent)),
+            const Text(
+              'Malipo Yamefanikiwa!',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppConstants.success,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text('TZS ${_currencyFmt.format(payment.amount ?? 0)}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            Text(
+              'TZS ${_currencyFmt.format(payment.amount ?? 0)}',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
           ] else if (payment.isPolling) ...[
             const CircularProgressIndicator(),
             const SizedBox(height: 16),
-            const Text('Inasubiri uthibitisho...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+            const Text(
+              'Inasubiri uthibitisho...',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
             const SizedBox(height: 8),
-            Text('Angalia simu yako na uthibitishe malipo', style: TextStyle(color: Colors.grey[600])),
+            Text(
+              'Angalia simu yako na uthibitishe malipo',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
           ] else ...[
-            Text(payment.statusMessage ?? '', style: TextStyle(color: Colors.grey[600])),
+            Text(
+              payment.statusMessage ?? '',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
           ],
           const SizedBox(height: 24),
           SizedBox(

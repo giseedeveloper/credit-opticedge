@@ -29,25 +29,28 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : state.error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(state.error!, style: const TextStyle(color: AppConstants.danger)),
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: () => ref.read(scheduleProvider.notifier).load(),
-                        child: const Text('Jaribu Tena'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    state.error!,
+                    style: const TextStyle(color: AppConstants.error),
                   ),
-                )
-              : state.schedule == null
-                  ? const Center(child: Text('Hakuna ratiba'))
-                  : RefreshIndicator(
-                      onRefresh: () => ref.read(scheduleProvider.notifier).load(),
-                      child: _buildList(context, state),
-                    ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => ref.read(scheduleProvider.notifier).load(),
+                    child: const Text('Jaribu Tena'),
+                  ),
+                ],
+              ),
+            )
+          : state.schedule == null
+          ? const Center(child: Text('Hakuna ratiba'))
+          : RefreshIndicator(
+              onRefresh: () => ref.read(scheduleProvider.notifier).load(),
+              child: _buildList(context, state),
+            ),
     );
   }
 
@@ -75,7 +78,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                     _StatChip(
                       label: 'Zilipolipwa',
                       value: '${s.paidInstallments}',
-                      color: AppConstants.accent,
+                      color: AppConstants.success,
                     ),
                     _StatChip(
                       label: 'Zimebaki',
@@ -105,7 +108,11 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
               child: Center(
                 child: Text(
                   '#${item.installmentNumber}',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: statusColor, fontSize: 13),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: statusColor,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ),
@@ -122,14 +129,21 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     _statusLabel(item.status),
-                    style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 if (item.isOverdue && item.daysOverdue > 0)
@@ -137,7 +151,10 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       'Siku ${item.daysOverdue}',
-                      style: const TextStyle(color: AppConstants.danger, fontSize: 10),
+                      style: const TextStyle(
+                        color: AppConstants.error,
+                        fontSize: 10,
+                      ),
                     ),
                   ),
                 if (item.isPaid && item.paidAt != null)
@@ -171,13 +188,24 @@ class _StatChip extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-  const _StatChip({required this.label, required this.value, required this.color});
+  const _StatChip({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
         const SizedBox(height: 2),
         Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
       ],

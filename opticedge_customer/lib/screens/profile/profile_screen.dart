@@ -123,11 +123,11 @@ class ProfileScreen extends ConsumerWidget {
                   child: ListTile(
                     leading: const Icon(
                       Icons.logout_rounded,
-                      color: AppConstants.danger,
+                      color: AppConstants.error,
                     ),
                     title: const Text(
                       'Ondoka',
-                      style: TextStyle(color: AppConstants.danger),
+                      style: TextStyle(color: AppConstants.error),
                     ),
                     onTap: () => _confirmLogout(context, ref),
                   ),
@@ -167,7 +167,7 @@ class ProfileScreen extends ConsumerWidget {
               ref.read(authProvider.notifier).logout();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstants.danger,
+              backgroundColor: AppConstants.error,
             ),
             child: const Text('Ndiyo, Ondoka'),
           ),
@@ -250,7 +250,7 @@ class ProfileScreen extends ConsumerWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('PIN imebadilishwa!'),
-                      backgroundColor: AppConstants.accent,
+                      backgroundColor: AppConstants.success,
                     ),
                   );
                 }
@@ -259,7 +259,7 @@ class ProfileScreen extends ConsumerWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Imeshindikana: $e'),
-                      backgroundColor: AppConstants.danger,
+                      backgroundColor: AppConstants.error,
                     ),
                   );
                 }

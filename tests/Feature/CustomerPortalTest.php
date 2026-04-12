@@ -16,6 +16,46 @@ beforeEach(function () {
     ]);
 });
 
+test('check-phone returns has_pin for existing customer', function () {
+    postJson('/api/v1/customer/check-phone', ['phone' => '0712345678'])
+        ->assertOk()
+        ->assertJsonPath('data.has_pin', true)
+        ->assertJsonPath('data.customer_name', $this->customer->first_name);
+});
+
+test('check-phone fails for unknown number', function () {
+    postJson('/api/v1/customer/check-phone', ['phone' => '0799999999'])
+        ->assertUnprocessable();
+});
+
+test('set-pin works for customer without pin', function () {
+    $noPinCustomer = Customer::factory()->create([
+        'phone' => '255799000111',
+        'pin' => null,
+        'asset_release_status' => 'released',
+        'kyc_status' => 'approved',
+    ]);
+
+    postJson('/api/v1/customer/set-pin', [
+        'phone' => '255799000111',
+        'new_pin' => '5566',
+        'new_pin_confirmation' => '5566',
+    ])
+        ->assertOk()
+        ->assertJsonStructure(['data' => ['token', 'customer']]);
+
+    $noPinCustomer->refresh();
+    expect(Hash::check('5566', $noPinCustomer->pin))->toBeTrue();
+});
+
+test('set-pin rejected if customer already has pin', function () {
+    postJson('/api/v1/customer/set-pin', [
+        'phone' => '0712345678',
+        'new_pin' => '9999',
+        'new_pin_confirmation' => '9999',
+    ])->assertUnprocessable();
+});
+
 test('customer can login with phone and pin', function () {
     postJson('/api/v1/customer/login', [
         'phone' => '0712345678',

@@ -21,7 +21,71 @@ class CustomerAuthController extends Controller
     use ApiResponse;
 
     /**
-     * Login with phone + PIN.
+     * Step 1 – Check if a phone number belongs to an eligible customer.
+     *
+     * Returns `has_pin` so the app knows whether to show "Set PIN" or "Enter PIN".
+     */
+    public function checkPhone(Request $request): JsonResponse
+    {
+        $request->validate([
+            'phone' => ['required', 'string', 'min:7', 'max:20'],
+        ]);
+
+        $phone = $this->normalizePhone($request->string('phone')->toString());
+
+        $customer = Customer::where('phone', $phone)
+            ->where('asset_release_status', 'released')
+            ->first();
+
+        if (! $customer) {
+            throw ValidationException::withMessages([
+                'phone' => ['Namba hii haipatikani kwenye mfumo wetu.'],
+            ]);
+        }
+
+        return $this->successResponse([
+            'has_pin' => $customer->pin !== null,
+            'customer_name' => $customer->first_name,
+        ], 'Customer found.');
+    }
+
+    /**
+     * Step 2a – First-time PIN setup (customer has no PIN yet).
+     */
+    public function setPin(Request $request): JsonResponse
+    {
+        $request->validate([
+            'phone' => ['required', 'string', 'min:7', 'max:20'],
+            'new_pin' => ['required', 'string', 'min:4', 'max:6', 'confirmed'],
+        ]);
+
+        $phone = $this->normalizePhone($request->string('phone')->toString());
+
+        $customer = Customer::where('phone', $phone)
+            ->where('asset_release_status', 'released')
+            ->whereNull('pin')
+            ->first();
+
+        if (! $customer) {
+            throw ValidationException::withMessages([
+                'phone' => ['Mteja hayupo au tayari ana PIN.'],
+            ]);
+        }
+
+        $customer->update(['pin' => $request->new_pin]);
+
+        // Auto-login after PIN setup
+        $customer->tokens()->where('name', 'customer-app')->delete();
+        $token = $customer->createToken('customer-app', ['customer-portal'])->plainTextToken;
+
+        return $this->successResponse([
+            'customer' => $this->serializeProfile($customer->load('branch', 'vendor')),
+            'token' => $token,
+        ], 'PIN imewekwa. Karibu!');
+    }
+
+    /**
+     * Step 2b – Login with phone + PIN.
      *
      * Authenticates the customer and returns a Sanctum token.
      * Only customers with a released asset may log in.

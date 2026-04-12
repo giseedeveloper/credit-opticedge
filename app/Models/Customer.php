@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Database\Factories\CustomerFactory;
+use Illuminate\Auth\Authenticatable as AuthenticatableTrait;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -12,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
@@ -46,11 +49,18 @@ use Spatie\MediaLibrary\InteractsWithMedia;
     'asset_release_status', 'asset_released_at', 'asset_released_by',
     // Step 7 – Submit metadata
     'fo_notes', 'application_source',
+    // Customer portal auth
+    'pin',
 ])]
-class Customer extends Model implements HasMedia
+class Customer extends Model implements Authenticatable, HasMedia
 {
     /** @use HasFactory<CustomerFactory> */
-    use HasFactory, HasUuids, InteractsWithMedia, SoftDeletes;
+    use AuthenticatableTrait, HasApiTokens, HasFactory, HasUuids, InteractsWithMedia, SoftDeletes;
+
+    /**
+     * @var list<string>
+     */
+    protected $hidden = ['pin', 'remember_token'];
 
     /**
      * @return array<int, string>
@@ -60,9 +70,18 @@ class Customer extends Model implements HasMedia
         return ['approved', 'verified'];
     }
 
+    /**
+     * The customer portal uses `pin` as the password column.
+     */
+    public function getAuthPassword(): string
+    {
+        return (string) $this->pin;
+    }
+
     protected function casts(): array
     {
         return [
+            'pin' => 'hashed',
             'date_of_birth' => 'date',
             'monthly_income' => 'decimal:2',
             'monthly_expenses' => 'decimal:2',

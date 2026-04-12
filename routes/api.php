@@ -7,6 +7,10 @@ use App\Http\Controllers\Api\AnalyticsApiController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CollectionApiController;
 use App\Http\Controllers\Api\ComplianceApiController;
+use App\Http\Controllers\Api\CustomerPortal\CustomerAuthController;
+use App\Http\Controllers\Api\CustomerPortal\CustomerDeviceController;
+use App\Http\Controllers\Api\CustomerPortal\CustomerLoanController;
+use App\Http\Controllers\Api\CustomerPortal\CustomerPaymentController;
 use App\Http\Controllers\Api\FinanceApiController;
 use App\Http\Controllers\Api\FraudApiController;
 use App\Http\Controllers\Api\KycApiController;
@@ -35,7 +39,31 @@ Route::prefix('v1')->group(function () {
         ->middleware('throttle:public-media')
         ->name('api.kyc.public-media');
 
-    // Protected Routes (Sanctum)
+    // ──────────────────────────────────────────────────────────
+    // Customer Portal (Phone + PIN auth)
+    // ──────────────────────────────────────────────────────────
+    Route::prefix('customer')->group(function () {
+        Route::post('/login', [CustomerAuthController::class, 'login'])->middleware('throttle:api-login');
+
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('/logout', [CustomerAuthController::class, 'logout']);
+            Route::get('/profile', [CustomerAuthController::class, 'profile']);
+            Route::put('/pin', [CustomerAuthController::class, 'changePin']);
+
+            Route::get('/loan', [CustomerLoanController::class, 'loan']);
+            Route::get('/loan/schedule', [CustomerLoanController::class, 'schedule']);
+            Route::get('/loan/transactions', [CustomerLoanController::class, 'transactions']);
+
+            Route::post('/loan/pay', [CustomerPaymentController::class, 'pay']);
+            Route::get('/loan/pay/{payment_id}/status', [CustomerPaymentController::class, 'status']);
+
+            Route::get('/device', [CustomerDeviceController::class, 'show']);
+        });
+    });
+
+    // ──────────────────────────────────────────────────────────
+    // Protected Routes (Sanctum — Staff / FO)
+    // ──────────────────────────────────────────────────────────
     Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('/logout', [AuthController::class, 'logout']);

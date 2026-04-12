@@ -31,9 +31,9 @@ class CustomerAuthController extends Controller
             'phone' => ['required', 'string', 'min:7', 'max:20'],
         ]);
 
-        $phone = $this->normalizePhone($request->string('phone')->toString());
+        $phones = $this->phoneVariants($request->string('phone')->toString());
 
-        $customer = Customer::where('phone', $phone)
+        $customer = Customer::whereIn('phone', $phones)
             ->where('asset_release_status', 'released')
             ->first();
 
@@ -59,9 +59,9 @@ class CustomerAuthController extends Controller
             'new_pin' => ['required', 'string', 'min:4', 'max:6', 'confirmed'],
         ]);
 
-        $phone = $this->normalizePhone($request->string('phone')->toString());
+        $phones = $this->phoneVariants($request->string('phone')->toString());
 
-        $customer = Customer::where('phone', $phone)
+        $customer = Customer::whereIn('phone', $phones)
             ->where('asset_release_status', 'released')
             ->whereNull('pin')
             ->first();
@@ -106,9 +106,9 @@ class CustomerAuthController extends Controller
             return $this->errorResponse("Too many login attempts. Try again in {$seconds} seconds.", 429);
         }
 
-        $phone = $this->normalizePhone($request->string('phone')->toString());
+        $phones = $this->phoneVariants($request->string('phone')->toString());
 
-        $customer = Customer::where('phone', $phone)
+        $customer = Customer::whereIn('phone', $phones)
             ->where('asset_release_status', 'released')
             ->whereNotNull('pin')
             ->first();
@@ -190,17 +190,32 @@ class CustomerAuthController extends Controller
         return $tokenable;
     }
 
-    private function normalizePhone(string $raw): string
+    /**
+     * Return all plausible phone formats so the query matches
+     * regardless of how the number was stored in the database.
+     *
+     * @return string[]
+     */
+    private function phoneVariants(string $raw): array
     {
-        $phone = preg_replace('/[^0-9]/', '', $raw);
+        $digits = preg_replace('/[^0-9]/', '', $raw);
 
-        if (str_starts_with($phone, '0') && strlen($phone) >= 10) {
-            $phone = '255'.substr($phone, 1);
-        } elseif (strlen($phone) === 9) {
-            $phone = '255'.$phone;
+        // Derive the 9-digit core (without country code or leading zero)
+        if (str_starts_with($digits, '255') && strlen($digits) >= 12) {
+            $core = substr($digits, 3);          // 255xxxxxxxxx → xxxxxxxxx
+        } elseif (str_starts_with($digits, '0') && strlen($digits) >= 10) {
+            $core = substr($digits, 1);           // 0xxxxxxxxx → xxxxxxxxx
+        } elseif (strlen($digits) === 9) {
+            $core = $digits;                      // xxxxxxxxx
+        } else {
+            return [$digits];                     // fallback, return as-is
         }
 
-        return $phone;
+        return [
+            '0'.$core,       // 07xxxxxxxx
+            '255'.$core,     // 2557xxxxxxxx
+            '+255'.$core,    // +2557xxxxxxxx
+        ];
     }
 
     /**

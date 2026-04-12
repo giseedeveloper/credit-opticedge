@@ -63,10 +63,10 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     _load();
   }
 
-  static const _key = 'fo_app_settings';
+  static const storageKey = 'fo_app_settings';
 
   Future<void> _load() async {
-    final data = await SecureStorageService.instance.read(_key);
+    final data = await SecureStorageService.instance.read(storageKey);
     if (data != null) {
       try {
         state = SettingsState.fromJson(jsonDecode(data));
@@ -75,7 +75,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   }
 
   Future<void> _save() async {
-    await SecureStorageService.instance.write(_key, jsonEncode(state.toJson()));
+    await SecureStorageService.instance
+        .write(storageKey, jsonEncode(state.toJson()));
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -93,15 +94,17 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   Future<String?> toggleBiometric(bool enabled) async {
     if (enabled) {
       final bio = BiometricService.instance;
-      final available = await bio.isAvailable;
-      if (!available) {
-        return 'Biometrics not available on this device';
+      final availability = await bio.availability();
+      if (!availability.isAvailable) {
+        return availability.message ??
+            'Biometrics not available on this device.';
       }
-      final authenticated = await bio.authenticate(
+
+      final authentication = await bio.authenticateWithResult(
         reason: 'Verify your identity to enable biometric login',
       );
-      if (!authenticated) {
-        return 'Authentication failed';
+      if (!authentication.isAuthenticated) {
+        return authentication.message ?? 'Authentication failed';
       }
     }
     state = state.copyWith(biometricEnabled: enabled);

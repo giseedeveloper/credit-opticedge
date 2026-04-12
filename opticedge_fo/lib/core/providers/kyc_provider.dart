@@ -10,8 +10,19 @@ import '../api/api_client.dart';
 import '../models/customer_model.dart';
 import '../models/dashboard_model.dart';
 import '../models/kyc_flow_model.dart';
+import '../utils/kyc_upload_limits.dart';
 
 const _unset = Object();
+
+bool _isRecoverableNetworkError(Object error) {
+  if (error is DioException) {
+    return error.type == DioExceptionType.connectionError ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.connectionTimeout;
+  }
+  return false;
+}
 
 class KycDraftState {
   final String? customerId;
@@ -19,6 +30,10 @@ class KycDraftState {
   final bool isSubmitting;
   final String? error;
   final bool stepSaved;
+  /// Furthest step the user may open in the wizard (synced with server resume + local progress).
+  final int maxReachableStep;
+  /// Last submit that failed with a retryable network error (step 1–7).
+  final int? pendingRetryStep;
 
   // Step 1 — Device
   final String brandId;
@@ -109,6 +124,8 @@ class KycDraftState {
     this.isSubmitting = false,
     this.error,
     this.stepSaved = false,
+    this.maxReachableStep = 1,
+    this.pendingRetryStep,
     this.brandId = '',
     this.phoneModelId = '',
     this.inventoryUnitId = '',
@@ -188,6 +205,8 @@ class KycDraftState {
     bool? isSubmitting,
     Object? error = _unset,
     bool? stepSaved,
+    int? maxReachableStep,
+    Object? pendingRetryStep = _unset,
     String? brandId,
     String? phoneModelId,
     String? inventoryUnitId,
@@ -266,6 +285,10 @@ class KycDraftState {
       isSubmitting: isSubmitting ?? this.isSubmitting,
       error: identical(error, _unset) ? this.error : error as String?,
       stepSaved: stepSaved ?? this.stepSaved,
+      maxReachableStep: maxReachableStep ?? this.maxReachableStep,
+      pendingRetryStep: identical(pendingRetryStep, _unset)
+          ? this.pendingRetryStep
+          : pendingRetryStep as int?,
       brandId: brandId ?? this.brandId,
       phoneModelId: phoneModelId ?? this.phoneModelId,
       inventoryUnitId: inventoryUnitId ?? this.inventoryUnitId,
@@ -422,6 +445,38 @@ class KycNotifier extends StateNotifier<KycDraftState> {
 
     if (slot == 'fo') {
       state = state.copyWith(foSignatureData: '');
+    }
+  }
+
+  /// Updates the visible wizard step when navigating back (no API call).
+  void setActiveStep(int step) {
+    final s = step.clamp(1, 7);
+    state = state.copyWith(currentStep: s, stepSaved: false, error: null);
+  }
+
+  /// Replays the last step submission after a recoverable network failure.
+  Future<bool> retryLastFailedSubmission() async {
+    final step = state.pendingRetryStep;
+    if (step == null) {
+      return false;
+    }
+    switch (step) {
+      case 1:
+        return submitStep1();
+      case 2:
+        return submitStep2();
+      case 3:
+        return submitStep3();
+      case 4:
+        return submitStep4();
+      case 5:
+        return submitStep5();
+      case 6:
+        return submitStep6();
+      case 7:
+        return (await submitStep7()) != null;
+      default:
+        return false;
     }
   }
 
@@ -587,7 +642,22 @@ class KycNotifier extends StateNotifier<KycDraftState> {
   }
 
   Future<bool> submitStep1() async {
-    state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+    state = state.copyWith(
+      isSubmitting: true,
+      error: null,
+      stepSaved: false,
+      pendingRetryStep: null,
+    );
+
+    final uploadErr = KycUploadLimits.validateMany([
+      (state.imeiPhoto, 'IMEI photo'),
+      (state.deviceBoxPhoto, 'Device box photo'),
+      (state.devicePhoto, 'Device photo'),
+    ]);
+    if (uploadErr != null) {
+      state = state.copyWith(isSubmitting: false, error: uploadErr);
+      return false;
+    }
 
     try {
       final accessories = <Map<String, dynamic>>[];
@@ -648,6 +718,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         isSubmitting: false,
         stepSaved: true,
         currentStep: 2,
+        maxReachableStep: 2,
+        pendingRetryStep: null,
       );
       await _saveDraft();
       return true;
@@ -655,13 +727,30 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       state = state.copyWith(
         isSubmitting: false,
         error: ApiClient.instance.parseError(error),
+        pendingRetryStep: _isRecoverableNetworkError(error) ? 1 : null,
       );
       return false;
     }
   }
 
   Future<bool> submitStep2() async {
-    state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+    state = state.copyWith(
+      isSubmitting: true,
+      error: null,
+      stepSaved: false,
+      pendingRetryStep: null,
+    );
+
+    final uploadErr = KycUploadLimits.validateMany([
+      (state.idFrontPhoto, 'ID front photo'),
+      (state.idBackPhoto, 'ID back photo'),
+      (state.headshotPhoto, 'Headshot'),
+      (state.clientFoPhoto, 'Client photo'),
+    ]);
+    if (uploadErr != null) {
+      state = state.copyWith(isSubmitting: false, error: uploadErr);
+      return false;
+    }
 
     try {
       final id = state.customerId!;
@@ -699,6 +788,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         isSubmitting: false,
         stepSaved: true,
         currentStep: 3,
+        maxReachableStep: 3,
+        pendingRetryStep: null,
       );
       await _saveDraft();
       return true;
@@ -706,13 +797,19 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       state = state.copyWith(
         isSubmitting: false,
         error: ApiClient.instance.parseError(error),
+        pendingRetryStep: _isRecoverableNetworkError(error) ? 2 : null,
       );
       return false;
     }
   }
 
   Future<bool> submitStep3() async {
-    state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+    state = state.copyWith(
+      isSubmitting: true,
+      error: null,
+      stepSaved: false,
+      pendingRetryStep: null,
+    );
 
     try {
       final id = state.customerId!;
@@ -733,6 +830,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         stepSaved: true,
         currentStep: 4,
         paymentPhone: state.phone,
+        maxReachableStep: 4,
+        pendingRetryStep: null,
       );
       await _saveDraft();
       return true;
@@ -740,13 +839,26 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       state = state.copyWith(
         isSubmitting: false,
         error: ApiClient.instance.parseError(error),
+        pendingRetryStep: _isRecoverableNetworkError(error) ? 3 : null,
       );
       return false;
     }
   }
 
   Future<bool> submitStep4() async {
-    state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+    state = state.copyWith(
+      isSubmitting: true,
+      error: null,
+      stepSaved: false,
+      pendingRetryStep: null,
+    );
+
+    final uploadErr =
+        KycUploadLimits.validateMany([(state.businessPhoto, 'Business photo')]);
+    if (uploadErr != null) {
+      state = state.copyWith(isSubmitting: false, error: uploadErr);
+      return false;
+    }
 
     try {
       final id = state.customerId!;
@@ -771,6 +883,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         isSubmitting: false,
         stepSaved: true,
         currentStep: 5,
+        maxReachableStep: 5,
+        pendingRetryStep: null,
       );
       await _saveDraft();
       return true;
@@ -778,13 +892,19 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       state = state.copyWith(
         isSubmitting: false,
         error: ApiClient.instance.parseError(error),
+        pendingRetryStep: _isRecoverableNetworkError(error) ? 4 : null,
       );
       return false;
     }
   }
 
   Future<bool> submitStep5() async {
-    state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+    state = state.copyWith(
+      isSubmitting: true,
+      error: null,
+      stepSaved: false,
+      pendingRetryStep: null,
+    );
 
     try {
       final id = state.customerId!;
@@ -803,6 +923,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         isSubmitting: false,
         stepSaved: true,
         currentStep: 6,
+        maxReachableStep: 6,
+        pendingRetryStep: null,
       );
       await _saveDraft();
       return true;
@@ -810,13 +932,19 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       state = state.copyWith(
         isSubmitting: false,
         error: ApiClient.instance.parseError(error),
+        pendingRetryStep: _isRecoverableNetworkError(error) ? 5 : null,
       );
       return false;
     }
   }
 
   Future<bool> submitStep6() async {
-    state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+    state = state.copyWith(
+      isSubmitting: true,
+      error: null,
+      stepSaved: false,
+      pendingRetryStep: null,
+    );
 
     try {
       final id = state.customerId!;
@@ -830,6 +958,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         stepSaved: true,
         currentStep: 7,
         paymentPhone: state.phone,
+        maxReachableStep: 7,
+        pendingRetryStep: null,
       );
       await loadFinalContext();
       await _saveDraft();
@@ -838,13 +968,27 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       state = state.copyWith(
         isSubmitting: false,
         error: ApiClient.instance.parseError(error),
+        pendingRetryStep: _isRecoverableNetworkError(error) ? 6 : null,
       );
       return false;
     }
   }
 
   Future<Map<String, dynamic>?> submitStep7() async {
-    state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+    state = state.copyWith(
+      isSubmitting: true,
+      error: null,
+      stepSaved: false,
+      pendingRetryStep: null,
+    );
+
+    final uploadErr = KycUploadLimits.validateMany(
+      [(state.assetHandoverList, 'Asset handover document')],
+    );
+    if (uploadErr != null) {
+      state = state.copyWith(isSubmitting: false, error: uploadErr);
+      return null;
+    }
 
     try {
       final id = state.customerId!;
@@ -869,6 +1013,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       state = state.copyWith(
         isSubmitting: false,
         stepSaved: true,
+        maxReachableStep: 7,
+        pendingRetryStep: null,
         paymentContext: res.data['data']['payment'] is Map<String, dynamic>
             ? KycPaymentContext.fromJson(
                 res.data['data']['payment'] as Map<String, dynamic>)
@@ -888,6 +1034,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       state = state.copyWith(
         isSubmitting: false,
         error: ApiClient.instance.parseError(error),
+        pendingRetryStep: _isRecoverableNetworkError(error) ? 7 : null,
       );
       return null;
     }
@@ -1002,6 +1149,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         agreementContext: detail.agreement,
         releaseContext: detail.release,
         isSubmitting: false,
+        maxReachableStep: detail.resumeStep.clamp(1, 7),
+        pendingRetryStep: null,
       );
 
       return true;

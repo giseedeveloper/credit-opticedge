@@ -31,6 +31,7 @@ dependencies:
   google_fonts: ^6.2.1
   shimmer: ^3.0.0
   flutter_animate: ^4.5.0
+  flutter_svg: ^2.2.4
 
   # Biometric Auth
   local_auth: ^2.2.0
@@ -49,3 +50,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/icons/fluent-color/

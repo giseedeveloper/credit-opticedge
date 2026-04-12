@@ -242,6 +242,7 @@ class KycReleaseContext {
   final String? releasedAt;
   final String? releasedBy;
   final bool canReleaseAsset;
+  final List<String> eligibilityBlockers;
   final String? inventoryUnitId;
   final String? inventoryUnitStatus;
 
@@ -250,19 +251,33 @@ class KycReleaseContext {
     this.releasedAt,
     this.releasedBy,
     this.canReleaseAsset = false,
+    this.eligibilityBlockers = const [],
     this.inventoryUnitId,
     this.inventoryUnitStatus,
   });
 
-  factory KycReleaseContext.fromJson(Map<String, dynamic> json) =>
-      KycReleaseContext(
-        status: json['status']?.toString() ?? 'pending',
-        releasedAt: json['released_at']?.toString(),
-        releasedBy: json['released_by']?.toString(),
-        canReleaseAsset: json['can_release_asset'] == true,
-        inventoryUnitId: json['inventory_unit_id']?.toString(),
-        inventoryUnitStatus: json['inventory_unit_status']?.toString(),
-      );
+  factory KycReleaseContext.fromJson(Map<String, dynamic> json) {
+    final raw = json['eligibility_blockers'];
+    final blockers = <String>[];
+    if (raw is List) {
+      for (final e in raw) {
+        final s = e?.toString().trim();
+        if (s != null && s.isNotEmpty) {
+          blockers.add(s);
+        }
+      }
+    }
+
+    return KycReleaseContext(
+      status: json['status']?.toString() ?? 'pending',
+      releasedAt: json['released_at']?.toString(),
+      releasedBy: json['released_by']?.toString(),
+      canReleaseAsset: json['can_release_asset'] == true,
+      eligibilityBlockers: blockers,
+      inventoryUnitId: json['inventory_unit_id']?.toString(),
+      inventoryUnitStatus: json['inventory_unit_status']?.toString(),
+    );
+  }
 }
 
 /// Laravel often encodes decimals as JSON strings; plain [as num?] throws on String.

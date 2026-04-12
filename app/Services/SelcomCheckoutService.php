@@ -380,7 +380,7 @@ class SelcomCheckoutService
         }
 
         $customer->update([
-            'deposit_payment_status' => $payment->status,
+            'deposit_payment_status' => $payment->isCompleted() ? 'completed' : $payment->status,
             'deposit_payment_amount' => $payment->amount,
             'deposit_payment_reference' => $payment->selcom_reference ?: $payment->transid,
             'deposit_paid_at' => $payment->paid_at,

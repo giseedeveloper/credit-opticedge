@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -80,7 +82,8 @@ class _DetailView extends ConsumerStatefulWidget {
   ConsumerState<_DetailView> createState() => _DetailViewState();
 }
 
-class _DetailViewState extends ConsumerState<_DetailView> {
+class _DetailViewState extends ConsumerState<_DetailView>
+    with WidgetsBindingObserver {
   final Set<String> _expanded = {
     'personal',
     'device',
@@ -89,8 +92,35 @@ class _DetailViewState extends ConsumerState<_DetailView> {
   };
 
   bool _releasing = false;
+  Timer? _detailPollTimer;
 
   CustomerDetail get customer => widget.customer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _detailPollTimer = Timer.periodic(const Duration(seconds: 25), (_) {
+      if (!mounted) {
+        return;
+      }
+      ref.invalidate(customerDetailProvider(widget.customerId));
+    });
+  }
+
+  @override
+  void dispose() {
+    _detailPollTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(customerDetailProvider(widget.customerId));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -867,6 +897,7 @@ class _DetailViewState extends ConsumerState<_DetailView> {
     final release = customer.release;
     final canRelease = customer.canReleaseAsset;
     final isReleased = release?.status == 'released';
+    final blockers = release?.eligibilityBlockers ?? const <String>[];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -889,6 +920,61 @@ class _DetailViewState extends ConsumerState<_DetailView> {
                   : AppConstants.warning,
           icon: Icons.inventory_2_outlined,
         ),
+        if (!isReleased && blockers.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppConstants.warning.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppConstants.warning.withValues(alpha: 0.25),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Still needed before release',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AppConstants.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...blockers.map(
+                  (b) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '• ',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppConstants.textSecondary,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            b,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              height: 1.35,
+                              color: AppConstants.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         _infoRow('Release Status', release?.status),
         _infoRow('Released At', release?.releasedAt),

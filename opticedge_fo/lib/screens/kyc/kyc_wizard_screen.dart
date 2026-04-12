@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/constants.dart';
+import '../../core/providers/connectivity_provider.dart';
 import '../../core/providers/kyc_provider.dart';
-import '../../widgets/kyc/step_indicator.dart';
 import 'steps/step1_device.dart';
 import 'steps/step2_identity.dart';
 import 'steps/step3_contact.dart';
@@ -14,10 +14,12 @@ import 'steps/step6_consent.dart';
 import 'steps/step7_submit.dart';
 
 class KycWizardScreen extends ConsumerStatefulWidget {
+  final int routeStep;
   final String? draftCustomerId;
 
   const KycWizardScreen({
     super.key,
+    required this.routeStep,
     this.draftCustomerId,
   });
 
@@ -26,9 +28,7 @@ class KycWizardScreen extends ConsumerStatefulWidget {
 }
 
 class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
-  final PageController _pageCtrl = PageController();
   bool _bootstrappingDraft = true;
-  int? _pendingPageIndex;
 
   static const _stepLabels = [
     'Device',
@@ -38,16 +38,6 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
     'NOK',
     'Consent',
     'Submit',
-  ];
-
-  static const _stepIcons = [
-    Icons.qr_code_scanner_rounded,
-    Icons.badge_rounded,
-    Icons.call_rounded,
-    Icons.payments_outlined,
-    Icons.shield_outlined,
-    Icons.gavel_rounded,
-    Icons.verified_user_rounded,
   ];
 
   static const _stepSummaries = [
@@ -104,9 +94,19 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
     });
   }
 
-  Future<void> _bootstrapWizard() async {
-    int? resumePageIndex;
+  String _draftQuery(String? customerId) {
+    if (customerId == null || customerId.isEmpty) {
+      return '';
+    }
+    return '?draft=${Uri.encodeComponent(customerId)}';
+  }
 
+  void _goToStep(int step, String? customerId) {
+    final s = step.clamp(1, 7);
+    context.go('/kyc/new/step/$s${_draftQuery(customerId)}');
+  }
+
+  Future<void> _bootstrapWizard() async {
     if (widget.draftCustomerId != null && widget.draftCustomerId!.isNotEmpty) {
       final loaded = await ref
           .read(kycProvider.notifier)
@@ -116,9 +116,11 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
         return;
       }
 
-      final currentState = ref.read(kycProvider);
       if (loaded) {
-        resumePageIndex = currentState.currentStep - 1;
+        final current = ref.read(kycProvider).currentStep.clamp(1, 7);
+        if (current != widget.routeStep) {
+          _goToStep(current, ref.read(kycProvider).customerId);
+        }
       }
     } else {
       ref.read(kycProvider.notifier).reset();
@@ -127,68 +129,44 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
     if (mounted) {
       setState(() {
         _bootstrappingDraft = false;
-        _pendingPageIndex = resumePageIndex;
       });
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _enforceRouteLimits());
+    }
+  }
+
+  void _enforceRouteLimits() {
+    if (!mounted) {
+      return;
+    }
+    final kyc = ref.read(kycProvider);
+    final max = kyc.maxReachableStep.clamp(1, 7);
+    if (widget.routeStep > max) {
+      _goToStep(max, kyc.customerId);
     }
   }
 
   @override
-  void dispose() {
-    _pageCtrl.dispose();
-    super.dispose();
+  void didUpdateWidget(covariant KycWizardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.routeStep != widget.routeStep) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _enforceRouteLimits());
+    }
   }
 
-  void _toStep(int step) {
-    FocusManager.instance.primaryFocus?.unfocus();
-    _moveToPage(step - 1, animated: true);
-  }
-
-  void _moveToPage(int pageIndex, {required bool animated}) {
-    if (!_pageCtrl.hasClients) {
-      _pendingPageIndex = pageIndex;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _flushPendingPage(animated: animated);
-        }
-      });
+  Future<void> _onWillPop() async {
+    if (widget.routeStep > 1) {
+      final id = ref.read(kycProvider).customerId;
+      ref.read(kycProvider.notifier).setActiveStep(widget.routeStep - 1);
+      _goToStep(widget.routeStep - 1, id);
       return;
-    }
-
-    final currentPage = _pageCtrl.page?.round() ?? _pageCtrl.initialPage;
-    if (currentPage == pageIndex) {
-      return;
-    }
-
-    if (animated) {
-      _pageCtrl.animateToPage(
-        pageIndex,
-        duration: const Duration(milliseconds: 420),
-        curve: Curves.easeOutCubic,
-      );
-      return;
-    }
-
-    _pageCtrl.jumpToPage(pageIndex);
-  }
-
-  void _flushPendingPage({required bool animated}) {
-    final pageIndex = _pendingPageIndex;
-    if (pageIndex == null || !_pageCtrl.hasClients) {
-      return;
-    }
-
-    _pendingPageIndex = null;
-    _moveToPage(pageIndex, animated: animated);
-  }
-
-  Future<bool> _onWillPop() async {
-    final draft = ref.read(kycProvider);
-    if (draft.currentStep > 1) {
-      _toStep(draft.currentStep - 1);
-      return false;
     }
     FocusManager.instance.primaryFocus?.unfocus();
-    return _showExitDialog();
+    final shouldExit = await _showExitDialog();
+    if (shouldExit && mounted) {
+      context.go('/dashboard');
+    }
   }
 
   Future<bool> _showExitDialog() async {
@@ -219,41 +197,45 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
         false;
   }
 
+  Widget _buildStepBody(int step) {
+    switch (step) {
+      case 1:
+        return const Step1DeviceScreen();
+      case 2:
+        return const Step2IdentityScreen();
+      case 3:
+        return const Step3ContactScreen();
+      case 4:
+        return const Step4IncomeScreen();
+      case 5:
+        return const Step5NokScreen();
+      case 6:
+        return const Step6ConsentScreen();
+      case 7:
+      default:
+        return const Step7SubmitScreen();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(kycProvider);
+    final stepIndex = widget.routeStep.clamp(1, 7);
+    final descriptor = _stepSummaries[stepIndex - 1];
+    final progress = stepIndex / 7;
+    final media = MediaQuery.of(context);
+    final isKeyboardVisible = media.viewInsets.bottom > 0;
+    final showOutcomeBanner = !isKeyboardVisible && media.size.height >= 700;
+
     if (_bootstrappingDraft) {
       return const Scaffold(
-        backgroundColor: AppConstants.background,
+        backgroundColor: AppConstants.kycWizardSurface,
         body: Center(
           child: CircularProgressIndicator(color: AppConstants.primary),
         ),
       );
     }
 
-    final descriptor = _stepSummaries[state.currentStep - 1];
-    final progress = state.currentStep / 7;
-    final media = MediaQuery.of(context);
-    final isKeyboardVisible = media.viewInsets.bottom > 0;
-    final isCompactHeader = isKeyboardVisible || media.size.height < 860;
-    final showOutcomeBanner = !isKeyboardVisible && media.size.height >= 700;
-    final titleFontSize = isCompactHeader ? 20.0 : 24.0;
-    final headerPadding = isCompactHeader ? 15.0 : 18.0;
-    final currentStepIcon = _stepIcons[state.currentStep - 1];
-
-    if (_pendingPageIndex != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _flushPendingPage(animated: false);
-        }
-      });
-    }
-
-    ref.listen(kycProvider, (previous, next) {
-      if (next.stepSaved && next.currentStep != state.currentStep) {
-        _toStep(next.currentStep);
-      }
-
+    ref.listen<KycDraftState>(kycProvider, (previous, next) {
       if (next.error != null && next.error != previous?.error) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -262,7 +244,16 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
           ),
         );
       }
+
+      if (next.stepSaved &&
+          previous != null &&
+          next.currentStep != previous.currentStep) {
+        _goToStep(next.currentStep, next.customerId);
+      }
     });
+
+    final online = ref.watch(onlineStatusProvider);
+    final kycState = ref.watch(kycProvider);
 
     return PopScope(
       canPop: false,
@@ -273,310 +264,205 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
         await _onWillPop();
       },
       child: Scaffold(
-        backgroundColor: AppConstants.background,
+        backgroundColor: AppConstants.kycWizardSurface,
         body: DecoratedBox(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                AppConstants.heroStart,
-                AppConstants.heroEnd,
-                AppConstants.background,
+                AppConstants.kycWizardHeroTop,
+                AppConstants.kycWizardHeroMid,
+                AppConstants.kycWizardHeroBottom,
+                AppConstants.kycWizardSurface,
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              stops: [0, 0.23, 0.24],
+              stops: [0, 0.18, 0.42, 0.43],
             ),
           ),
           child: SafeArea(
             child: Column(
               children: [
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    18,
-                    isCompactHeader ? 8 : 12,
-                    18,
-                    12,
-                  ),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 240),
-                    curve: Curves.easeOutCubic,
-                    width: double.infinity,
-                    padding: EdgeInsets.all(headerPadding),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withValues(alpha: 0.14),
-                          Colors.white.withValues(alpha: 0.06),
+                if (online.maybeWhen(data: (v) => !v, orElse: () => false))
+                  Material(
+                    color: AppConstants.warningSurface,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.wifi_off_rounded,
+                              color: AppConstants.warning, size: 22),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'You appear offline. Check your connection before saving — uploads will resume when you retry.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppConstants.textPrimary.withValues(
+                                    alpha: 0.92),
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
                         ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.10),
                       ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            InkWell(
-                              borderRadius: BorderRadius.circular(18),
-                              onTap: () async {
-                                if (state.currentStep > 1) {
-                                  _toStep(state.currentStep - 1);
-                                  return;
-                                }
-
-                                FocusManager.instance.primaryFocus?.unfocus();
-                                final shouldExit = await _showExitDialog();
-                                if (!context.mounted) {
-                                  return;
-                                }
-                                if (shouldExit) {
-                                  context.pop();
-                                }
-                              },
-                              child: Ink(
-                                width: 42,
-                                height: 42,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: const Icon(
-                                  Icons.arrow_back_ios_new_rounded,
-                                  size: 18,
-                                  color: Colors.white,
-                                ),
+                  ),
+                if (kycState.pendingRetryStep != null)
+                  Material(
+                    color: AppConstants.errorSurface,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.cloud_off_outlined,
+                              color: AppConstants.error, size: 22),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Last send failed (network). You can retry without losing your entries.',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppConstants.textPrimary.withValues(
+                                    alpha: 0.9),
                               ),
                             ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                'Step ${state.currentStep} of 7',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'OpticEdge FO KYC',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.3,
-                            color: Color(0xFFDCE7F3),
                           ),
-                        ),
-                        SizedBox(height: isCompactHeader ? 4 : 6),
-                        Text(
-                          descriptor.title,
-                          maxLines: isCompactHeader ? 2 : 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: titleFontSize,
-                            fontWeight: FontWeight.w800,
-                            height: 1.1,
-                            color: Colors.white,
+                          TextButton(
+                            onPressed: kycState.isSubmitting
+                                ? null
+                                : () => ref
+                                    .read(kycProvider.notifier)
+                                    .retryLastFailedSubmission(),
+                            child: const Text('Retry'),
                           ),
-                        ),
-                        SizedBox(height: isCompactHeader ? 6 : 8),
-                        Text(
-                          descriptor.subtitle,
-                          maxLines: isCompactHeader ? 2 : 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            height: 1.45,
-                            color: Color(0xFFE5EEF8),
-                          ),
-                        ),
-                        SizedBox(height: isCompactHeader ? 12 : 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(999),
-                                child: LinearProgressIndicator(
-                                  minHeight: 8,
-                                  value: progress,
-                                  backgroundColor:
-                                      Colors.white.withValues(alpha: 0.14),
-                                  valueColor:
-                                      const AlwaysStoppedAnimation<Color>(
-                                    AppConstants.primaryLight,
+                        ],
+                      ),
+                    ),
+                  ),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(14, 6, 18, 0),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _stepLabels[stepIndex - 1],
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppConstants.kycWizardHeaderTitle,
+                                    letterSpacing: -0.2,
                                   ),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              '${(progress * 100).round()}%',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: isCompactHeader ? 12 : 14),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.08),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _stepSummaries[stepIndex - 1].title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white.withValues(alpha: 0.72),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: AppConstants.primaryLight
-                                      .withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Icon(
-                                  currentStepIcon,
-                                  size: 18,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _stepLabels[state.currentStep - 1],
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Guided field capture for step ${state.currentStep}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white.withValues(
-                                          alpha: 0.72,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-                    decoration: BoxDecoration(
-                      color: AppConstants.surface,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Container(
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor:
+                                  AppConstants.kycWizardHeaderTitle,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppConstants.primarySurface,
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: const Text(
-                                'Step journey',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppConstants.primaryDark,
-                                ),
+                                  horizontal: 8, vertical: 4),
+                              minimumSize: const Size(48, 40),
+                            ),
+                            onPressed: () async {
+                              if (widget.routeStep > 1) {
+                                final id = ref.read(kycProvider).customerId;
+                                ref
+                                    .read(kycProvider.notifier)
+                                    .setActiveStep(widget.routeStep - 1);
+                                _goToStep(widget.routeStep - 1, id);
+                                return;
+                              }
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              final shouldExit = await _showExitDialog();
+                              if (!context.mounted) {
+                                return;
+                              }
+                              if (shouldExit) {
+                                context.go('/dashboard');
+                              }
+                            },
+                            child: Text(
+                              widget.routeStep > 1 ? 'Previous' : 'Exit',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
                               ),
                             ),
-                            const Spacer(),
-                            Text(
-                              '${7 - state.currentStep} remaining',
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.14),
+                              ),
+                            ),
+                            child: Text(
+                              'Step $stepIndex/7',
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: AppConstants.textSecondary,
+                                color: AppConstants.kycWizardHeaderTitle,
                               ),
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          minHeight: 4,
+                          value: progress,
+                          backgroundColor:
+                              Colors.white.withValues(alpha: 0.12),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppConstants.kycWizardAccentLine,
+                          ),
                         ),
-                        const SizedBox(height: 12),
-                        StepIndicator(
-                          totalSteps: 7,
-                          currentStep: state.currentStep,
-                          labels: _stepLabels,
-                          compact: isCompactHeader,
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
                   ),
                 ),
                 Expanded(
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: AppConstants.surface,
+                      color: AppConstants.kycWizardSurface,
                       borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(32),
+                        top: Radius.circular(28),
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
-                          blurRadius: 22,
-                          offset: const Offset(0, -10),
+                          color: const Color(0xFF0B1220).withValues(alpha: 0.08),
+                          blurRadius: 28,
+                          offset: const Offset(0, -12),
                         ),
                       ],
                     ),
@@ -591,8 +477,8 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
                                   colors: [
-                                    Color(0xFFFFF7ED),
-                                    Color(0xFFFFFBF5),
+                                    AppConstants.kycWizardInsightTop,
+                                    AppConstants.kycWizardInsightBottom,
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -600,7 +486,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: AppConstants.primary.withValues(
-                                    alpha: 0.12,
+                                    alpha: 0.14,
                                   ),
                                 ),
                               ),
@@ -611,13 +497,18 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                                     width: 34,
                                     height: 34,
                                     decoration: BoxDecoration(
-                                      color: AppConstants.primarySurface,
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          AppConstants.primary,
+                                          AppConstants.primaryDark,
+                                        ],
+                                      ),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Icon(
                                       Icons.auto_awesome_rounded,
                                       size: 18,
-                                      color: AppConstants.primary,
+                                      color: Colors.white,
                                     ),
                                   ),
                                   const SizedBox(width: 10),
@@ -636,21 +527,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                               ),
                             ),
                           ),
-                        Expanded(
-                          child: PageView(
-                            controller: _pageCtrl,
-                            physics: const NeverScrollableScrollPhysics(),
-                            children: const [
-                              Step1DeviceScreen(),
-                              Step2IdentityScreen(),
-                              Step3ContactScreen(),
-                              Step4IncomeScreen(),
-                              Step5NokScreen(),
-                              Step6ConsentScreen(),
-                              Step7SubmitScreen(),
-                            ],
-                          ),
-                        ),
+                        Expanded(child: _buildStepBody(stepIndex)),
                       ],
                     ),
                   ),

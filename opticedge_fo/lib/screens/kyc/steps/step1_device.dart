@@ -3,11 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../config/app_icon_assets.dart';
 import '../../../config/constants.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/models/kyc_flow_model.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/common/app_color_icon.dart';
 import '../../../widgets/common/photo_picker_tile.dart';
 
 class Step1DeviceScreen extends ConsumerStatefulWidget {
@@ -651,10 +653,10 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.campaign_outlined,
-            color: AppConstants.primary,
+          AppColorIcon(
+            assetName: AppIconAssets.register,
             size: 20,
+            semanticsLabel: 'Helpful script',
           ),
           SizedBox(width: 12),
           Expanded(
@@ -708,9 +710,13 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                   color: Colors.white.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(
-                  Icons.qr_code_scanner_rounded,
-                  color: Colors.white,
+                child: const Center(
+                  child: AppColorIcon(
+                    assetName: AppIconAssets.device,
+                    size: 22,
+                    tintColor: Colors.white,
+                    semanticsLabel: 'Device scan',
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -749,7 +755,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                 child: _overviewMetric(
                   label: 'Handset Setup',
                   value: '$deviceSetupCount/3',
-                  icon: Icons.inventory_2_outlined,
+                  iconAsset: AppIconAssets.handset,
                 ),
               ),
               const SizedBox(width: 10),
@@ -757,7 +763,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                 child: _overviewMetric(
                   label: 'Identifiers',
                   value: '$identifierCount/5',
-                  icon: Icons.confirmation_number_outlined,
+                  iconAsset: AppIconAssets.identity,
                 ),
               ),
               const SizedBox(width: 10),
@@ -765,7 +771,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                 child: _overviewMetric(
                   label: 'Photo Evidence',
                   value: '$attachedPhotos/3',
-                  icon: Icons.photo_camera_back_outlined,
+                  iconAsset: AppIconAssets.checklist,
                 ),
               ),
             ],
@@ -778,7 +784,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
   Widget _overviewMetric({
     required String label,
     required String value,
-    required IconData icon,
+    required String iconAsset,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -790,7 +796,12 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: Colors.white),
+          AppColorIcon(
+            assetName: iconAsset,
+            size: 18,
+            tintColor: Colors.white,
+            semanticsLabel: label,
+          ),
           const SizedBox(height: 10),
           Text(
             value,
@@ -839,9 +850,12 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(
-                  Icons.verified_outlined,
-                  color: AppConstants.success,
+                child: const Center(
+                  child: AppColorIcon(
+                    assetName: AppIconAssets.verified,
+                    size: 22,
+                    semanticsLabel: 'Verified handset',
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -872,19 +886,19 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
             runSpacing: 8,
             children: [
               _snapshotChip(
-                icon: Icons.smartphone_outlined,
+                iconAsset: AppIconAssets.handset,
                 label: state.deviceSpecs.isNotEmpty
                     ? state.deviceSpecs
                     : 'Device linked',
               ),
               if (state.imeiNumber.isNotEmpty)
                 _snapshotChip(
-                  icon: Icons.qr_code_2_rounded,
+                  iconAsset: AppIconAssets.device,
                   label: state.imeiNumber,
                 ),
               if (state.serialNumber.isNotEmpty)
                 _snapshotChip(
-                  icon: Icons.tag_outlined,
+                  iconAsset: AppIconAssets.checklist,
                   label: state.serialNumber,
                 ),
             ],
@@ -895,7 +909,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
   }
 
   Widget _snapshotChip({
-    required IconData icon,
+    required String iconAsset,
     required String label,
   }) {
     return Container(
@@ -908,7 +922,11 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppConstants.success),
+          AppColorIcon(
+            assetName: iconAsset,
+            size: 14,
+            semanticsLabel: label,
+          ),
           const SizedBox(width: 6),
           Text(
             label,
@@ -931,19 +949,19 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
       (
         title: 'Sticker',
         hint: 'IMEI lines visible',
-        icon: Icons.qr_code_scanner_rounded,
+        iconAsset: AppIconAssets.device,
         done: state.imeiPhoto != null,
       ),
       (
         title: 'Box',
         hint: 'Retail label captured',
-        icon: Icons.inventory_2_outlined,
+        iconAsset: AppIconAssets.checklist,
         done: state.deviceBoxPhoto != null,
       ),
       (
         title: 'Device',
         hint: 'Body condition shown',
-        icon: Icons.smartphone_outlined,
+        iconAsset: AppIconAssets.handset,
         done: state.devicePhoto != null,
       ),
     ];
@@ -987,7 +1005,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                   child: _scanStage(
                     title: steps[index].title,
                     hint: steps[index].hint,
-                    icon: steps[index].icon,
+                    iconAsset: steps[index].iconAsset,
                     done: steps[index].done,
                   ),
                 ),
@@ -1011,7 +1029,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
   Widget _scanStage({
     required String title,
     required String hint,
-    required IconData icon,
+    required String iconAsset,
     required bool done,
   }) {
     return AnimatedContainer(
@@ -1027,11 +1045,18 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
       ),
       child: Column(
         children: [
-          Icon(
-            done ? Icons.check_circle_rounded : icon,
-            size: 18,
-            color: done ? AppConstants.success : AppConstants.textSecondary,
-          ),
+          done
+              ? const AppColorIcon(
+                  assetName: AppIconAssets.submit,
+                  size: 18,
+                  semanticsLabel: 'Completed',
+                )
+              : AppColorIcon(
+                  assetName: iconAsset,
+                  size: 18,
+                  opacity: 0.9,
+                  semanticsLabel: title,
+                ),
           const SizedBox(height: 8),
           Text(
             title,

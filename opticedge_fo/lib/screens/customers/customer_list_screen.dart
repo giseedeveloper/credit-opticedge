@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +20,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen>
   late TabController _tabController;
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  Timer? _searchDebounce;
 
   static const _tabs = [
     ('all', 'All'),
@@ -55,10 +58,18 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen>
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _tabController.dispose();
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 420), () {
+      ref.read(customerListProvider.notifier).setSearch(value.trim());
+    });
   }
 
   @override
@@ -86,8 +97,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen>
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: TextField(
                   controller: _searchCtrl,
-                  onChanged: (v) =>
-                      ref.read(customerListProvider.notifier).setSearch(v),
+                  onChanged: _onSearchChanged,
                   decoration: InputDecoration(
                     hintText: 'Search name, phone, NIDA...',
                     hintStyle: const TextStyle(fontSize: 13),
@@ -95,6 +105,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen>
                     suffixIcon: _searchCtrl.text.isNotEmpty
                         ? GestureDetector(
                             onTap: () {
+                              _searchDebounce?.cancel();
                               _searchCtrl.clear();
                               ref
                                   .read(customerListProvider.notifier)

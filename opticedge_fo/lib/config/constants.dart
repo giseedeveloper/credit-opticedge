@@ -80,6 +80,16 @@ class AppConstants {
   static const Color ink = Color(0xFF0E1826);
   static const Color heroStart = Color(0xFF103454);
   static const Color heroEnd = Color(0xFF1F5A88);
+
+  /// KYC wizard — deep nautical header + warm surfaces (distinct from generic hero)
+  static const Color kycWizardHeroTop = Color(0xFF070E18);
+  static const Color kycWizardHeroMid = Color(0xFF0F2844);
+  static const Color kycWizardHeroBottom = Color(0xFF163A5E);
+  static const Color kycWizardAccentLine = Color(0xFFFF9F7A);
+  static const Color kycWizardHeaderTitle = Color(0xFFF8FAFC);
+  static const Color kycWizardSurface = Color(0xFFFBFCFE);
+  static const Color kycWizardInsightTop = Color(0xFFFFF8F4);
+  static const Color kycWizardInsightBottom = Color(0xFFFFF1E8);
   static const Color textPrimary = Color(0xFF111B2A);
   static const Color textSecondary = Color(0xFF607087);
   static const Color textHint = Color(0xFF94A3B8);

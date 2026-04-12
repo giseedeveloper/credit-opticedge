@@ -989,7 +989,7 @@ class VerificationWizard extends Component
             'fo_signature_path' => $this->storeSignature($this->foSignatureData, 'fo-signatures'),
             'asset_handover_list_path' => $this->storePhoto($this->assetHandoverList, 'handover'),
             'asset_handover_notes' => $this->assetHandoverNotes !== '' ? trim($this->assetHandoverNotes) : null,
-            'deposit_payment_status' => $successfulPayment->status,
+            'deposit_payment_status' => 'completed',
             'deposit_payment_amount' => $successfulPayment->amount,
             'deposit_payment_reference' => $successfulPayment->selcom_reference ?: $successfulPayment->transid,
             'deposit_paid_at' => $successfulPayment->paid_at,

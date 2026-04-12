@@ -155,7 +155,13 @@ class Customer extends Model implements HasMedia
 
     public function hasSuccessfulDepositPayment(): bool
     {
-        return $this->deposit_payment_status === 'completed';
+        if ($this->deposit_payment_status === 'completed') {
+            return true;
+        }
+
+        // Legacy rows: deposit was completed in Selcom while snapshot stored a non-completed `status` string
+        return $this->deposit_paid_at !== null
+            && filled($this->deposit_payment_reference);
     }
 
     public function hasAcceptedAgreement(): bool

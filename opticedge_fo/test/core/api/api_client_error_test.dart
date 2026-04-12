@@ -20,7 +20,7 @@ void main() {
 
     expect(
       ApiClient.instance.parseError(error),
-      'Upload was interrupted before the server finished reading it. Retake the handover image more closely and try again.',
+      'Upload was interrupted. Try again with a smaller file or a stronger connection.',
     );
   });
 
@@ -37,7 +37,25 @@ void main() {
 
     expect(
       ApiClient.instance.parseError(error),
-      'Cannot reach the API server at ${AppConstants.baseUrl}. Check that the backend is running, then try again.',
+      'No connection to the service. Check your internet or try again later.',
+    );
+  });
+
+  test(
+      'ApiClient maps Dio connection failed boilerplate to a clean login-friendly message',
+      () {
+    ApiClient.instance.init();
+
+    final error = DioException(
+      requestOptions: RequestOptions(path: '/login'),
+      type: DioExceptionType.connectionError,
+      message:
+          'The connection errored: Connection failed This indicates an error which most likely cannot be solved by the library.',
+    );
+
+    expect(
+      ApiClient.instance.parseError(error),
+      'Connection failed. Check your internet or VPN, then try again.',
     );
   });
 

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/app_icon_assets.dart';
 import '../../config/constants.dart';
+import '../../config/design_tokens.dart';
 import '../../core/models/dashboard_model.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/connectivity_provider.dart';
 import '../../core/providers/customer_provider.dart';
 import '../../core/l10n/app_strings.dart';
+import '../../widgets/common/app_color_icon.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -43,6 +47,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     final dashAsync = ref.watch(dashboardProvider);
+    final onlineAsync = ref.watch(onlineStatusProvider);
     final theme = Theme.of(context);
     final s = S.of(ref);
 
@@ -55,7 +60,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         },
         child: CustomScrollView(
           slivers: [
-            _buildAppBar(user, dashAsync.valueOrNull),
+            _buildAppBar(user, dashAsync.valueOrNull, onlineAsync),
             SliverPadding(
               padding: const EdgeInsets.all(20),
               sliver: SliverList(
@@ -80,7 +85,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildSectionTitle(s.recentCustomers),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionTitle(s.recentCustomers),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Latest registrations and status changes',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.55),
+                            ),
+                          ),
+                        ],
+                      ),
                       TextButton(
                         onPressed: () => context.go('/customers'),
                         child: Text(s.seeAll,
@@ -105,12 +125,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return '${s.weekdays[now.weekday - 1]}, ${now.day} ${s.months[now.month - 1]}';
   }
 
-  SliverAppBar _buildAppBar(user, DashboardStats? stats) {
+  SliverAppBar _buildAppBar(
+    user,
+    DashboardStats? stats,
+    AsyncValue<bool> onlineAsync,
+  ) {
     final s = S.of(ref);
     final insight = stats ?? DashboardStats.empty;
+    final isOnline = onlineAsync.maybeWhen(data: (v) => v, orElse: () => true);
 
     return SliverAppBar(
-      expandedHeight: 290,
+      expandedHeight: 345,
       pinned: true,
       elevation: 0,
       backgroundColor: AppConstants.heroStart,
@@ -119,18 +144,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           fit: StackFit.expand,
           children: [
             Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppConstants.heroStart,
-                    AppConstants.heroEnd,
-                    Color(0xFF10263F),
-                  ],
-                  stops: [0.0, 0.62, 1.0],
-                ),
-              ),
+              decoration: BoxDecoration(gradient: DesignTokens.heroGradient),
             ),
             Positioned(
               top: -40,
@@ -200,7 +214,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           children: [
                             _heroActionButton(
                               icon: Icons.notifications_none_rounded,
-                              dotColor: const Color(0xFF4ADE80),
+                              dotColor: insight.pending > 0
+                                  ? const Color(0xFFFDE68A)
+                                  : null,
+                              badgeCount:
+                                  insight.pending > 0 ? insight.pending : null,
+                              semanticsLabel: insight.pending > 0
+                                  ? 'View ${insight.pending} pending applications'
+                                  : 'No pending applications',
+                              onTap: insight.pending > 0
+                                  ? () =>
+                                      context.go('/customers?tab=pending')
+                                  : null,
                             ),
                             const SizedBox(width: 10),
                             GestureDetector(
@@ -244,8 +269,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           ),
                         _heroChip(
                           icon: Icons.circle,
-                          label: 'Online',
-                          iconColor: const Color(0xFF4ADE80),
+                          label: isOnline ? 'Online' : 'Offline',
+                          iconColor: isOnline
+                              ? const Color(0xFF4ADE80)
+                              : AppConstants.textHint,
                         ),
                         _heroChip(
                           icon: Icons.inventory_2_outlined,
@@ -253,7 +280,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 14),
                     GestureDetector(
                       onTap: () => context.go('/customers'),
                       child: Container(
@@ -283,7 +310,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 14),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -331,8 +358,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Widget _heroActionButton({
     required IconData icon,
     Color? dotColor,
+    int? badgeCount,
+    VoidCallback? onTap,
+    String? semanticsLabel,
   }) {
-    return Container(
+    final child = Container(
       width: 48,
       height: 48,
       decoration: BoxDecoration(
@@ -340,11 +370,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         borderRadius: BorderRadius.circular(16),
       ),
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           Center(
             child: Icon(icon, color: Colors.white, size: 22),
           ),
-          if (dotColor != null)
+          if (dotColor != null && badgeCount == null)
             Positioned(
               top: 10,
               right: 10,
@@ -357,7 +388,50 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 ),
               ),
             ),
+          if (badgeCount != null && badgeCount > 0)
+            Positioned(
+              top: 4,
+              right: 2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppConstants.primary,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+                ),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                child: Text(
+                  badgeCount > 99 ? '99+' : '$badgeCount',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
         ],
+      ),
+    );
+
+    if (onTap == null) {
+      return Semantics(
+        label: semanticsLabel ?? 'Notifications',
+        child: child,
+      );
+    }
+
+    return Semantics(
+      button: true,
+      label: semanticsLabel ?? 'Notifications',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: child,
+        ),
       ),
     );
   }
@@ -434,7 +508,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         label: s.total,
         value: stats.totalRegistered.toString(),
         note: 'Customers onboarded',
-        icon: Icons.people_alt_outlined,
+        iconAsset: AppIconAssets.customers,
         color: const Color(0xFF2F80ED),
         background: const Color(0xFFF4F8FF),
         accent: const Color(0xFFDCEAFF),
@@ -443,7 +517,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         label: s.drafts,
         value: stats.drafts.toString(),
         note: 'Need completion',
-        icon: Icons.edit_note_rounded,
+        iconAsset: AppIconAssets.drafts,
         color: const Color(0xFFF59E0B),
         background: const Color(0xFFFFF8EC),
         accent: const Color(0xFFFFE9BF),
@@ -452,7 +526,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         label: s.pending,
         value: stats.pending.toString(),
         note: 'Waiting review',
-        icon: Icons.timelapse_rounded,
+        iconAsset: AppIconAssets.pending,
         color: const Color(0xFF8B5CF6),
         background: const Color(0xFFF6F1FF),
         accent: const Color(0xFFE6DAFF),
@@ -461,7 +535,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         label: s.verified,
         value: stats.verified.toString(),
         note: 'Ready to release',
-        icon: Icons.verified_rounded,
+        iconAsset: AppIconAssets.verified,
         color: AppConstants.success,
         background: const Color(0xFFECFDF5),
         accent: const Color(0xFFCFF8E3),
@@ -495,7 +569,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         _ActionData(
           label: s.registerCustomer,
           caption: 'Start a new KYC flow',
-          icon: Icons.person_add_alt_1_rounded,
+          iconAsset: AppIconAssets.register,
           color: AppConstants.primary,
           surface: const Color(0xFFFFF4EC),
           onTap: () => context.go('/kyc/new'),
@@ -503,7 +577,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       _ActionData(
         label: s.myCustomers,
         caption: 'Review active customers',
-        icon: Icons.groups_rounded,
+        iconAsset: AppIconAssets.customers,
         color: const Color(0xFF2F80ED),
         surface: const Color(0xFFF1F7FF),
         onTap: () => context.go('/customers'),
@@ -511,7 +585,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       _ActionData(
         label: s.search,
         caption: 'Find by name, phone or NIDA',
-        icon: Icons.manage_search_rounded,
+        iconAsset: AppIconAssets.search,
         color: const Color(0xFF8B5CF6),
         surface: const Color(0xFFF7F3FF),
         onTap: () => context.go('/customers'),
@@ -519,7 +593,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       _ActionData(
         label: s.drafts,
         caption: 'Resume unfinished onboarding',
-        icon: Icons.inventory_2_rounded,
+        iconAsset: AppIconAssets.checklist,
         color: const Color(0xFFF59E0B),
         surface: const Color(0xFFFFF9ED),
         onTap: () => context.go('/customers?tab=draft'),
@@ -564,7 +638,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 color: action.color.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(action.icon, color: action.color, size: 24),
+              child: Center(
+                child: AppColorIcon(
+                  assetName: action.iconAsset,
+                  size: 24,
+                  semanticsLabel: action.label,
+                ),
+              ),
             ),
             const Spacer(),
             Text(
@@ -679,8 +759,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       padding: const EdgeInsets.symmetric(vertical: 32),
       child: Column(
         children: [
-          Icon(Icons.people_outline_rounded,
-              size: 48, color: theme.dividerColor),
+          AppColorIcon(
+            assetName: AppIconAssets.customers,
+            size: 48,
+            opacity: 0.45,
+            tintColor: theme.dividerColor,
+            semanticsLabel: 'No customers',
+          ),
           const SizedBox(height: 12),
           Text(S.of(ref).noCustomersYet,
               style: TextStyle(
@@ -724,7 +809,7 @@ class _StatData {
   final String label;
   final String value;
   final String note;
-  final IconData icon;
+  final String iconAsset;
   final Color color;
   final Color background;
   final Color accent;
@@ -733,7 +818,7 @@ class _StatData {
     required this.label,
     required this.value,
     required this.note,
-    required this.icon,
+    required this.iconAsset,
     required this.color,
     required this.background,
     required this.accent,
@@ -743,7 +828,7 @@ class _StatData {
 class _ActionData {
   final String label;
   final String caption;
-  final IconData icon;
+  final String iconAsset;
   final Color color;
   final Color surface;
   final VoidCallback onTap;
@@ -751,7 +836,7 @@ class _ActionData {
   const _ActionData({
     required this.label,
     required this.caption,
-    required this.icon,
+    required this.iconAsset,
     required this.color,
     required this.surface,
     required this.onTap,
@@ -828,10 +913,12 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> {
                         color: widget.data.accent,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Icon(
-                        widget.data.icon,
-                        color: widget.data.color,
-                        size: 24,
+                      child: Center(
+                        child: AppColorIcon(
+                          assetName: widget.data.iconAsset,
+                          size: 24,
+                          semanticsLabel: widget.data.label,
+                        ),
                       ),
                     ),
                     Container(

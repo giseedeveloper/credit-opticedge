@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../config/constants.dart';
+import '../../core/utils/kyc_upload_limits.dart';
 
 class PhotoPickerTile extends StatelessWidget {
   final String label;
@@ -24,7 +25,19 @@ class PhotoPickerTile extends StatelessWidget {
       imageQuality: 75,
       maxWidth: 1200,
     );
-    if (picked != null) onPicked(File(picked.path));
+    if (picked != null) {
+      final file = File(picked.path);
+      final msg = KycUploadLimits.validateOptional(file, label);
+      if (msg != null) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(msg)),
+          );
+        }
+        return;
+      }
+      onPicked(file);
+    }
   }
 
   void _showOptions(BuildContext context) {
@@ -112,7 +125,12 @@ class PhotoPickerTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: file != null
+          ? '$label — photo attached, tap to replace'
+          : '$label — add photo',
+      child: GestureDetector(
       onTap: () => _showOptions(context),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -266,6 +284,7 @@ class PhotoPickerTile extends StatelessWidget {
           );
         },
       ),
+    ),
     );
   }
 }

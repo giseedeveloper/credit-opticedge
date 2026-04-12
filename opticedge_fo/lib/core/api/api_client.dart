@@ -94,6 +94,47 @@ class ApiClient {
     );
   }
 
+  /// User-facing text for transport failures (short, no URLs or dev jargon).
+  String _friendlyConnectionError(DioException error) {
+    final msg = (error.message ?? '').toLowerCase();
+    final underlying = (error.error?.toString() ?? '').toLowerCase();
+    final combined = '$msg $underlying';
+
+    if (combined.contains('connection refused') ||
+        combined.contains('failed to fetch') ||
+        combined.contains('xmlhttprequest error') ||
+        combined.contains('err_connection_refused')) {
+      return 'No connection to the service. Check your internet or try again later.';
+    }
+    if (combined.contains('closed before full header') ||
+        combined.contains('connection terminated') ||
+        combined.contains('connection closed')) {
+      return 'Upload was interrupted. Try again with a smaller file or a stronger connection.';
+    }
+    if (combined.contains('failed host lookup') ||
+        combined.contains('nodename nor servname') ||
+        combined.contains('name or service not known')) {
+      return 'Internet looks unstable. Check Wi‑Fi or mobile data, then try again.';
+    }
+    if (combined.contains('certificate') ||
+        combined.contains('ssl') ||
+        combined.contains('handshake') ||
+        combined.contains('cert_verify')) {
+      return 'Secure connection failed. Check this device\'s date and time, then try again.';
+    }
+    if (combined.contains('network is unreachable') ||
+        combined.contains('no route to host')) {
+      return 'You appear to be offline. Turn on Wi‑Fi or mobile data.';
+    }
+    if (combined.contains('connection failed') ||
+        combined.contains('connection errored') ||
+        combined.contains('socketexception')) {
+      return 'Connection failed. Check your internet or VPN, then try again.';
+    }
+
+    return 'Something went wrong with the network. Please try again.';
+  }
+
   String parseError(dynamic error) {
     if (error is DioException) {
       final data = error.response?.data;
@@ -114,27 +155,10 @@ class ApiClient {
       if (error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.sendTimeout ||
           error.type == DioExceptionType.receiveTimeout) {
-        return 'Request took too long. Try again with a smaller handover image or a stronger connection.';
+        return 'Request timed out. Check your connection or try again with a smaller upload.';
       }
       if (error.type == DioExceptionType.connectionError) {
-        final message = (error.message ?? '').toLowerCase();
-        final activeBaseUrl =
-            _initialized ? _dio.options.baseUrl : AppConstants.baseUrl;
-        if (message.contains('connection refused') ||
-            message.contains('failed to fetch') ||
-            message.contains('xmlhttprequest error')) {
-          return 'Cannot reach the API server at $activeBaseUrl. Check that the backend is running, then try again.';
-        }
-        if (message.contains('closed before full header') ||
-            message.contains('connection terminated') ||
-            message.contains('connection closed')) {
-          return 'Upload was interrupted before the server finished reading it. Retake the handover image more closely and try again.';
-        }
-        if (error.message != null && error.message!.trim().isNotEmpty) {
-          return 'Network issue: ${error.message}';
-        }
-
-        return 'No internet connection.';
+        return _friendlyConnectionError(error);
       }
       if (error.response?.statusCode == 401) {
         return 'Session expired. Please login again.';
@@ -149,7 +173,7 @@ class ApiClient {
         return 'Validation failed. Check your inputs.';
       }
       if (error.response?.statusCode != null) {
-        return 'Request failed (${error.response?.statusCode}). Please try again.';
+        return 'Something went wrong (${error.response?.statusCode}). Please try again.';
       }
     }
     return 'Something went wrong. Please try again.';

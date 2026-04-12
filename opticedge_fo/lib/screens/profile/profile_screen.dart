@@ -147,26 +147,26 @@ class ProfileScreen extends ConsumerWidget {
               onPressed: () async {
                 final confirm = await showDialog<bool>(
                   context: context,
-                  builder: (_) => AlertDialog(
+                  builder: (dialogContext) => AlertDialog(
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16)),
                     title: Text(s.signOut),
                     content: Text(s.signOutConfirm),
                     actions: [
                       TextButton(
-                          onPressed: () => Navigator.pop(context, false),
+                          onPressed: () => Navigator.pop(dialogContext, false),
                           child: Text(s.cancel)),
                       TextButton(
-                        onPressed: () => Navigator.pop(context, true),
+                        onPressed: () => Navigator.pop(dialogContext, true),
                         child: Text(s.signOut,
                             style: const TextStyle(color: AppConstants.error)),
                       ),
                     ],
                   ),
                 );
-                if (confirm == true) {
-                  await ref.read(authProvider.notifier).logout();
-                  if (context.mounted) context.go('/login');
+                if (confirm == true && context.mounted) {
+                  context.go('/login');
+                  ref.read(authProvider.notifier).logout();
                 }
               },
             ),

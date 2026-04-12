@@ -19,7 +19,7 @@
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">All registered customers — verified, pending and unverified</p>
             </div>
         </div>
-        <a href="{{ route('kyc.wizard') }}" wire:navigate
+        <a href="{{ route('kyc.wizard') }}"
            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:opacity-90 transition-opacity shadow-sm">
             <x-fluent-icon name="user-plus" size="xs" palette="emerald" />
             New KYC Wizard

@@ -167,7 +167,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 20,
                 offset: const Offset(0, 6),
               ),
@@ -200,7 +200,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           s.fieldOfficerPortal,
           style: TextStyle(
             fontSize: 14,
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
             fontWeight: FontWeight.w400,
           ),
         ),
@@ -368,6 +368,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               icon: Icons.login_rounded,
               onPressed: _login,
             ),
+
+            if (authState.canUseBiometricUnlock) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: authState.isLoading
+                      ? null
+                      : () {
+                          ref
+                              .read(authProvider.notifier)
+                              .unlockWithBiometrics();
+                        },
+                  icon: const Icon(Icons.fingerprint_rounded, size: 20),
+                  label: const Text(
+                    'Unlock with biometrics',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppConstants.primary,
+                    side: BorderSide(
+                      color: AppConstants.primary.withValues(alpha: 0.25),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Use your saved fingerprint or Face ID to unlock the last active session.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.textTheme.bodySmall?.color,
+                  height: 1.45,
+                ),
+              ),
+            ],
 
             const SizedBox(height: 20),
 

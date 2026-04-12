@@ -604,7 +604,7 @@ class KycApiController extends Controller
             'fo_signature_path' => $this->storeSignatureDataUrl($validated['fo_signature'] ?? null, 'fo-signatures') ?? $customer->fo_signature_path,
             'asset_handover_list_path' => $this->storeFile($request, 'asset_handover_list', 'handover') ?? $customer->asset_handover_list_path,
             'asset_handover_notes' => $validated['asset_handover_notes'] ?? null,
-            'deposit_payment_status' => $successfulPayment->status,
+            'deposit_payment_status' => 'completed',
             'deposit_payment_amount' => $successfulPayment->amount,
             'deposit_payment_reference' => $successfulPayment->selcom_reference ?: $successfulPayment->transid,
             'deposit_paid_at' => $successfulPayment->paid_at,
@@ -906,6 +906,10 @@ class KycApiController extends Controller
 
         if (! $customer->hasAssetHandoverRecord()) {
             return $this->errorResponse('Asset handover checklist is required before release.', 422);
+        }
+
+        if (! filled($customer->agreement_document_id)) {
+            return $this->errorResponse('Agreement document must be on file before release.', 422);
         }
 
         if ($customer->isAssetReleased()) {
@@ -1210,6 +1214,50 @@ class KycApiController extends Controller
     }
 
     /**
+     * Human-readable reasons the FO cannot release yet (empty when ready or already released).
+     *
+     * @return list<string>
+     */
+    private function releaseEligibilityBlockers(Customer $customer): array
+    {
+        if ($customer->isAssetReleased()) {
+            return [];
+        }
+
+        $blockers = [];
+
+        if (! $customer->hasApprovedKyc()) {
+            $blockers[] = 'KYC must be approved before release.';
+        }
+
+        if (! $customer->hasSuccessfulDepositPayment()) {
+            $blockers[] = 'Deposit payment must be completed.';
+        }
+
+        if (! $customer->hasAcceptedAgreement()) {
+            $blockers[] = 'Customer must accept the agreement.';
+        }
+
+        if (! $customer->hasCapturedSignatures()) {
+            $blockers[] = 'Customer and FO signatures are required.';
+        }
+
+        if (! $customer->hasAssetHandoverRecord()) {
+            $blockers[] = 'Handover checklist upload is required.';
+        }
+
+        if (! filled($customer->agreement_document_id)) {
+            $blockers[] = 'Agreement document is not linked to this application.';
+        }
+
+        if (! filled($customer->inventory_unit_id)) {
+            $blockers[] = 'No inventory unit is linked.';
+        }
+
+        return $blockers;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function serializeReleaseSummary(Customer $customer): array
@@ -1219,6 +1267,7 @@ class KycApiController extends Controller
             'released_at' => $customer->asset_released_at?->toDateTimeString(),
             'released_by' => $customer->assetReleasedBy?->name,
             'can_release_asset' => $customer->isReadyForAssetRelease(),
+            'eligibility_blockers' => $this->releaseEligibilityBlockers($customer),
             'inventory_unit_id' => $customer->inventory_unit_id,
             'inventory_unit_status' => $customer->inventoryUnit?->status,
         ];

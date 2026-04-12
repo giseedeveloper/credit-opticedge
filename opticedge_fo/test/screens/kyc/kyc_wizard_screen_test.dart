@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:opticedge_fo/core/models/dashboard_model.dart';
 import 'package:opticedge_fo/core/models/kyc_flow_model.dart';
 import 'package:opticedge_fo/core/providers/kyc_provider.dart';
@@ -12,6 +13,7 @@ class _BootstrapDraftNotifier extends KycNotifier {
     state = const KycDraftState(
       customerId: 'draft-001',
       currentStep: 4,
+      maxReachableStep: 4,
       brandId: 'brand-1',
       phoneModelId: 'model-1',
       inventoryUnitId: 'unit-1',
@@ -32,7 +34,7 @@ class _BootstrapDraftNotifier extends KycNotifier {
 }
 
 void main() {
-  testWidgets('draft bootstrap waits for the page view before jumping steps',
+  testWidgets('draft bootstrap navigates to resumed step route',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2160);
     tester.view.devicePixelRatio = 3.0;
@@ -94,8 +96,24 @@ void main() {
             ],
           ),
         ],
-        child: const MaterialApp(
-          home: KycWizardScreen(draftCustomerId: 'draft-001'),
+        child: MaterialApp.router(
+          routerConfig: GoRouter(
+            initialLocation: '/kyc/new/step/1?draft=draft-001',
+            routes: [
+              GoRoute(
+                path: '/kyc/new/step/:step',
+                builder: (context, state) {
+                  final step =
+                      int.tryParse(state.pathParameters['step'] ?? '1') ?? 1;
+                  final draft = state.uri.queryParameters['draft'];
+                  return KycWizardScreen(
+                    routeStep: step.clamp(1, 7),
+                    draftCustomerId: draft,
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

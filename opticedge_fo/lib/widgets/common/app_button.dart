@@ -10,6 +10,9 @@ class AppButton extends StatelessWidget {
   final Color? color;
   final double? width;
 
+  /// Screen reader label (defaults to [label]).
+  final String? semanticsLabel;
+
   const AppButton({
     super.key,
     required this.label,
@@ -19,6 +22,7 @@ class AppButton extends StatelessWidget {
     this.icon,
     this.color,
     this.width,
+    this.semanticsLabel,
   });
 
   @override
@@ -45,61 +49,72 @@ class AppButton extends StatelessWidget {
           );
 
     if (outlined) {
-      return SizedBox(
-        width: width,
-        child: OutlinedButton(
-          onPressed: isLoading ? null : onPressed,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: bg,
-            side: BorderSide(color: bg, width: 1.5),
-            backgroundColor: Colors.white.withValues(alpha: 0.88),
-            padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 24),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      return Semantics(
+        button: true,
+        label: semanticsLabel ?? label,
+        enabled: onPressed != null && !isLoading,
+        child: SizedBox(
+          width: width,
+          child: OutlinedButton(
+            onPressed: isLoading ? null : onPressed,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: bg,
+              side: BorderSide(color: bg, width: 1.5),
+              backgroundColor: Colors.white.withValues(alpha: 0.88),
+              padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: child,
           ),
-          child: child,
         ),
       );
     }
 
-    return SizedBox(
-      width: width,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              bg,
-              Color.lerp(bg, AppConstants.primaryDark, 0.35) ??
-                  AppConstants.primaryDark,
+    return Semantics(
+      button: true,
+      label: semanticsLabel ?? label,
+      enabled: onPressed != null && !isLoading,
+      child: SizedBox(
+        width: width,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                bg,
+                Color.lerp(bg, AppConstants.primaryDark, 0.35) ??
+                    AppConstants.primaryDark,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: bg.withValues(alpha: 0.28),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
             ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: bg.withValues(alpha: 0.28),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
+          child: ElevatedButton(
+            onPressed: isLoading ? null : onPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.transparent,
+              disabledForegroundColor: Colors.white.withValues(alpha: 0.72),
+              shadowColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              elevation: 0,
             ),
-          ],
-        ),
-        child: ElevatedButton(
-          onPressed: isLoading ? null : onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: Colors.transparent,
-            disabledForegroundColor: Colors.white.withValues(alpha: 0.72),
-            shadowColor: Colors.transparent,
-            surfaceTintColor: Colors.transparent,
-            padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 24),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            elevation: 0,
+            child: child,
           ),
-          child: child,
         ),
       ),
     );

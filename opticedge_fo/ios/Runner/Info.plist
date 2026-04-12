@@ -10,6 +10,8 @@
 	<string>Opticedge FO</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Required to capture customer and document photos for KYC registration</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Required to securely unlock the saved Opticedge FO session with Face ID</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Required to select photos from gallery for KYC registration</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

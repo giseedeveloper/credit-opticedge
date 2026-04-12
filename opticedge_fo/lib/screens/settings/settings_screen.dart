@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/providers/auth_provider.dart';
@@ -270,29 +271,31 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmLogout(BuildContext context, WidgetRef ref) {
-    showDialog(
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Log Out'),
         content: const Text('Are you sure you want to log out?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ref.read(authProvider.notifier).logout();
-            },
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Log Out',
                 style: TextStyle(color: AppConstants.error)),
           ),
         ],
       ),
     );
+
+    if (confirm == true && context.mounted) {
+      context.go('/login');
+      ref.read(authProvider.notifier).logout();
+    }
   }
 
   void _confirmClear(BuildContext context, WidgetRef ref) {
@@ -605,7 +608,8 @@ class _SwitchTile extends StatelessWidget {
           Switch.adaptive(
             value: value,
             onChanged: onChanged,
-            activeColor: AppConstants.primary,
+            activeThumbColor: AppConstants.primary,
+            activeTrackColor: AppConstants.primary.withValues(alpha: 0.35),
           ),
         ],
       ),

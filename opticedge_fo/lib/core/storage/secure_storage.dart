@@ -40,6 +40,14 @@ class SecureStorageService {
     await _storage.write(key: key, value: value);
   }
 
+  Future<void> delete(String key) async {
+    await _storage.delete(key: key);
+  }
+
+  Future<void> deleteUser() async {
+    await _storage.delete(key: AppConstants.userKey);
+  }
+
   Future<void> clearAll() async {
     await _storage.deleteAll();
   }

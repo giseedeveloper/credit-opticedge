@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'app_icon_assets.dart';
+import 'design_tokens.dart';
 import '../core/providers/auth_provider.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/auth/login_screen.dart';
@@ -11,6 +13,7 @@ import '../screens/kyc/kyc_wizard_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../core/l10n/app_strings.dart';
+import '../widgets/common/app_color_icon.dart';
 
 class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this._ref) {
@@ -70,9 +73,43 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/kyc/new',
-            builder: (_, state) => KycWizardScreen(
-              draftCustomerId: state.uri.queryParameters['draft'],
-            ),
+            redirect: (_, state) {
+              final draft = state.uri.queryParameters['draft'];
+              if (draft != null && draft.isNotEmpty) {
+                return '/kyc/new/step/1?draft=${Uri.encodeComponent(draft)}';
+              }
+              return '/kyc/new/step/1';
+            },
+          ),
+          GoRoute(
+            path: '/kyc/new/step/:step',
+            pageBuilder: (context, state) {
+              final raw = int.tryParse(state.pathParameters['step'] ?? '1') ?? 1;
+              final step = raw.clamp(1, 7);
+              return CustomTransitionPage<void>(
+                key: state.pageKey,
+                child: KycWizardScreen(
+                  routeStep: step,
+                  draftCustomerId: state.uri.queryParameters['draft'],
+                ),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                  return SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.08, 0),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    )),
+                    child: FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    ),
+                  );
+                },
+              );
+            },
           ),
           GoRoute(
             path: '/profile',
@@ -130,15 +167,15 @@ class _MainShell extends ConsumerWidget {
             child: Row(
               children: [
                 _NavItem(
-                  icon: Icons.dashboard_outlined,
-                  activeIcon: Icons.dashboard_rounded,
+                  iconAsset: AppIconAssets.dashboard,
+                  activeIconAsset: AppIconAssets.dashboard,
                   label: s.dashboard,
                   selected: _selectedIndex == 0,
                   onTap: () => context.go('/dashboard'),
                 ),
                 _NavItem(
-                  icon: Icons.people_outline_rounded,
-                  activeIcon: Icons.people_rounded,
+                  iconAsset: AppIconAssets.customers,
+                  activeIconAsset: AppIconAssets.customers,
                   label: s.customers,
                   selected: _selectedIndex == 1,
                   onTap: () => context.go('/customers'),
@@ -151,26 +188,32 @@ class _MainShell extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          width: 40,
-                          height: 40,
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFEA580C), Color(0xFFC2410C)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: DesignTokens.primaryLight
+                                  .withValues(alpha: 0.45),
+                              width: 1.2,
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFEA580C)
+                                color: DesignTokens.primary
                                     .withValues(alpha: 0.35),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
+                                blurRadius: 14,
+                                offset: const Offset(0, 6),
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.person_add_rounded,
-                              color: Colors.white, size: 20),
+                          child: const Center(
+                            child: AppColorIcon(
+                              assetName: AppIconAssets.register,
+                              size: 24,
+                              semanticsLabel: 'Register',
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Padding(
@@ -187,7 +230,7 @@ class _MainShell extends ConsumerWidget {
                                 style: const TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFFEA580C),
+                                  color: DesignTokens.primary,
                                 ),
                               ),
                             ),
@@ -198,15 +241,15 @@ class _MainShell extends ConsumerWidget {
                   ),
                 ),
                 _NavItem(
-                  icon: Icons.person_outline_rounded,
-                  activeIcon: Icons.person_rounded,
+                  iconAsset: AppIconAssets.profile,
+                  activeIconAsset: AppIconAssets.profile,
                   label: s.profile,
                   selected: _selectedIndex == 3,
                   onTap: () => context.go('/profile'),
                 ),
                 _NavItem(
-                  icon: Icons.settings_outlined,
-                  activeIcon: Icons.settings_rounded,
+                  iconAsset: AppIconAssets.settings,
+                  activeIconAsset: AppIconAssets.settings,
                   label: s.settings,
                   selected: _selectedIndex == 4,
                   onTap: () => context.go('/settings'),
@@ -221,15 +264,15 @@ class _MainShell extends ConsumerWidget {
 }
 
 class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final IconData activeIcon;
+  final String iconAsset;
+  final String activeIconAsset;
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
   const _NavItem({
-    required this.icon,
-    required this.activeIcon,
+    required this.iconAsset,
+    required this.activeIconAsset,
     required this.label,
     required this.selected,
     required this.onTap,
@@ -244,11 +287,25 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              selected ? activeIcon : icon,
-              size: 22,
-              color:
-                  selected ? const Color(0xFFEA580C) : const Color(0xFF9CA3AF),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: selected
+                    ? DesignTokens.navSelectedBg
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: AppColorIcon(
+                  assetName: selected ? activeIconAsset : iconAsset,
+                  size: 22,
+                  opacity: selected ? 1 : 0.58,
+                  semanticsLabel: label,
+                ),
+              ),
             ),
             const SizedBox(height: 4),
             Padding(
@@ -266,8 +323,8 @@ class _NavItem extends StatelessWidget {
                       fontSize: 9,
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                       color: selected
-                          ? const Color(0xFFEA580C)
-                          : const Color(0xFF9CA3AF),
+                          ? DesignTokens.navSelectedFg
+                          : DesignTokens.navUnselectedFg,
                     ),
                   ),
                 ),

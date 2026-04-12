@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../config/constants.dart';
+import '../common/app_color_icon.dart';
 
 class StepIndicator extends StatelessWidget {
   final int totalSteps;
   final int currentStep;
   final List<String> labels;
+  final List<String>? iconAssets;
   final bool compact;
   final bool onDarkBackground;
 
@@ -14,6 +16,7 @@ class StepIndicator extends StatelessWidget {
     required this.totalSteps,
     required this.currentStep,
     required this.labels,
+    this.iconAssets,
     this.compact = false,
     this.onDarkBackground = false,
   });
@@ -51,6 +54,9 @@ class StepIndicator extends StatelessWidget {
           final stepNumber = index + 1;
           final isDone = currentStep > stepNumber;
           final isActive = currentStep == stepNumber;
+          final iconAsset = iconAssets != null && index < iconAssets!.length
+              ? iconAssets![index]
+              : null;
 
           return AnimatedContainer(
             duration: const Duration(milliseconds: 260),
@@ -106,18 +112,25 @@ class StepIndicator extends StatelessWidget {
                     child: isDone
                         ? const Icon(Icons.check_rounded,
                             size: 14, color: Colors.white)
-                        : Text(
-                            '$stepNumber',
-                            style: TextStyle(
-                              fontSize: compact ? 10 : 11,
-                              fontWeight: FontWeight.w800,
-                              color: isActive
-                                  ? Colors.white
-                                  : onDarkBackground
-                                      ? Colors.white.withValues(alpha: 0.82)
-                                      : AppConstants.textSecondary,
-                            ),
-                          ),
+                        : iconAsset != null
+                            ? AppColorIcon(
+                                assetName: iconAsset,
+                                size: compact ? 14 : 16,
+                                opacity: isActive ? 1 : 0.75,
+                                semanticsLabel: labels[index],
+                              )
+                            : Text(
+                                '$stepNumber',
+                                style: TextStyle(
+                                  fontSize: compact ? 10 : 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: isActive
+                                      ? Colors.white
+                                      : onDarkBackground
+                                          ? Colors.white.withValues(alpha: 0.82)
+                                          : AppConstants.textSecondary,
+                                ),
+                              ),
                   ),
                 ),
                 const SizedBox(width: 10),

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\CustomerPortal;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\SelcomPaymentRequest;
+use App\Services\CustomerLoanProvisioningService;
 use App\Services\SelcomCheckoutService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +22,7 @@ class CustomerPaymentController extends Controller
     use ApiResponse;
 
     public function __construct(
+        private CustomerLoanProvisioningService $loanProvisioning,
         private SelcomCheckoutService $selcom,
     ) {}
 
@@ -39,10 +41,15 @@ class CustomerPaymentController extends Controller
 
         $customer = $this->resolveCustomer($request);
 
-        $loan = $customer->loans()->where('status', 'active')->latest()->first();
+        $loan = $customer->loans()->where('status', 'active')->latest()->first()
+            ?? $this->loanProvisioning->provisionForCustomerPortal($customer);
 
         if (! $loan) {
-            return $this->errorResponse('No active loan found.', 404);
+            $message = $customer->isAssetReleased()
+                ? 'Your device has been released, but your loan account is still being prepared.'
+                : 'No active loan found.';
+
+            return $this->errorResponse($message, 409);
         }
 
         if (! $this->selcom->isConfigured()) {

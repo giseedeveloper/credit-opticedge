@@ -49,29 +49,100 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
     final state = ref.watch(_deviceProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Kifaa Changu')),
+      backgroundColor: AppConstants.background,
+      appBar: AppBar(
+        title: const Text(
+          'Kifaa Changu',
+          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.4),
+        ),
+        backgroundColor: AppConstants.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: AppConstants.primary),
+            )
           : state.error != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: AppConstants.error.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Icon(
+                        Icons.wifi_off_rounded,
+                        color: AppConstants.error,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      state.error!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppConstants.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () =>
+                          ref.read(_deviceProvider.notifier).load(),
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: const Text('Jaribu Tena'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppConstants.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : state.data == null
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    state.error!,
-                    style: const TextStyle(color: AppConstants.error),
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7F3FF),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: const Icon(
+                      Icons.phone_android_rounded,
+                      color: Color(0xFF8B5CF6),
+                      size: 36,
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () => ref.read(_deviceProvider.notifier).load(),
-                    child: const Text('Jaribu Tena'),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Hakuna Taarifa za Kifaa',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppConstants.textPrimary,
+                    ),
                   ),
                 ],
               ),
             )
-          : state.data == null
-          ? const Center(child: Text('Hakuna taarifa za kifaa'))
           : RefreshIndicator(
+              color: AppConstants.primary,
               onRefresh: () => ref.read(_deviceProvider.notifier).load(),
               child: _buildContent(context, state.data!),
             ),
@@ -83,102 +154,175 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
     final model = d['model'] as Map<String, dynamic>?;
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [
         // Device header
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppConstants.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.phone_android,
-                    size: 40,
-                    color: AppConstants.primary,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '${brand?['name'] ?? ''} ${model?['name'] ?? ''}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                if (model?['storage'] != null || model?['ram'] != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    [
-                      if (model?['storage'] != null) model!['storage'],
-                      if (model?['ram'] != null) '${model!['ram']} RAM',
-                    ].join(' • '),
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ],
-              ],
+        Container(
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF7F3FF),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: const Color(0xFF8B5CF6).withValues(alpha: 0.14),
             ),
           ),
+          child: Column(
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Icon(
+                  Icons.phone_android_rounded,
+                  size: 40,
+                  color: Color(0xFF8B5CF6),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                '${brand?['name'] ?? ''} ${model?['name'] ?? ''}',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppConstants.textPrimary,
+                  letterSpacing: -0.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (model?['storage'] != null || model?['ram'] != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  [
+                    if (model?['storage'] != null) model!['storage'],
+                    if (model?['ram'] != null) '${model!['ram']} RAM',
+                  ].join(' • '),
+                  style: const TextStyle(
+                    color: AppConstants.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
 
         // Device details
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Taarifa za Kifaa',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppConstants.surface,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppConstants.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppConstants.info.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.info_outline_rounded,
+                      color: AppConstants.info,
+                      size: 18,
+                    ),
                   ),
-                ),
-                const Divider(height: 20),
-                _InfoRow('IMEI', d['imei'] ?? '-'),
-                if (d['imei_2'] != null) _InfoRow('IMEI 2', d['imei_2']),
-                if (d['serial_number'] != null)
-                  _InfoRow('Serial Number', d['serial_number']),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Taarifa za Kifaa',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      color: AppConstants.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _InfoRow('IMEI', d['imei'] ?? '-'),
+              if (d['imei_2'] != null) _InfoRow('IMEI 2', d['imei_2']),
+              if (d['serial_number'] != null)
+                _InfoRow('Serial Number', d['serial_number']),
+              _InfoRow(
+                'Bei ya Pesa Taslimu',
+                'TZS ${_fmtAmount(d['cash_price'])}',
+              ),
+              _InfoRow('Amana', 'TZS ${_fmtAmount(d['deposit_amount'])}'),
+              _InfoRow('Malipo', _repaymentLabel(d['preferred_repayment'])),
+              if (d['loan_interest_rate'] != null)
                 _InfoRow(
-                  'Bei ya Pesa Taslimu',
-                  'TZS ${_fmtAmount(d['cash_price'])}',
+                  'Interest',
+                  '${d['loan_interest_rate']}% ${_interestTypeLabel(d['loan_interest_type'])}',
                 ),
-                _InfoRow('Amana', 'TZS ${_fmtAmount(d['deposit_amount'])}'),
-                _InfoRow('Malipo', _repaymentLabel(d['preferred_repayment'])),
-                _InfoRow(
-                  'Hali',
-                  d['asset_release_status'] == 'released'
-                      ? 'Imepewa'
-                      : 'Inasubiri',
-                ),
-                if (d['asset_released_at'] != null)
-                  _InfoRow('Tarehe ya Kupewa', d['asset_released_at']),
-              ],
-            ),
+              if (d['loan_duration_weeks'] != null)
+                _InfoRow('Duration', '${d['loan_duration_weeks']} weeks'),
+              if (d['loan_grace_period_days'] != null)
+                _InfoRow('Grace Period', '${d['loan_grace_period_days']} days'),
+              _InfoRow(
+                'Hali',
+                d['asset_release_status'] == 'released'
+                    ? 'Imepewa'
+                    : 'Inasubiri',
+              ),
+              if (d['asset_released_at'] != null)
+                _InfoRow('Tarehe ya Kupewa', d['asset_released_at']),
+            ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
 
         // Agreement
         if (d['agreement'] != null)
-          Card(
+          Container(
+            decoration: BoxDecoration(
+              color: AppConstants.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppConstants.border),
+            ),
             child: ListTile(
-              leading: const Icon(
-                Icons.description_rounded,
-                color: AppConstants.primary,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 6,
               ),
-              title: Text(d['agreement']['title'] ?? 'Mkataba'),
-              subtitle: const Text('Bonyeza kuona mkataba'),
-              trailing: const Icon(Icons.open_in_new, size: 18),
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppConstants.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.description_rounded,
+                  color: AppConstants.primary,
+                  size: 20,
+                ),
+              ),
+              title: Text(
+                d['agreement']['title'] ?? 'Mkataba',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              subtitle: const Text(
+                'Bonyeza kuona mkataba',
+                style: TextStyle(fontSize: 12),
+              ),
+              trailing: const Icon(
+                Icons.open_in_new,
+                size: 16,
+                color: AppConstants.textHint,
+              ),
               onTap: () {
-                // Could open PDF viewer
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Mkataba utafunguliwa hivi karibuni'),
@@ -207,6 +351,14 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
       _ => v?.toString() ?? '-',
     };
   }
+
+  String _interestTypeLabel(dynamic value) {
+    return switch (value) {
+      'reducing_balance' => 'Reducing',
+      'flat' => 'Flat',
+      _ => value?.toString() ?? '-',
+    };
+  }
 }
 
 class _InfoRow extends StatelessWidget {
@@ -217,21 +369,29 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Flexible(
             child: Text(
               label,
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+              style: const TextStyle(
+                color: AppConstants.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           const SizedBox(width: 12),
           Flexible(
             child: Text(
               value,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: AppConstants.textPrimary,
+              ),
               textAlign: TextAlign.end,
             ),
           ),

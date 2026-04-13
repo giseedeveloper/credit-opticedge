@@ -118,7 +118,13 @@ test('authenticated customer can view active loan', function () {
         ->getJson('/api/v1/customer/loan')
         ->assertOk()
         ->assertJsonPath('success', true)
-        ->assertJsonStructure(['data' => ['id', 'loan_number', 'total_payable', 'amount_paid', 'remaining_balance']]);
+        ->assertJsonPath('data.portal_state', 'loan_active')
+        ->assertJsonStructure([
+            'data' => [
+                'portal_state',
+                'loan' => ['id', 'loan_number', 'total_payable', 'amount_paid', 'remaining_balance'],
+            ],
+        ]);
 });
 
 test('authenticated customer can view repayment schedule', function () {
@@ -142,7 +148,8 @@ test('authenticated customer can view repayment schedule', function () {
     $this->withToken($token)
         ->getJson('/api/v1/customer/loan/schedule')
         ->assertOk()
-        ->assertJsonStructure(['data' => ['loan_id', 'schedule']]);
+        ->assertJsonPath('data.portal_state', 'loan_active')
+        ->assertJsonStructure(['data' => ['schedule' => ['loan_id', 'schedule']]]);
 });
 
 test('authenticated customer can view device info', function () {

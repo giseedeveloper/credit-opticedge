@@ -11,16 +11,38 @@ use Illuminate\Support\Str;
 
 class LoanCalculatorService
 {
+    public function installmentCount(int $durationWeeks, string $repaymentFrequency): int
+    {
+        return match ($repaymentFrequency) {
+            'monthly' => max(1, (int) ceil($durationWeeks / 4.33)),
+            'biweekly' => max(1, (int) ceil($durationWeeks / 2)),
+            default => max(1, $durationWeeks),
+        };
+    }
+
+    public function periodRate(float $annualRatePercent, string $repaymentFrequency): float
+    {
+        return match ($repaymentFrequency) {
+            'monthly' => ($annualRatePercent / 100) / 12,
+            'biweekly' => ($annualRatePercent / 100) / 26,
+            default => ($annualRatePercent / 100) / 52,
+        };
+    }
+
     /**
      * Compute total interest and payable using flat rate.
      *
      * @return array{total_interest: float, total_payable: float, installment_amount: float}
      */
-    public function computeFlat(float $principal, float $ratePercent, int $durationWeeks): array
-    {
+    public function computeFlat(
+        float $principal,
+        float $ratePercent,
+        int $durationWeeks,
+        string $repaymentFrequency = 'weekly',
+    ): array {
         $totalInterest = $principal * ($ratePercent / 100) * ($durationWeeks / 52);
         $totalPayable = $principal + $totalInterest;
-        $installmentAmount = $totalPayable / $durationWeeks;
+        $installmentAmount = $totalPayable / $this->installmentCount($durationWeeks, $repaymentFrequency);
 
         return [
             'total_interest' => round($totalInterest, 2),
@@ -34,14 +56,19 @@ class LoanCalculatorService
      *
      * @return array{total_interest: float, total_payable: float, installment_amount: float}
      */
-    public function computeReducingBalance(float $principal, float $annualRatePercent, int $durationWeeks): array
-    {
-        $weeklyRate = ($annualRatePercent / 100) / 52;
-        $installment = $weeklyRate === 0
-            ? $principal / $durationWeeks
-            : ($principal * $weeklyRate) / (1 - pow(1 + $weeklyRate, -$durationWeeks));
+    public function computeReducingBalance(
+        float $principal,
+        float $annualRatePercent,
+        int $durationWeeks,
+        string $repaymentFrequency = 'weekly',
+    ): array {
+        $installments = $this->installmentCount($durationWeeks, $repaymentFrequency);
+        $periodRate = $this->periodRate($annualRatePercent, $repaymentFrequency);
+        $installment = $periodRate === 0
+            ? $principal / $installments
+            : ($principal * $periodRate) / (1 - pow(1 + $periodRate, -$installments));
 
-        $totalPayable = $installment * $durationWeeks;
+        $totalPayable = $installment * $installments;
         $totalInterest = $totalPayable - $principal;
 
         return [
@@ -57,7 +84,7 @@ class LoanCalculatorService
     public function generateLoanNumber(): string
     {
         do {
-            $number = 'LN-' . date('Ymd') . '-' . strtoupper(Str::random(5));
+            $number = 'LN-'.date('Ymd').'-'.strtoupper(Str::random(5));
         } while (Loan::where('loan_number', $number)->exists());
 
         return $number;
@@ -69,50 +96,60 @@ class LoanCalculatorService
     public function generateSchedule(Loan $loan): Collection
     {
         $schedules = collect();
-        $dueDate = Carbon::parse($loan->disbursed_at);
-        $principal = (float) $loan->principal_amount;
+        $principal = max(0, round((float) $loan->principal_amount - (float) $loan->deposit_paid, 2));
         $balance = $principal;
+        $installments = $this->installmentCount($loan->duration_weeks, $loan->repayment_frequency);
 
         if ($loan->interest_type === 'flat') {
-            $result = $this->computeFlat($principal, (float) $loan->interest_rate, $loan->duration_weeks);
+            $result = $this->computeFlat(
+                $principal,
+                (float) $loan->interest_rate,
+                $loan->duration_weeks,
+                $loan->repayment_frequency,
+            );
         } else {
-            $result = $this->computeReducingBalance($principal, (float) $loan->interest_rate, $loan->duration_weeks);
+            $result = $this->computeReducingBalance(
+                $principal,
+                (float) $loan->interest_rate,
+                $loan->duration_weeks,
+                $loan->repayment_frequency,
+            );
         }
 
         $installment = $result['installment_amount'];
-        $weeklyRate = ($loan->interest_type === 'reducing_balance')
-            ? (($loan->interest_rate / 100) / 52)
+        $periodRate = ($loan->interest_type === 'reducing_balance')
+            ? $this->periodRate((float) $loan->interest_rate, $loan->repayment_frequency)
             : 0;
 
-        for ($i = 1; $i <= $loan->duration_weeks; $i++) {
+        for ($i = 1; $i <= $installments; $i++) {
             $dueDate = match ($loan->repayment_frequency) {
                 'biweekly' => Carbon::parse($loan->disbursed_at)->addWeeks($i * 2),
-                'monthly'  => Carbon::parse($loan->disbursed_at)->addMonths($i),
-                default    => Carbon::parse($loan->disbursed_at)->addWeeks($i),
+                'monthly' => Carbon::parse($loan->disbursed_at)->addMonths($i),
+                default => Carbon::parse($loan->disbursed_at)->addWeeks($i),
             };
 
             $interestComponent = $loan->interest_type === 'reducing_balance'
-                ? round($balance * $weeklyRate, 2)
-                : round(($result['total_interest']) / $loan->duration_weeks, 2);
+                ? round($balance * $periodRate, 2)
+                : round(($result['total_interest']) / $installments, 2);
 
             $principalComponent = round($installment - $interestComponent, 2);
             $balance = max(0, round($balance - $principalComponent, 2));
 
             $schedules->push([
-                'id'                   => Str::orderedUuid()->toString(),
-                'loan_id'              => $loan->id,
-                'installment_number'   => $i,
-                'amount_due'           => $installment,
-                'principal_component'  => $principalComponent,
-                'interest_component'   => $interestComponent,
-                'penalty_component'    => 0,
-                'amount_paid'          => 0,
-                'balance_remaining'    => $balance,
-                'due_date'             => $dueDate->toDateString(),
-                'status'               => 'pending',
-                'days_overdue'         => 0,
-                'created_at'           => now(),
-                'updated_at'           => now(),
+                'id' => Str::orderedUuid()->toString(),
+                'loan_id' => $loan->id,
+                'installment_number' => $i,
+                'amount_due' => $installment,
+                'principal_component' => $principalComponent,
+                'interest_component' => $interestComponent,
+                'penalty_component' => 0,
+                'amount_paid' => 0,
+                'balance_remaining' => $balance,
+                'due_date' => $dueDate->toDateString(),
+                'status' => 'pending',
+                'days_overdue' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
 
@@ -149,8 +186,8 @@ class LoanCalculatorService
 
                 $schedule->update([
                     'penalty_component' => $penalty,
-                    'days_overdue'      => $daysOverdue,
-                    'status'            => 'overdue',
+                    'days_overdue' => $daysOverdue,
+                    'status' => 'overdue',
                 ]);
                 $affected++;
             });
@@ -162,5 +199,4 @@ class LoanCalculatorService
 
         return $affected;
     }
-
 }

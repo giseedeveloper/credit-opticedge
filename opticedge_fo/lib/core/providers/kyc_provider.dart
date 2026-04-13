@@ -24,6 +24,18 @@ bool _isRecoverableNetworkError(Object error) {
   return false;
 }
 
+String _repaymentValueForApi(String raw) {
+  switch (raw) {
+    case 'bi-weekly':
+      return 'biweekly';
+    case 'weekly':
+    case 'monthly':
+      return raw;
+    default:
+      return 'weekly';
+  }
+}
+
 class KycDraftState {
   final String? customerId;
   final int currentStep;
@@ -47,6 +59,10 @@ class KycDraftState {
   final String cashPrice;
   final String depositAmount;
   final String preferredRepayment;
+  final String loanInterestRate;
+  final String loanInterestType;
+  final String loanDurationWeeks;
+  final String loanGracePeriodDays;
   final bool includeScreenProtector;
   final bool includePhoneCover;
   final String storeOfferNotes;
@@ -137,6 +153,10 @@ class KycDraftState {
     this.cashPrice = '',
     this.depositAmount = '',
     this.preferredRepayment = 'weekly',
+    this.loanInterestRate = '',
+    this.loanInterestType = 'flat',
+    this.loanDurationWeeks = '',
+    this.loanGracePeriodDays = '',
     this.includeScreenProtector = false,
     this.includePhoneCover = false,
     this.storeOfferNotes = '',
@@ -218,6 +238,10 @@ class KycDraftState {
     String? cashPrice,
     String? depositAmount,
     String? preferredRepayment,
+    String? loanInterestRate,
+    String? loanInterestType,
+    String? loanDurationWeeks,
+    String? loanGracePeriodDays,
     bool? includeScreenProtector,
     bool? includePhoneCover,
     String? storeOfferNotes,
@@ -300,6 +324,11 @@ class KycDraftState {
       cashPrice: cashPrice ?? this.cashPrice,
       depositAmount: depositAmount ?? this.depositAmount,
       preferredRepayment: preferredRepayment ?? this.preferredRepayment,
+      loanInterestRate: loanInterestRate ?? this.loanInterestRate,
+      loanInterestType: loanInterestType ?? this.loanInterestType,
+      loanDurationWeeks: loanDurationWeeks ?? this.loanDurationWeeks,
+      loanGracePeriodDays:
+          loanGracePeriodDays ?? this.loanGracePeriodDays,
       includeScreenProtector:
           includeScreenProtector ?? this.includeScreenProtector,
       includePhoneCover: includePhoneCover ?? this.includePhoneCover,
@@ -492,6 +521,10 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       imei2: '',
       serialNumber: '',
       cashPrice: '',
+      loanInterestRate: '',
+      loanInterestType: 'flat',
+      loanDurationWeeks: '',
+      loanGracePeriodDays: '',
     );
   }
 
@@ -505,11 +538,16 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         imeiNumber: '',
         imei2: '',
         serialNumber: '',
+        loanInterestRate: '',
+        loanInterestType: 'flat',
+        loanDurationWeeks: '',
+        loanGracePeriodDays: '',
       );
       return;
     }
 
-    state = state.copyWith(
+    state = _applyRecommendedTerms(
+      state.copyWith(
       brandId: model.brandId,
       phoneModelId: model.id,
       inventoryUnitId: '',
@@ -518,6 +556,11 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       imeiNumber: '',
       imei2: '',
       serialNumber: '',
+      ),
+      interestRate: model.recommendedInterestRate,
+      interestType: model.recommendedInterestType,
+      durationWeeks: model.recommendedDurationWeeks,
+      gracePeriodDays: model.recommendedGracePeriodDays,
     );
   }
 
@@ -532,13 +575,39 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       return;
     }
 
-    state = state.copyWith(
+    state = _applyRecommendedTerms(
+      state.copyWith(
       inventoryUnitId: unit.id,
       deviceSpecs: unit.deviceSpecs,
       cashPrice: unit.recommendedCashPrice?.toString() ?? state.cashPrice,
       imeiNumber: unit.imei1,
       imei2: unit.imei2 ?? '',
       serialNumber: unit.serialNumber ?? '',
+      ),
+      interestRate: unit.recommendedInterestRate,
+      interestType: unit.recommendedInterestType,
+      durationWeeks: unit.recommendedDurationWeeks,
+      gracePeriodDays: unit.recommendedGracePeriodDays,
+    );
+  }
+
+  KycDraftState _applyRecommendedTerms(
+    KycDraftState current, {
+    num? interestRate,
+    String? interestType,
+    int? durationWeeks,
+    int? gracePeriodDays,
+  }) {
+    return current.copyWith(
+      loanInterestRate:
+          interestRate != null ? interestRate.toString() : current.loanInterestRate,
+      loanInterestType:
+          (interestType != null && interestType.isNotEmpty)
+              ? interestType
+              : current.loanInterestType,
+      loanDurationWeeks: durationWeeks?.toString() ?? current.loanDurationWeeks,
+      loanGracePeriodDays:
+          gracePeriodDays?.toString() ?? current.loanGracePeriodDays,
     );
   }
 
@@ -690,6 +759,14 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         if (state.cashPrice.isNotEmpty) 'cash_price': state.cashPrice,
         'deposit_amount': state.depositAmount,
         'preferred_repayment': _repaymentForApi(state.preferredRepayment),
+        if (state.loanInterestRate.isNotEmpty)
+          'loan_interest_rate': state.loanInterestRate,
+        if (state.loanInterestType.isNotEmpty)
+          'loan_interest_type': state.loanInterestType,
+        if (state.loanDurationWeeks.isNotEmpty)
+          'loan_duration_weeks': state.loanDurationWeeks,
+        if (state.loanGracePeriodDays.isNotEmpty)
+          'loan_grace_period_days': state.loanGracePeriodDays,
         if (accessories.isNotEmpty) 'accessories': accessories,
         if (state.storeOfferNotes.isNotEmpty)
           'store_offer_notes': state.storeOfferNotes,
@@ -1088,6 +1165,14 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         depositAmount: detail.device['deposit_amount']?.toString() ?? '',
         preferredRepayment:
             _repaymentFromApi(detail.device['preferred_repayment']?.toString()),
+        loanInterestRate:
+            detail.device['loan_interest_rate']?.toString() ?? '',
+        loanInterestType:
+            detail.device['loan_interest_type']?.toString() ?? 'flat',
+        loanDurationWeeks:
+            detail.device['loan_duration_weeks']?.toString() ?? '',
+        loanGracePeriodDays:
+            detail.device['loan_grace_period_days']?.toString() ?? '',
         includeScreenProtector:
             _hasAccessory(detail.device, 'screen_protector'),
         includePhoneCover: _hasAccessory(detail.device, 'phone_cover'),
@@ -1240,17 +1325,20 @@ final deviceBrandsProvider =
       .toList();
 });
 
-final deviceModelsProvider =
-    FutureProvider.family<List<DeviceModelOption>, String>(
-        (ref, brandId) async {
-  final id = brandId.trim();
+final deviceModelsProvider = FutureProvider.family<List<DeviceModelOption>,
+    ({String brandId, String preferredRepayment})>((ref, args) async {
+  final id = args.brandId.trim();
   if (id.isEmpty) {
     return [];
   }
 
   final res = await ApiClient.instance.get(
     '/kyc/application/device/models',
-    queryParameters: {'brand_id': id},
+    queryParameters: {
+      'brand_id': id,
+      if (args.preferredRepayment.trim().isNotEmpty)
+        'preferred_repayment': _repaymentValueForApi(args.preferredRepayment),
+    },
   );
   final data = res.data['data'] as List<dynamic>;
   return data
@@ -1259,7 +1347,8 @@ final deviceModelsProvider =
 });
 
 final inventoryUnitsProvider = FutureProvider.family<List<InventoryUnitOption>,
-    ({String phoneModelId, String search})>((ref, args) async {
+    ({String phoneModelId, String search, String preferredRepayment})>(
+        (ref, args) async {
   final modelId = args.phoneModelId.trim();
   if (modelId.isEmpty) {
     return [];
@@ -1270,6 +1359,8 @@ final inventoryUnitsProvider = FutureProvider.family<List<InventoryUnitOption>,
     queryParameters: {
       'phone_model_id': modelId,
       if (args.search.trim().isNotEmpty) 'search': args.search.trim(),
+      if (args.preferredRepayment.trim().isNotEmpty)
+        'preferred_repayment': _repaymentValueForApi(args.preferredRepayment),
     },
   );
   final data = res.data['data'] as List<dynamic>;

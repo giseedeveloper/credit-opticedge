@@ -5,6 +5,8 @@ namespace App\Livewire\Kyc;
 use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\Verification;
+use App\Services\CustomerLoanProvisioningService;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -221,15 +223,20 @@ class CustomerProfiles extends Component
             return;
         }
 
-        $customer->update([
-            'asset_release_status' => 'released',
-            'asset_released_at' => now(),
-            'asset_released_by' => auth()->id(),
-        ]);
+        $loan = DB::transaction(function () use ($customer) {
+            $customer->update([
+                'asset_release_status' => 'released',
+                'asset_released_at' => now(),
+                'asset_released_by' => auth()->id(),
+            ]);
 
-        if ($customer->inventoryUnit->status !== 'sold') {
-            $customer->inventoryUnit->update(['status' => 'assigned']);
-        }
+            if ($customer->inventoryUnit->status !== 'sold') {
+                $customer->inventoryUnit->update(['status' => 'assigned']);
+            }
+
+            return app(CustomerLoanProvisioningService::class)
+                ->provision($customer->fresh(['inventoryUnit', 'assetReleasedBy']), auth()->user());
+        });
 
         activity('kyc')
             ->performedOn($customer)
@@ -240,7 +247,7 @@ class CustomerProfiles extends Component
             ])
             ->log("Asset released for {$customer->full_name}");
 
-        $this->dispatch('toast', message: "Asset released successfully for {$customer->full_name}.", type: 'success');
+        $this->dispatch('toast', message: "Asset released successfully for {$customer->full_name}. Loan {$loan->loan_number} is now active.", type: 'success');
     }
 
     public function canReleaseCustomerAsset(Customer $customer): bool

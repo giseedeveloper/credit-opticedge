@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\InventoryUnit;
 use App\Models\Loan;
 use App\Services\DocumentService;
+use App\Services\LoanCalculatorService;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -109,25 +110,24 @@ class LendingPanel extends Component
         ]);
 
         $principal = (float) $this->newPrincipal;
-        $rate = $this->newInterestRate / 100;
-        $months = (int) ceil($this->newDurationWeeks / 4);
         $deposit = (float) ($this->newDepositPaid ?: 0);
-
-        if ($this->newInterestType === 'flat') {
-            $totalInterest = $principal * $rate * $months;
-        } else {
-            // Reducing-balance: sum of monthly interest on outstanding balance
-            $totalInterest = 0;
-            $balance = $principal;
-            $monthlyPrincipal = $months > 0 ? $principal / $months : $principal;
-            for ($i = 0; $i < $months; $i++) {
-                $totalInterest += $balance * $rate;
-                $balance -= $monthlyPrincipal;
-            }
-        }
-
-        $totalDebt = $principal + $totalInterest;
-        $remaining = $totalDebt - $deposit;
+        $financedPrincipal = max(0, $principal - $deposit);
+        $loanCalculator = app(LoanCalculatorService::class);
+        $computed = $this->newInterestType === 'flat'
+            ? $loanCalculator->computeFlat(
+                $financedPrincipal,
+                $this->newInterestRate,
+                $this->newDurationWeeks,
+                $this->newFrequency,
+            )
+            : $loanCalculator->computeReducingBalance(
+                $financedPrincipal,
+                $this->newInterestRate,
+                $this->newDurationWeeks,
+                $this->newFrequency,
+            );
+        $totalDebt = $principal + $computed['total_interest'];
+        $remaining = $computed['total_payable'];
 
         $loan = DB::transaction(function () use (
             $principal, $deposit, $totalDebt, $remaining
@@ -163,6 +163,8 @@ class LendingPanel extends Component
         });
 
         InventoryUnit::where('id', $this->newUnitId)->update(['status' => 'sold']);
+
+        app(LoanCalculatorService::class)->createSchedule($loan);
 
         activity('loan')
             ->performedOn($loan)

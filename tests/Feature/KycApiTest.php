@@ -4,8 +4,10 @@ use App\Models\Branch;
 use App\Models\Brand;
 use App\Models\Customer;
 use App\Models\InventoryUnit;
+use App\Models\Loan;
 use App\Models\Permission;
 use App\Models\PhoneModel;
+use App\Models\RepaymentSchedule;
 use App\Models\SelcomPaymentRequest;
 use App\Models\SystemDocument;
 use App\Models\User;
@@ -69,6 +71,10 @@ it('step1 creates a draft customer and returns customer_id', function () {
         'inventory_unit_id' => $this->inventoryUnit->id,
         'deposit_amount' => 50000,
         'preferred_repayment' => 'weekly',
+        'loan_interest_rate' => 4.25,
+        'loan_interest_type' => 'flat',
+        'loan_duration_weeks' => 40,
+        'loan_grace_period_days' => 5,
         'accessories' => [
             ['code' => 'screen_protector', 'name' => 'Screen Protector', 'quantity' => 1, 'offer_type' => 'free'],
             ['name' => 'Phone Cover', 'quantity' => 1, 'offer_type' => 'charged', 'unit_price' => 15000],
@@ -88,7 +94,32 @@ it('step1 creates a draft customer and returns customer_id', function () {
 
     expect($draft)->not->toBeNull()
         ->and($draft?->device_accessories)->toHaveCount(2)
-        ->and($draft?->store_offer_notes)->toBe('Weekend promo included a free protector.');
+        ->and($draft?->store_offer_notes)->toBe('Weekend promo included a free protector.')
+        ->and((float) $draft?->loan_interest_rate)->toBe(4.25)
+        ->and($draft?->loan_interest_type)->toBe('flat')
+        ->and($draft?->loan_duration_weeks)->toBe(40)
+        ->and($draft?->loan_grace_period_days)->toBe(5)
+        ->and($draft?->metadata['loan_terms']['source'])->toBe('kyc_capture');
+});
+
+it('step1 snapshots default credit terms when offer inputs are omitted', function () {
+    $this->postJson('/api/v1/kyc/application/step1', [
+        'brand_id' => $this->brand->id,
+        'phone_model_id' => $this->phoneModel->id,
+        'inventory_unit_id' => $this->inventoryUnit->id,
+        'deposit_amount' => 50000,
+        'preferred_repayment' => 'monthly',
+    ])->assertOk();
+
+    $draft = Customer::latest()->first();
+
+    expect($draft)->not->toBeNull()
+        ->and($draft?->loan_interest_rate)->not->toBeNull()
+        ->and($draft?->loan_interest_type)->not->toBeNull()
+        ->and($draft?->loan_duration_weeks)->not->toBeNull()
+        ->and($draft?->loan_grace_period_days)->not->toBeNull()
+        ->and($draft?->metadata['loan_terms']['source'])->toBe('credit_defaults_snapshot')
+        ->and($draft?->preferred_repayment)->toBe('monthly');
 });
 
 it('step1 auto-links vendor store context from the selected stock unit', function () {
@@ -617,6 +648,9 @@ it('release asset marks the stock unit as assigned', function () {
         'fo_signature_path' => 'kyc/fo-signatures/api-fo.png',
         'asset_handover_list_path' => 'kyc/handover/api-release.pdf',
         'deposit_payment_status' => 'completed',
+        'cash_price' => 380000,
+        'deposit_amount' => 50000,
+        'preferred_repayment' => 'weekly',
         'asset_release_status' => 'pending',
         'kyc_status' => 'approved',
     ]);
@@ -624,10 +658,17 @@ it('release asset marks the stock unit as assigned', function () {
     $response = $this->postJson("/api/v1/kyc/customers/{$customer->id}/release-asset");
 
     $response->assertOk()
-        ->assertJsonPath('data.release.status', 'released');
+        ->assertJsonPath('data.release.status', 'released')
+        ->assertJsonPath('data.loan.status', 'active');
+
+    $loan = Loan::query()->where('customer_id', $customer->id)->first();
 
     expect($customer->fresh()->asset_release_status)->toBe('released')
-        ->and($this->inventoryUnit->fresh()->status)->toBe('assigned');
+        ->and($this->inventoryUnit->fresh()->status)->toBe('assigned')
+        ->and($loan)->not->toBeNull()
+        ->and($loan?->repayment_frequency)->toBe('weekly')
+        ->and($loan?->status)->toBe('active')
+        ->and(RepaymentSchedule::query()->where('loan_id', $loan?->id)->count())->toBeGreaterThan(0);
 });
 
 function apiKycSignatureDataUrl(): string

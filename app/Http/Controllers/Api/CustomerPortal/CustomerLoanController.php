@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\CustomerPortal;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Loan;
+use App\Services\CustomerLoanProvisioningService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,10 @@ class CustomerLoanController extends Controller
 {
     use ApiResponse;
 
+    public function __construct(
+        private CustomerLoanProvisioningService $loanProvisioning,
+    ) {}
+
     /**
      * Active loan summary.
      *
@@ -27,17 +32,23 @@ class CustomerLoanController extends Controller
     public function loan(Request $request): JsonResponse
     {
         $customer = $this->resolveCustomer($request);
-        $loan = $customer->loans()
-            ->with('branch', 'vendor')
-            ->where('status', 'active')
-            ->latest()
-            ->first();
+        $loan = $this->resolvePortalLoan($customer);
 
         if (! $loan) {
-            return $this->successResponse(null, 'No active loan found.');
+            return $this->successResponse([
+                'portal_state' => $this->loanProvisioning->portalState($customer),
+                'portal_message' => $this->portalMessageFor($customer),
+                'loan' => null,
+                'release' => $this->serializeReleaseContext($customer),
+            ], $this->portalMessageFor($customer));
         }
 
-        return $this->successResponse($this->serializeLoan($loan), 'Active loan retrieved.');
+        return $this->successResponse([
+            'portal_state' => 'loan_active',
+            'portal_message' => 'Active loan retrieved.',
+            'loan' => $this->serializeLoan($loan),
+            'release' => $this->serializeReleaseContext($customer),
+        ], 'Active loan retrieved.');
     }
 
     /**
@@ -48,13 +59,15 @@ class CustomerLoanController extends Controller
     public function schedule(Request $request): JsonResponse
     {
         $customer = $this->resolveCustomer($request);
-        $loan = $customer->loans()
-            ->where('status', 'active')
-            ->latest()
-            ->first();
+        $loan = $this->resolvePortalLoan($customer);
 
         if (! $loan) {
-            return $this->successResponse([], 'No active loan found.');
+            return $this->successResponse([
+                'portal_state' => $this->loanProvisioning->portalState($customer),
+                'portal_message' => $this->portalMessageFor($customer),
+                'schedule' => null,
+                'release' => $this->serializeReleaseContext($customer),
+            ], $this->portalMessageFor($customer));
         }
 
         $schedules = $loan->repaymentSchedules()
@@ -76,12 +89,17 @@ class CustomerLoanController extends Controller
             ]);
 
         return $this->successResponse([
-            'loan_id' => $loan->id,
-            'loan_number' => $loan->loan_number,
-            'total_installments' => $schedules->count(),
-            'paid_installments' => $schedules->where('status', 'paid')->count(),
-            'next_due' => $schedules->whereIn('status', ['pending', 'partial', 'overdue'])->first(),
-            'schedule' => $schedules->values(),
+            'portal_state' => 'loan_active',
+            'portal_message' => 'Repayment schedule retrieved.',
+            'schedule' => [
+                'loan_id' => $loan->id,
+                'loan_number' => $loan->loan_number,
+                'total_installments' => $schedules->count(),
+                'paid_installments' => $schedules->where('status', 'paid')->count(),
+                'next_due' => $schedules->whereIn('status', ['pending', 'partial', 'overdue'])->first(),
+                'schedule' => $schedules->values(),
+            ],
+            'release' => $this->serializeReleaseContext($customer),
         ], 'Repayment schedule retrieved.');
     }
 
@@ -164,6 +182,55 @@ class CustomerLoanController extends Controller
             ] : null,
             'is_overdue' => $loan->isOverdue(),
         ];
+    }
+
+    private function resolvePortalLoan(Customer $customer): ?Loan
+    {
+        $customer->loadMissing(['assetReleasedBy', 'inventoryUnit']);
+
+        $loan = $customer->loans()
+            ->with(['branch', 'vendor'])
+            ->where('status', 'active')
+            ->latest('disbursed_at')
+            ->latest()
+            ->first();
+
+        if ($loan) {
+            return $loan;
+        }
+
+        return $this->loanProvisioning->provisionForCustomerPortal($customer);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeReleaseContext(Customer $customer): array
+    {
+        $metadata = is_array($customer->metadata) ? $customer->metadata : [];
+        $storedTerms = is_array($metadata['loan_terms'] ?? null) ? $metadata['loan_terms'] : [];
+
+        return [
+            'asset_release_status' => $customer->asset_release_status,
+            'asset_released_at' => $customer->asset_released_at?->toDateTimeString(),
+            'cash_price' => $customer->cash_price,
+            'deposit_amount' => $customer->deposit_amount,
+            'preferred_repayment' => $customer->preferred_repayment,
+            'inventory_unit_id' => $customer->inventory_unit_id,
+            'loan_interest_rate' => $customer->loan_interest_rate,
+            'loan_interest_type' => $customer->loan_interest_type,
+            'loan_duration_weeks' => $customer->loan_duration_weeks,
+            'loan_grace_period_days' => $customer->loan_grace_period_days,
+            'loan_terms_source' => (string) ($storedTerms['source'] ?? 'kyc_capture'),
+        ];
+    }
+
+    private function portalMessageFor(Customer $customer): string
+    {
+        return match ($this->loanProvisioning->portalState($customer)) {
+            'released_pending_disbursement' => 'Your device has been released, but your loan account is still being prepared.',
+            default => 'No active loan found.',
+        };
     }
 
     private function resolveCustomer(Request $request): Customer

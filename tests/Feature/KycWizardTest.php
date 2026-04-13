@@ -59,7 +59,18 @@ it('validates step 1 device fields', function () {
 
     Livewire::test(VerificationWizard::class)
         ->call('nextStep')
-        ->assertHasErrors(['brandId', 'phoneModelId', 'deviceSpecs', 'cashPrice', 'depositAmount', 'preferredRepayment']);
+        ->assertHasErrors([
+            'brandId',
+            'phoneModelId',
+            'deviceSpecs',
+            'cashPrice',
+            'depositAmount',
+            'preferredRepayment',
+            'loanInterestRate',
+            'loanInterestType',
+            'loanDurationWeeks',
+            'loanGracePeriodDays',
+        ]);
 });
 
 it('autofills device identifiers when a stock unit is selected', function () {
@@ -114,6 +125,10 @@ it('advances to step 2 after valid step 1', function () {
         ->set('inventoryUnitId', $this->inventoryUnit->id)
         ->set('depositAmount', '50000')
         ->set('preferredRepayment', 'weekly')
+        ->set('loanInterestRate', '4.50')
+        ->set('loanInterestType', 'flat')
+        ->set('loanDurationWeeks', '48')
+        ->set('loanGracePeriodDays', '3')
         ->call('nextStep')
         ->assertSet('step', 2)
         ->assertHasNoErrors();
@@ -185,6 +200,10 @@ it('creates customer and verification on submit and runs auto-checks', function 
         ->set('inventoryUnitId', $this->inventoryUnit->id)
         ->set('depositAmount', '35000')
         ->set('preferredRepayment', 'monthly')
+        ->set('loanInterestRate', '5.25')
+        ->set('loanInterestType', 'reducing_balance')
+        ->set('loanDurationWeeks', '52')
+        ->set('loanGracePeriodDays', '4')
         ->set('deviceAccessories', [
             ['code' => 'screen_protector', 'name' => 'Screen Protector', 'quantity' => 1, 'offer_type' => 'free', 'unit_price' => '', 'notes' => 'Promo gift'],
             ['code' => 'phone_cover', 'name' => 'Phone Cover', 'quantity' => 1, 'offer_type' => 'charged', 'unit_price' => '15000', 'notes' => 'Premium cover'],
@@ -232,6 +251,11 @@ it('creates customer and verification on submit and runs auto-checks', function 
         ->and($customer?->nok_phone)->toBe('+255754111222')
         ->and($customer?->device_accessories)->toHaveCount(2)
         ->and($customer?->store_offer_notes)->toBe('Weekend offer included a free protector.')
+        ->and((float) $customer?->loan_interest_rate)->toBe(5.25)
+        ->and($customer?->loan_interest_type)->toBe('reducing_balance')
+        ->and($customer?->loan_duration_weeks)->toBe(52)
+        ->and($customer?->loan_grace_period_days)->toBe(4)
+        ->and($customer?->metadata['loan_terms']['source'])->toBe('kyc_capture')
         ->and($customer?->agreement_document_id)->toBe($agreement->id)
         ->and($customer?->deposit_payment_status)->toBe('completed')
         ->and($customer?->asset_release_status)->toBe('pending')

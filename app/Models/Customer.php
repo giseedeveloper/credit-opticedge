@@ -31,6 +31,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
     // Step 1 – Device
     'imei_number', 'imei_2', 'serial_number', 'device_specs',
     'cash_price', 'deposit_amount', 'preferred_repayment',
+    'loan_interest_rate', 'loan_interest_type', 'loan_duration_weeks', 'loan_grace_period_days',
     'imei_photo_path', 'device_box_photo_path', 'device_photo_path', 'device_scan_metadata', 'device_accessories', 'store_offer_notes',
     // Step 2 – Identity docs
     'id_front_photo_path', 'id_back_photo_path', 'headshot_photo_path', 'client_fo_photo_path',
@@ -87,6 +88,9 @@ class Customer extends Model implements Authenticatable, HasMedia
             'monthly_expenses' => 'decimal:2',
             'cash_price' => 'decimal:2',
             'deposit_amount' => 'decimal:2',
+            'loan_interest_rate' => 'decimal:2',
+            'loan_duration_weeks' => 'integer',
+            'loan_grace_period_days' => 'integer',
             'kyc_stage' => 'integer',
             'latitude' => 'decimal:8',
             'longitude' => 'decimal:8',

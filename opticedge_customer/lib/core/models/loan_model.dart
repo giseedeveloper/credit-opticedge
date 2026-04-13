@@ -1,3 +1,73 @@
+class LoanReleaseContext {
+  final String? assetReleaseStatus;
+  final String? assetReleasedAt;
+  final double cashPrice;
+  final double depositAmount;
+  final String? preferredRepayment;
+  final String? inventoryUnitId;
+
+  const LoanReleaseContext({
+    this.assetReleaseStatus,
+    this.assetReleasedAt,
+    this.cashPrice = 0,
+    this.depositAmount = 0,
+    this.preferredRepayment,
+    this.inventoryUnitId,
+  });
+
+  factory LoanReleaseContext.fromJson(Map<String, dynamic> json) {
+    return LoanReleaseContext(
+      assetReleaseStatus: json['asset_release_status'] as String?,
+      assetReleasedAt: json['asset_released_at'] as String?,
+      cashPrice: LoanModel._toDouble(json['cash_price']),
+      depositAmount: LoanModel._toDouble(json['deposit_amount']),
+      preferredRepayment: json['preferred_repayment'] as String?,
+      inventoryUnitId: json['inventory_unit_id'] as String?,
+    );
+  }
+}
+
+class LoanPortalPayload {
+  final String portalState;
+  final String? portalMessage;
+  final LoanModel? loan;
+  final LoanReleaseContext? release;
+
+  const LoanPortalPayload({
+    this.portalState = 'no_loan',
+    this.portalMessage,
+    this.loan,
+    this.release,
+  });
+
+  bool get isLoanActive => portalState == 'loan_active' && loan != null;
+  bool get isReleasedPendingDisbursement =>
+      portalState == 'released_pending_disbursement';
+  bool get isNoLoan => portalState == 'no_loan' && loan == null;
+
+  factory LoanPortalPayload.fromJson(Map<String, dynamic> json) {
+    if (json.containsKey('loan') ||
+        json.containsKey('portal_state') ||
+        json.containsKey('release')) {
+      return LoanPortalPayload(
+        portalState: json['portal_state'] as String? ?? 'no_loan',
+        portalMessage: json['portal_message'] as String?,
+        loan: json['loan'] is Map<String, dynamic>
+            ? LoanModel.fromJson(json['loan'] as Map<String, dynamic>)
+            : null,
+        release: json['release'] is Map<String, dynamic>
+            ? LoanReleaseContext.fromJson(json['release'] as Map<String, dynamic>)
+            : null,
+      );
+    }
+
+    return LoanPortalPayload(
+      portalState: json.isEmpty ? 'no_loan' : 'loan_active',
+      loan: json.isEmpty ? null : LoanModel.fromJson(json),
+    );
+  }
+}
+
 class LoanModel {
   final String id;
   final String loanNumber;

@@ -7,14 +7,34 @@ import '../models/transaction_model.dart';
 // ─── Loan Summary ───────────────────────────────────────────────────
 class LoanState {
   final LoanModel? loan;
+  final LoanReleaseContext? releaseContext;
+  final String portalState;
+  final String? statusMessage;
   final bool isLoading;
   final String? error;
 
-  const LoanState({this.loan, this.isLoading = false, this.error});
+  const LoanState({
+    this.loan,
+    this.releaseContext,
+    this.portalState = 'no_loan',
+    this.statusMessage,
+    this.isLoading = false,
+    this.error,
+  });
 
-  LoanState copyWith({LoanModel? loan, bool? isLoading, String? error}) {
+  LoanState copyWith({
+    LoanModel? loan,
+    LoanReleaseContext? releaseContext,
+    String? portalState,
+    String? statusMessage,
+    bool? isLoading,
+    String? error,
+  }) {
     return LoanState(
       loan: loan ?? this.loan,
+      releaseContext: releaseContext ?? this.releaseContext,
+      portalState: portalState ?? this.portalState,
+      statusMessage: statusMessage,
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );
@@ -30,10 +50,17 @@ class LoanNotifier extends StateNotifier<LoanState> {
       final res = await ApiClient.instance.get('/loan');
       final data = res.data['data'];
       if (data == null) {
-        state = const LoanState(loan: null, isLoading: false);
+        state = const LoanState(isLoading: false);
         return;
       }
-      state = LoanState(loan: LoanModel.fromJson(data), isLoading: false);
+      final payload = LoanPortalPayload.fromJson(data as Map<String, dynamic>);
+      state = LoanState(
+        loan: payload.loan,
+        releaseContext: payload.release,
+        portalState: payload.portalState,
+        statusMessage: payload.portalMessage,
+        isLoading: false,
+      );
     } catch (e) {
       state = state.copyWith(isLoading: false, error: ApiClient.parseError(e));
     }
@@ -47,10 +74,20 @@ final loanProvider = StateNotifierProvider<LoanNotifier, LoanState>((ref) {
 // ─── Repayment Schedule ─────────────────────────────────────────────
 class ScheduleState {
   final ScheduleResponse? schedule;
+  final LoanReleaseContext? releaseContext;
+  final String portalState;
+  final String? statusMessage;
   final bool isLoading;
   final String? error;
 
-  const ScheduleState({this.schedule, this.isLoading = false, this.error});
+  const ScheduleState({
+    this.schedule,
+    this.releaseContext,
+    this.portalState = 'no_loan',
+    this.statusMessage,
+    this.isLoading = false,
+    this.error,
+  });
 }
 
 class ScheduleNotifier extends StateNotifier<ScheduleState> {
@@ -65,7 +102,13 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
         state = const ScheduleState();
         return;
       }
-      state = ScheduleState(schedule: ScheduleResponse.fromJson(data));
+      final payload = SchedulePortalPayload.fromJson(data as Map<String, dynamic>);
+      state = ScheduleState(
+        schedule: payload.schedule,
+        releaseContext: payload.release,
+        portalState: payload.portalState,
+        statusMessage: payload.portalMessage,
+      );
     } catch (e) {
       state = ScheduleState(error: ApiClient.parseError(e));
     }

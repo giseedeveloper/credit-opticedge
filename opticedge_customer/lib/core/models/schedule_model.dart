@@ -1,3 +1,5 @@
+import 'loan_model.dart';
+
 class ScheduleItem {
   final String id;
   final int installmentNumber;
@@ -53,6 +55,46 @@ class ScheduleItem {
     if (v is double) return v;
     if (v is int) return v.toDouble();
     return double.tryParse(v.toString()) ?? 0.0;
+  }
+}
+
+class SchedulePortalPayload {
+  final String portalState;
+  final String? portalMessage;
+  final LoanReleaseContext? release;
+  final ScheduleResponse? schedule;
+
+  const SchedulePortalPayload({
+    this.portalState = 'no_loan',
+    this.portalMessage,
+    this.release,
+    this.schedule,
+  });
+
+  bool get isLoanActive => portalState == 'loan_active' && schedule != null;
+  bool get isReleasedPendingDisbursement =>
+      portalState == 'released_pending_disbursement';
+
+  factory SchedulePortalPayload.fromJson(Map<String, dynamic> json) {
+    if (json.containsKey('schedule') ||
+        json.containsKey('portal_state') ||
+        json.containsKey('release')) {
+      return SchedulePortalPayload(
+        portalState: json['portal_state'] as String? ?? 'no_loan',
+        portalMessage: json['portal_message'] as String?,
+        release: json['release'] is Map<String, dynamic>
+            ? LoanReleaseContext.fromJson(json['release'] as Map<String, dynamic>)
+            : null,
+        schedule: json['schedule'] is Map<String, dynamic>
+            ? ScheduleResponse.fromJson(json['schedule'] as Map<String, dynamic>)
+            : null,
+      );
+    }
+
+    return SchedulePortalPayload(
+      portalState: json.isEmpty ? 'no_loan' : 'loan_active',
+      schedule: json.isEmpty ? null : ScheduleResponse.fromJson(json),
+    );
   }
 }
 

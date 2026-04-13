@@ -71,140 +71,521 @@ class _PayScreenState extends ConsumerState<PayScreen> {
     final loan = ref.watch(loanProvider);
     final payment = ref.watch(paymentProvider);
     final nextAmount = loan.loan?.nextInstallment?.amountDue;
+    final isPendingDisbursement =
+        loan.portalState == 'released_pending_disbursement';
+    final canSubmitPayment =
+        !payment.isRequesting && !isPendingDisbursement && loan.loan != null;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Lipa Mkopo')),
+      backgroundColor: AppConstants.background,
+      appBar: AppBar(
+        title: const Text(
+          'Lipa Mkopo',
+          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.4),
+        ),
+        backgroundColor: AppConstants.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Quick summary
-            if (loan.loan != null)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Deni Lililobaki',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+            if (loan.isLoading)
+              const Padding(
+                padding: EdgeInsets.only(top: 120),
+                child: Center(
+                  child: CircularProgressIndicator(color: AppConstants.primary),
+                ),
+              )
+            else if (loan.error != null)
+              _buildPortalError(loan.error!)
+            else if (isPendingDisbursement)
+              _buildPendingDisbursementState(loan)
+            else if (loan.loan == null)
+              _buildUnavailableState(loan.statusMessage)
+            else ...[
+              // Quick summary
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppConstants.primarySurface,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: AppConstants.primary.withValues(alpha: 0.14),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: AppConstants.primary.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      Text(
-                        'TZS ${_currencyFmt.format(loan.loan!.remainingBalance)}',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: AppConstants.primary,
+                      child: const Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: AppConstants.primary,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Deni Lililobaki',
+                      style: TextStyle(
+                        color: AppConstants.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'TZS ${_currencyFmt.format(loan.loan!.remainingBalance)}',
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: AppConstants.primary,
+                        letterSpacing: -0.6,
+                      ),
+                    ),
+                    if (nextAmount != null) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppConstants.surface,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'Malipo yajayo: TZS ${_currencyFmt.format(nextAmount)}',
+                          style: const TextStyle(
+                            color: AppConstants.textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                      if (nextAmount != null) ...[
-                        const Divider(height: 20),
-                        Text(
-                          'Malipo yajayo: TZS ${_currencyFmt.format(nextAmount)}',
-                          style: TextStyle(
-                            color: Colors.grey[700],
-                            fontSize: 13,
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Amount
+              const Text(
+                'Kiasi cha Kulipa (TZS)',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: AppConstants.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _amountCtrl,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  hintText: 'Mfano: 15000',
+                  prefixIcon: const Icon(
+                    Icons.payments_rounded,
+                    color: AppConstants.primary,
+                  ),
+                  filled: true,
+                  fillColor: AppConstants.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppConstants.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppConstants.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: AppConstants.primary,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Quick amount buttons
+              if (nextAmount != null)
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    _QuickAmountChip(
+                      label: 'Installment',
+                      amount: nextAmount,
+                      controller: _amountCtrl,
+                    ),
+                    if (loan.loan!.remainingBalance != nextAmount)
+                      _QuickAmountChip(
+                        label: 'Yote',
+                        amount: loan.loan!.remainingBalance,
+                        controller: _amountCtrl,
+                      ),
+                  ],
+                ),
+              const SizedBox(height: 20),
+
+              // Phone (optional)
+              const Text(
+                'Namba ya M-Pesa (hiari)',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: AppConstants.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _phoneCtrl,
+                keyboardType: TextInputType.phone,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  hintText: 'Acha tupu kutumia namba yako',
+                  prefixIcon: const Icon(
+                    Icons.phone_rounded,
+                    color: Color(0xFF8B5CF6),
+                  ),
+                  filled: true,
+                  fillColor: AppConstants.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppConstants.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppConstants.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: AppConstants.primary,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Error
+              if (payment.error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppConstants.errorSurface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppConstants.error.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: AppConstants.error,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            payment.error!,
+                            style: const TextStyle(
+                              color: AppConstants.error,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
-                    ],
+                    ),
+                  ),
+                ),
+
+              // Submit
+              SizedBox(
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: canSubmitPayment ? _submit : null,
+                  icon: payment.isRequesting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.send_rounded, size: 20),
+                  label: Text(
+                    payment.isRequesting ? 'Inatuma...' : 'Tuma Malipo',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppConstants.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
                   ),
                 ),
               ),
-            const SizedBox(height: 24),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
-            // Amount
-            Text(
-              'Kiasi cha Kulipa (TZS)',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _amountCtrl,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                hintText: 'Mfano: 15000',
-                prefixIcon: Icon(Icons.money_rounded),
+  Widget _buildPortalError(String message) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppConstants.errorSurface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppConstants.error.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.error_outline_rounded, color: AppConstants.error),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: AppConstants.error,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                height: 1.5,
               ),
             ),
-            const SizedBox(height: 8),
+          ),
+        ],
+      ),
+    );
+  }
 
-            // Quick amount buttons
-            if (nextAmount != null)
+  Widget _buildUnavailableState(String? message) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppConstants.primarySurface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppConstants.primary.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 68,
+            height: 68,
+            decoration: BoxDecoration(
+              color: AppConstants.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(
+              Icons.account_balance_wallet_outlined,
+              color: AppConstants.primary,
+              size: 34,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Malipo Hayajafunguliwa',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppConstants.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message ??
+                'Ukishapatiwa akaunti ya mkopo kwenye mfumo wa credit, utaweza kutuma malipo hapa.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppConstants.textSecondary,
+              fontSize: 13,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPendingDisbursementState(LoanState loan) {
+    final release = loan.releaseContext;
+    final repaymentLabel = switch (release?.preferredRepayment) {
+      'weekly' => 'Kila wiki',
+      'biweekly' => 'Kila baada ya wiki 2',
+      'monthly' => 'Kila mwezi',
+      _ => 'Inathibitishwa',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppConstants.warningSurface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: AppConstants.warning.withValues(alpha: 0.16),
+            ),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: AppConstants.warning.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(
+                  Icons.hourglass_top_rounded,
+                  color: AppConstants.warning,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Akaunti ya Malipo Inaandaliwa',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppConstants.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                loan.statusMessage ??
+                    'Kifaa kimeshatolewa. Subiri mfumo wa credit ukamilishe akaunti yako kabla ya kutuma malipo.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppConstants.textSecondary,
+                  fontSize: 13,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 18),
               Wrap(
-                spacing: 8,
+                spacing: 10,
+                runSpacing: 10,
+                alignment: WrapAlignment.center,
                 children: [
-                  _QuickAmountChip(
-                    label: 'Installment',
-                    amount: nextAmount,
-                    controller: _amountCtrl,
+                  _buildContextChip(
+                    'Malipo',
+                    repaymentLabel,
+                    AppConstants.warning,
+                    const Color(0xFFFFF0D9),
                   ),
-                  if (loan.loan!.remainingBalance != nextAmount)
-                    _QuickAmountChip(
-                      label: 'Yote',
-                      amount: loan.loan!.remainingBalance,
-                      controller: _amountCtrl,
+                  if ((release?.depositAmount ?? 0) > 0)
+                    _buildContextChip(
+                      'Amana',
+                      'TZS ${_currencyFmt.format(release!.depositAmount)}',
+                      AppConstants.success,
+                      AppConstants.successSurface,
+                    ),
+                  if (release?.assetReleasedAt != null)
+                    _buildContextChip(
+                      'Released',
+                      release!.assetReleasedAt!.split(' ').first,
+                      AppConstants.info,
+                      const Color(0xFFEFF6FF),
                     ),
                 ],
               ),
-            const SizedBox(height: 20),
-
-            // Phone (optional)
-            Text(
-              'Namba ya M-Pesa (hiari)',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _phoneCtrl,
-              keyboardType: TextInputType.phone,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                hintText: 'Acha tupu kutumia namba yako',
-                prefixIcon: Icon(Icons.phone_rounded),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppConstants.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppConstants.border),
+          ),
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                color: AppConstants.info,
+                size: 20,
               ),
-            ),
-            const SizedBox(height: 24),
-
-            // Error
-            if (payment.error != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppConstants.error.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    payment.error!,
-                    style: const TextStyle(
-                      color: AppConstants.error,
-                      fontSize: 13,
-                    ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Ukishaanza kuona salio na installment inayofuata kwenye app, hapo ndipo malipo yatakuwa yamefunguliwa.',
+                  style: TextStyle(
+                    color: AppConstants.textSecondary,
+                    fontSize: 13,
+                    height: 1.5,
                   ),
                 ),
               ),
-
-            // Submit
-            ElevatedButton.icon(
-              onPressed: payment.isRequesting ? null : _submit,
-              icon: payment.isRequesting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.send_rounded),
-              label: Text(payment.isRequesting ? 'Inatuma...' : 'Tuma Malipo'),
-            ),
-          ],
+            ],
+          ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildContextChip(
+    String label,
+    String value,
+    Color color,
+    Color background,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: color.withValues(alpha: 0.72),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

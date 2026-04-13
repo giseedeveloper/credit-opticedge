@@ -46,6 +46,10 @@ class DeviceModelOption {
   final num? retailPrice;
   final String deviceSpecs;
   final Map<String, dynamic> specifications;
+  final num? recommendedInterestRate;
+  final String recommendedInterestType;
+  final int? recommendedDurationWeeks;
+  final int? recommendedGracePeriodDays;
 
   const DeviceModelOption({
     required this.id,
@@ -55,10 +59,16 @@ class DeviceModelOption {
     required this.retailPrice,
     required this.deviceSpecs,
     this.specifications = const {},
+    this.recommendedInterestRate,
+    this.recommendedInterestType = '',
+    this.recommendedDurationWeeks,
+    this.recommendedGracePeriodDays,
   });
 
-  factory DeviceModelOption.fromJson(Map<String, dynamic> json) =>
-      DeviceModelOption(
+  factory DeviceModelOption.fromJson(Map<String, dynamic> json) {
+    final recommendedTerms = _specificationsMap(json['recommended_terms']);
+
+    return DeviceModelOption(
         id: json['id']?.toString() ?? '',
         brandId: json['brand_id']?.toString() ?? '',
         brandName: json['brand_name']?.toString() ?? '',
@@ -66,7 +76,15 @@ class DeviceModelOption {
         retailPrice: _nullableNum(json['retail_price']),
         deviceSpecs: json['device_specs']?.toString() ?? '',
         specifications: _specificationsMap(json['specifications']),
+        recommendedInterestRate: _nullableNum(recommendedTerms['interest_rate']),
+        recommendedInterestType:
+            recommendedTerms['interest_type']?.toString() ?? '',
+        recommendedDurationWeeks:
+            _nullableInt(recommendedTerms['duration_weeks']),
+        recommendedGracePeriodDays:
+            _nullableInt(recommendedTerms['grace_period_days']),
       );
+  }
 }
 
 class InventoryUnitOption {
@@ -80,6 +98,10 @@ class InventoryUnitOption {
   final String? imei2;
   final String? serialNumber;
   final String status;
+  final num? recommendedInterestRate;
+  final String recommendedInterestType;
+  final int? recommendedDurationWeeks;
+  final int? recommendedGracePeriodDays;
 
   const InventoryUnitOption({
     required this.id,
@@ -92,6 +114,10 @@ class InventoryUnitOption {
     this.imei2,
     this.serialNumber,
     required this.status,
+    this.recommendedInterestRate,
+    this.recommendedInterestType = '',
+    this.recommendedDurationWeeks,
+    this.recommendedGracePeriodDays,
   });
 
   String get title =>
@@ -108,8 +134,10 @@ class InventoryUnitOption {
     return parts.join(' • ');
   }
 
-  factory InventoryUnitOption.fromJson(Map<String, dynamic> json) =>
-      InventoryUnitOption(
+  factory InventoryUnitOption.fromJson(Map<String, dynamic> json) {
+    final recommendedTerms = _specificationsMap(json['recommended_terms']);
+
+    return InventoryUnitOption(
         id: json['id']?.toString() ?? '',
         phoneModelId: json['phone_model_id']?.toString() ?? '',
         brandName: json['brand_name']?.toString() ?? '',
@@ -120,7 +148,15 @@ class InventoryUnitOption {
         imei2: json['imei_2']?.toString(),
         serialNumber: json['serial_number']?.toString(),
         status: json['status']?.toString() ?? '',
+        recommendedInterestRate: _nullableNum(recommendedTerms['interest_rate']),
+        recommendedInterestType:
+            recommendedTerms['interest_type']?.toString() ?? '',
+        recommendedDurationWeeks:
+            _nullableInt(recommendedTerms['duration_weeks']),
+        recommendedGracePeriodDays:
+            _nullableInt(recommendedTerms['grace_period_days']),
       );
+  }
 }
 
 class KycDocumentOption {
@@ -313,4 +349,21 @@ Map<String, dynamic> _specificationsMap(dynamic value) {
   }
 
   return const {};
+}
+
+int? _nullableInt(dynamic value) {
+  if (value == null) {
+    return null;
+  }
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  if (value is String) {
+    return int.tryParse(value);
+  }
+
+  return null;
 }

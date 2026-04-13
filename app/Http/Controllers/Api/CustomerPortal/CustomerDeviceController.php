@@ -30,6 +30,8 @@ class CustomerDeviceController extends Controller
             'inventoryUnit',
             'agreementDocument',
         ]);
+        $metadata = is_array($customer->metadata) ? $customer->metadata : [];
+        $storedTerms = is_array($metadata['loan_terms'] ?? null) ? $metadata['loan_terms'] : [];
 
         $phoneModel = $customer->phoneModel;
         $brand = $phoneModel?->brand;
@@ -56,6 +58,11 @@ class CustomerDeviceController extends Controller
             'cash_price' => $customer->cash_price,
             'deposit_amount' => $customer->deposit_amount,
             'preferred_repayment' => $customer->preferred_repayment,
+            'loan_interest_rate' => $customer->loan_interest_rate,
+            'loan_interest_type' => $customer->loan_interest_type,
+            'loan_duration_weeks' => $customer->loan_duration_weeks,
+            'loan_grace_period_days' => $customer->loan_grace_period_days,
+            'loan_terms_source' => (string) ($storedTerms['source'] ?? 'kyc_capture'),
             'asset_release_status' => $customer->asset_release_status,
             'asset_released_at' => $customer->asset_released_at?->toDateString(),
             'agreement' => $customer->agreementDocument ? [

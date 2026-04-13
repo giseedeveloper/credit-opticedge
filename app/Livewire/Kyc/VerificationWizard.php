@@ -8,6 +8,7 @@ use App\Models\SelcomPaymentRequest;
 use App\Models\SystemDocument;
 use App\Models\Verification;
 use App\Services\ApplicationAutoCheckService;
+use App\Services\CustomerLoanProvisioningService;
 use App\Services\DeviceIdentifierScanService;
 use App\Services\IMEITrackingService;
 use App\Services\KycAccessoryOfferService;
@@ -59,6 +60,14 @@ class VerificationWizard extends Component
     public string $depositAmount = '';
 
     public string $preferredRepayment = '';
+
+    public string $loanInterestRate = '';
+
+    public string $loanInterestType = 'flat';
+
+    public string $loanDurationWeeks = '';
+
+    public string $loanGracePeriodDays = '';
 
     /** @var array<int, array<string, mixed>> */
     public array $deviceAccessories = [];
@@ -208,6 +217,8 @@ class VerificationWizard extends Component
         abort_unless(auth()->user()->canAccess('loans.create'), 403);
 
         $this->draftReference = (string) Str::uuid();
+        $this->preferredRepayment = 'weekly';
+        $this->seedLoanTermsFromDefaults(overwrite: true);
 
         if (auth()->user()->branch_id) {
             $this->branchId = (string) auth()->user()->branch_id;
@@ -228,6 +239,10 @@ class VerificationWizard extends Component
             'cashPrice' => ['required', 'numeric', 'min:1'],
             'depositAmount' => ['required', 'numeric', 'min:0'],
             'preferredRepayment' => ['required', 'in:weekly,biweekly,monthly'],
+            'loanInterestRate' => ['required', 'numeric', 'min:0'],
+            'loanInterestType' => ['required', 'in:flat,reducing_balance'],
+            'loanDurationWeeks' => ['required', 'integer', 'min:1', 'max:260'],
+            'loanGracePeriodDays' => ['required', 'integer', 'min:0', 'max:60'],
             'imeiPhoto' => ['nullable', 'image', 'max:5120'],
             'deviceBoxPhoto' => ['nullable', 'image', 'max:5120'],
             'devicePhoto' => ['nullable', 'image', 'max:5120'],
@@ -382,6 +397,7 @@ class VerificationWizard extends Component
         $this->brandId = (string) $phoneModel->brand_id;
         $this->deviceSpecs = $catalog->buildDeviceSpecs($phoneModel);
         $this->cashPrice = (string) ((float) $phoneModel->retail_price);
+        $this->seedLoanTermsFromDefaults();
     }
 
     public function updatedInventoryUnitId(KycDeviceCatalogService $catalog): void
@@ -400,6 +416,8 @@ class VerificationWizard extends Component
                 $this->deviceSpecs = $catalog->buildDeviceSpecs($phoneModel);
                 $this->cashPrice = (string) ((float) $phoneModel->retail_price);
             }
+
+            $this->seedLoanTermsFromDefaults();
 
             return;
         }
@@ -431,6 +449,12 @@ class VerificationWizard extends Component
         $this->serialNumber = $unit->serial_number ?? '';
         $this->scanFeedbackTone = 'sky';
         $this->scanFeedbackMessage = 'Stock unit linked. IMEI and serial have been loaded automatically from inventory.';
+        $this->seedLoanTermsFromDefaults();
+    }
+
+    public function updatedPreferredRepayment(): void
+    {
+        $this->seedLoanTermsFromDefaults();
     }
 
     /**
@@ -865,6 +889,10 @@ class VerificationWizard extends Component
             'cashPrice' => ['required', 'numeric', 'min:1'],
             'depositAmount' => ['required', 'numeric', 'min:0'],
             'preferredRepayment' => ['required', 'in:weekly,biweekly,monthly'],
+            'loanInterestRate' => ['required', 'numeric', 'min:0'],
+            'loanInterestType' => ['required', 'in:flat,reducing_balance'],
+            'loanDurationWeeks' => ['required', 'integer', 'min:1', 'max:260'],
+            'loanGracePeriodDays' => ['required', 'integer', 'min:0', 'max:60'],
             'deviceAccessories' => ['nullable', 'array', 'max:8'],
             'storeOfferNotes' => ['nullable', 'string', 'max:500'],
             // Step 2
@@ -915,6 +943,7 @@ class VerificationWizard extends Component
         $this->enforceDeviceSelectionIntegrity($catalog, app(IMEITrackingService::class));
         $selectedUnit = $catalog->accessibleUnit(auth()->user(), $this->inventoryUnitId);
         $activeAgreementDocument = $this->activeAgreementDocument;
+        $loanTerms = $this->resolvedLoanTermsSnapshot();
 
         $customer = Customer::create([
             'registered_by' => auth()->id(),
@@ -931,12 +960,17 @@ class VerificationWizard extends Component
             'cash_price' => $this->cashPrice,
             'deposit_amount' => $this->depositAmount,
             'preferred_repayment' => $this->preferredRepayment,
+            'loan_interest_rate' => $loanTerms['interest_rate'],
+            'loan_interest_type' => $loanTerms['interest_type'],
+            'loan_duration_weeks' => $loanTerms['duration_weeks'],
+            'loan_grace_period_days' => $loanTerms['grace_period_days'],
             'imei_photo_path' => $this->storePhoto($this->imeiPhoto, 'imei'),
             'device_box_photo_path' => $this->storePhoto($this->deviceBoxPhoto, 'device_box'),
             'device_photo_path' => $this->storePhoto($this->devicePhoto, 'device'),
             'device_scan_metadata' => $this->deviceScan !== [] ? $this->deviceScan : null,
             'device_accessories' => $this->deviceAccessories !== [] ? $this->deviceAccessories : null,
             'store_offer_notes' => $this->storeOfferNotes !== '' ? trim($this->storeOfferNotes) : null,
+            'metadata' => ['loan_terms' => $loanTerms],
             // Step 2 – Identity
             'first_name' => ucfirst(strtolower(trim($this->firstName))),
             'middle_name' => $this->middleName ? ucfirst(strtolower(trim($this->middleName))) : null,
@@ -1088,12 +1122,67 @@ class VerificationWizard extends Component
         }
     }
 
+    private function seedLoanTermsFromDefaults(bool $overwrite = false): void
+    {
+        $defaults = app(CustomerLoanProvisioningService::class)->defaultTerms($this->preferredRepayment);
+
+        if ($overwrite || $this->loanInterestRate === '') {
+            $this->loanInterestRate = (string) $defaults['interest_rate'];
+        }
+
+        if ($overwrite || $this->loanInterestType === '') {
+            $this->loanInterestType = (string) $defaults['interest_type'];
+        }
+
+        if ($overwrite || $this->loanDurationWeeks === '') {
+            $this->loanDurationWeeks = (string) $defaults['duration_weeks'];
+        }
+
+        if ($overwrite || $this->loanGracePeriodDays === '') {
+            $this->loanGracePeriodDays = (string) $defaults['grace_period_days'];
+        }
+    }
+
+    /**
+     * @return array{
+     *     interest_rate: float,
+     *     interest_type: string,
+     *     duration_weeks: int,
+     *     repayment_frequency: string,
+     *     grace_period_days: int,
+     *     source: string
+     * }
+     */
+    private function resolvedLoanTermsSnapshot(): array
+    {
+        $defaults = app(CustomerLoanProvisioningService::class)->defaultTerms($this->preferredRepayment);
+        $interestType = in_array($this->loanInterestType, ['flat', 'reducing_balance'], true)
+            ? $this->loanInterestType
+            : $defaults['interest_type'];
+
+        return [
+            'interest_rate' => round((float) ($this->loanInterestRate !== '' ? $this->loanInterestRate : $defaults['interest_rate']), 2),
+            'interest_type' => $interestType,
+            'duration_weeks' => max(1, (int) ($this->loanDurationWeeks !== '' ? $this->loanDurationWeeks : $defaults['duration_weeks'])),
+            'repayment_frequency' => $this->preferredRepayment !== '' ? $this->preferredRepayment : $defaults['repayment_frequency'],
+            'grace_period_days' => max(0, (int) ($this->loanGracePeriodDays !== '' ? $this->loanGracePeriodDays : $defaults['grace_period_days'])),
+            'source' => ($this->loanInterestRate !== ''
+                    || $this->loanInterestType !== ''
+                    || $this->loanDurationWeeks !== ''
+                    || $this->loanGracePeriodDays !== '')
+                ? 'kyc_capture'
+                : 'credit_defaults_snapshot',
+        ];
+    }
+
     public function startNew(): void
     {
         $this->reset();
         $this->step = 1;
         $this->scanFeedbackTone = 'slate';
         $this->draftReference = (string) Str::uuid();
+        $this->preferredRepayment = 'weekly';
+        $this->seedLoanTermsFromDefaults(overwrite: true);
         $this->paymentStatus = 'pending';
         $this->paymentMessage = '';
 

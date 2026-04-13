@@ -1,16 +1,17 @@
 <?php
 
 use App\Models\Branch;
+use App\Models\Brand;
 use App\Models\Customer;
 use App\Models\InventoryUnit;
 use App\Models\Loan;
 use App\Models\PhoneModel;
-use App\Models\Brand;
 use App\Models\Vendor;
 use App\Services\LoanCalculatorService;
 use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->service = app(LoanCalculatorService::class);
@@ -48,6 +49,34 @@ test('schedule installment numbers are sequential', function () {
     expect($numbers)->toBe([1, 2, 3, 4]);
 });
 
+test('monthly schedules use installment count derived from weeks', function () {
+    $loan = createTestLoan(
+        principal: 500_000,
+        weeks: 52,
+        type: 'flat',
+        repaymentFrequency: 'monthly',
+    );
+
+    $this->service->createSchedule($loan);
+
+    expect($loan->repaymentSchedules()->count())->toBe(13)
+        ->and($loan->repaymentSchedules()->first()?->due_date?->diffInDays($loan->disbursed_at))->toBeGreaterThanOrEqual(28);
+});
+
+test('biweekly schedules use half-week installment count', function () {
+    $loan = createTestLoan(
+        principal: 500_000,
+        weeks: 12,
+        type: 'flat',
+        repaymentFrequency: 'biweekly',
+    );
+
+    $this->service->createSchedule($loan);
+
+    expect($loan->repaymentSchedules()->count())->toBe(6)
+        ->and($loan->repaymentSchedules()->first()?->due_date?->diffInDays($loan->disbursed_at))->toBe(14);
+});
+
 test('generate loan number is unique', function () {
     $n1 = $this->service->generateLoanNumber();
     $n2 = $this->service->generateLoanNumber();
@@ -62,7 +91,7 @@ test('applies penalties to overdue installments', function () {
 
     $loan->repaymentSchedules()->update([
         'due_date' => Carbon::today()->subDays(10),
-        'status'   => 'pending',
+        'status' => 'pending',
     ]);
 
     $affected = $this->service->applyPenalties($loan, 1.0);
@@ -75,8 +104,12 @@ test('applies penalties to overdue installments', function () {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function createTestLoan(float $principal, int $weeks, string $type): Loan
-{
+function createTestLoan(
+    float $principal,
+    int $weeks,
+    string $type,
+    string $repaymentFrequency = 'weekly'
+): Loan {
     $branch = Branch::factory()->create();
     $brand = Brand::factory()->create();
     $model = PhoneModel::factory()->create(['brand_id' => $brand->id]);
@@ -86,24 +119,24 @@ function createTestLoan(float $principal, int $weeks, string $type): Loan
 
     $service = app(LoanCalculatorService::class);
     $computed = $type === 'flat'
-        ? $service->computeFlat($principal, 20, $weeks)
-        : $service->computeReducingBalance($principal, 20, $weeks);
+        ? $service->computeFlat($principal, 20, $weeks, $repaymentFrequency)
+        : $service->computeReducingBalance($principal, 20, $weeks, $repaymentFrequency);
 
     return Loan::factory()->create([
-        'customer_id'          => $customer->id,
-        'inventory_unit_id'    => $unit->id,
-        'vendor_id'            => $vendor->id,
-        'branch_id'            => $branch->id,
-        'loan_number'          => $service->generateLoanNumber(),
-        'principal_amount'     => $principal,
-        'interest_rate'        => 20,
-        'interest_type'        => $type,
-        'total_payable'        => $computed['total_payable'],
-        'outstanding_balance'  => $computed['total_payable'],
-        'duration_weeks'       => $weeks,
-        'repayment_frequency'  => 'weekly',
-        'status'               => 'active',
-        'disbursed_at'         => Carbon::today()->subWeeks($weeks + 1),
-        'due_date'             => Carbon::today()->subWeek(),
+        'customer_id' => $customer->id,
+        'inventory_unit_id' => $unit->id,
+        'vendor_id' => $vendor->id,
+        'branch_id' => $branch->id,
+        'loan_number' => $service->generateLoanNumber(),
+        'principal_amount' => $principal,
+        'interest_rate' => 20,
+        'interest_type' => $type,
+        'total_payable' => $computed['total_payable'],
+        'outstanding_balance' => $computed['total_payable'],
+        'duration_weeks' => $weeks,
+        'repayment_frequency' => $repaymentFrequency,
+        'status' => 'active',
+        'disbursed_at' => Carbon::today()->subWeeks($weeks + 1),
+        'due_date' => Carbon::today()->subWeek(),
     ]);
 }

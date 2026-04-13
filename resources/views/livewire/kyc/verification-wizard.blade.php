@@ -373,6 +373,41 @@
                                     <flux:error name="depositAmount" />
                                 </flux:field>
                             </div>
+                            <div class="rounded-2xl border border-sky-100 bg-sky-50/70 p-4 space-y-4">
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-900 dark:text-white">Credit Offer Terms</p>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        These terms will be snapshotted onto the customer record and later used when the loan account is created.
+                                    </p>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <flux:field>
+                                        <flux:label>Interest Type <span class="text-red-500">*</span></flux:label>
+                                        <flux:select wire:model="loanInterestType">
+                                            <flux:select.option value="flat">Flat Rate</flux:select.option>
+                                            <flux:select.option value="reducing_balance">Reducing Balance</flux:select.option>
+                                        </flux:select>
+                                        <flux:error name="loanInterestType" />
+                                    </flux:field>
+                                    <flux:field>
+                                        <flux:label>Interest Rate (%) <span class="text-red-500">*</span></flux:label>
+                                        <flux:input wire:model="loanInterestRate" type="number" min="0" step="0.01" placeholder="e.g. 3.5" />
+                                        <flux:error name="loanInterestRate" />
+                                    </flux:field>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <flux:field>
+                                        <flux:label>Duration (Weeks) <span class="text-red-500">*</span></flux:label>
+                                        <flux:input wire:model="loanDurationWeeks" type="number" min="1" max="260" placeholder="e.g. 52" />
+                                        <flux:error name="loanDurationWeeks" />
+                                    </flux:field>
+                                    <flux:field>
+                                        <flux:label>Grace Period (Days) <span class="text-red-500">*</span></flux:label>
+                                        <flux:input wire:model="loanGracePeriodDays" type="number" min="0" max="60" placeholder="e.g. 3" />
+                                        <flux:error name="loanGracePeriodDays" />
+                                    </flux:field>
+                                </div>
+                            </div>
                             <div class="grid grid-cols-3 gap-3">
                                 @foreach([
                                     ['imeiPhoto','IMEI / Box Sticker Photo','optional', true],

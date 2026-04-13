@@ -13,51 +13,103 @@ class ProfileScreen extends ConsumerWidget {
     final c = auth.customer;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profaili Yangu')),
+      backgroundColor: AppConstants.background,
+      appBar: AppBar(
+        title: const Text(
+          'Profaili Yangu',
+          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.4),
+        ),
+        backgroundColor: AppConstants.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: c == null
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: AppConstants.primary),
+            )
           : ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
               children: [
-                // Avatar
-                Center(
+                // Avatar card
+                Container(
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppConstants.heroStart,
+                        AppConstants.heroEnd,
+                        Color(0xFF10263F),
+                      ],
+                      stops: [0.0, 0.62, 1.0],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
                   child: Column(
                     children: [
-                      CircleAvatar(
-                        radius: 48,
-                        backgroundColor: AppConstants.primary.withValues(
-                          alpha: 0.1,
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            width: 2,
+                          ),
                         ),
-                        child: Text(
-                          _initials(c.firstName, c.lastName),
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: AppConstants.primary,
+                        child: Center(
+                          child: Text(
+                            _initials(c.firstName, c.lastName),
+                            style: const TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       Text(
                         c.fullName,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.4,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        c.phoneDisplay ?? c.phone,
-                        style: TextStyle(color: Colors.grey[600]),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          c.phoneDisplay ?? c.phone,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
 
                 // Personal Info
                 _SectionCard(
                   title: 'Taarifa Binafsi',
                   icon: Icons.person_rounded,
+                  iconColor: const Color(0xFF2F80ED),
+                  iconBg: const Color(0xFFF1F7FF),
                   children: [
                     _InfoRow('Jina Kamili', c.fullName),
                     _InfoRow('Simu', c.phoneDisplay ?? c.phone),
@@ -70,13 +122,15 @@ class ProfileScreen extends ConsumerWidget {
                     if (c.nidaNumber != null) _InfoRow('NIDA', c.nidaNumber!),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
 
                 // Vendor Info
                 if (c.vendor != null)
                   _SectionCard(
                     title: 'Muuzaji',
                     icon: Icons.store_rounded,
+                    iconColor: AppConstants.primary,
+                    iconBg: AppConstants.primarySurface,
                     children: [
                       _InfoRow('Jina', c.vendor!.name),
                       if (c.vendor!.phone != null)
@@ -85,13 +139,15 @@ class ProfileScreen extends ConsumerWidget {
                         _InfoRow('Anwani', c.vendor!.address!),
                     ],
                   ),
-                if (c.vendor != null) const SizedBox(height: 12),
+                if (c.vendor != null) const SizedBox(height: 14),
 
                 // Branch Info
                 if (c.branch != null)
                   _SectionCard(
                     title: 'Tawi',
                     icon: Icons.location_on_rounded,
+                    iconColor: AppConstants.success,
+                    iconBg: AppConstants.successSurface,
                     children: [
                       _InfoRow('Jina', c.branch!.name),
                       if (c.branch!.phone != null)
@@ -102,45 +158,90 @@ class ProfileScreen extends ConsumerWidget {
                         _InfoRow('Anwani', c.branch!.address!),
                     ],
                   ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
 
                 // Change PIN
-                Card(
-                  child: ListTile(
-                    leading: const Icon(
-                      Icons.lock_rounded,
-                      color: AppConstants.primary,
-                    ),
-                    title: const Text('Badilisha PIN'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _showChangePinDialog(context, ref),
-                  ),
+                _buildActionTile(
+                  icon: Icons.lock_rounded,
+                  iconColor: const Color(0xFF8B5CF6),
+                  iconBg: const Color(0xFFF7F3FF),
+                  title: 'Badilisha PIN',
+                  onTap: () => _showChangePinDialog(context, ref),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
                 // Logout
-                Card(
-                  child: ListTile(
-                    leading: const Icon(
-                      Icons.logout_rounded,
-                      color: AppConstants.error,
-                    ),
-                    title: const Text(
-                      'Ondoka',
-                      style: TextStyle(color: AppConstants.error),
-                    ),
-                    onTap: () => _confirmLogout(context, ref),
-                  ),
+                _buildActionTile(
+                  icon: Icons.logout_rounded,
+                  iconColor: AppConstants.error,
+                  iconBg: AppConstants.errorSurface,
+                  title: 'Ondoka',
+                  titleColor: AppConstants.error,
+                  onTap: () => _confirmLogout(context, ref),
                 ),
                 const SizedBox(height: 24),
                 Center(
                   child: Text(
                     'Opticedge Customer v1.0',
-                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                    style: TextStyle(
+                      color: AppConstants.textHint,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildActionTile({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBg,
+    required String title,
+    Color? titleColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppConstants.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppConstants.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: titleColor ?? AppConstants.textPrimary,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppConstants.textHint,
+              size: 22,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -290,37 +391,54 @@ class ProfileScreen extends ConsumerWidget {
 class _SectionCard extends StatelessWidget {
   final String title;
   final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
   final List<Widget> children;
   const _SectionCard({
     required this.title,
     required this.icon,
+    required this.iconColor,
+    required this.iconBg,
     required this.children,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: AppConstants.primary, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppConstants.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppConstants.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              ],
-            ),
-            const Divider(height: 20),
-            ...children,
-          ],
-        ),
+                child: Icon(icon, color: iconColor, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  color: AppConstants.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
       ),
     );
   }
@@ -334,16 +452,27 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppConstants.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const SizedBox(width: 12),
           Flexible(
             child: Text(
               value,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: AppConstants.textPrimary,
+              ),
               textAlign: TextAlign.end,
             ),
           ),

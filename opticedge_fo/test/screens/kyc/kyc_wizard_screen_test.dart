@@ -52,7 +52,9 @@ void main() {
               DeviceBrandOption(id: 'brand-1', name: 'Samsung'),
             ],
           ),
-          deviceModelsProvider('brand-1').overrideWith(
+          deviceModelsProvider(
+            (brandId: 'brand-1', preferredRepayment: 'weekly'),
+          ).overrideWith(
             (ref) async => const [
               DeviceModelOption(
                 id: 'model-1',
@@ -64,7 +66,11 @@ void main() {
               ),
             ],
           ),
-          inventoryUnitsProvider((phoneModelId: 'model-1', search: ''))
+          inventoryUnitsProvider((
+            phoneModelId: 'model-1',
+            search: '',
+            preferredRepayment: 'weekly',
+          ))
               .overrideWith(
             (ref) async => const [
               InventoryUnitOption(

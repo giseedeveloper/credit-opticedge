@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -28,6 +30,9 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
   late final TextEditingController _serial;
   late final TextEditingController _cash;
   late final TextEditingController _deposit;
+  late final TextEditingController _interestRate;
+  late final TextEditingController _durationWeeks;
+  late final TextEditingController _graceDays;
   late final TextEditingController _storeOfferNotes;
 
   final _repaymentOptions = const ['weekly', 'bi-weekly', 'monthly'];
@@ -43,6 +48,9 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
     _serial = TextEditingController(text: state.serialNumber);
     _cash = TextEditingController(text: state.cashPrice);
     _deposit = TextEditingController(text: state.depositAmount);
+    _interestRate = TextEditingController(text: state.loanInterestRate);
+    _durationWeeks = TextEditingController(text: state.loanDurationWeeks);
+    _graceDays = TextEditingController(text: state.loanGracePeriodDays);
     _storeOfferNotes = TextEditingController(text: state.storeOfferNotes);
   }
 
@@ -56,6 +64,9 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
       _serial,
       _cash,
       _deposit,
+      _interestRate,
+      _durationWeeks,
+      _graceDays,
       _storeOfferNotes,
     ]) {
       controller.dispose();
@@ -72,6 +83,9 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
       _serial: state.serialNumber,
       _cash: state.cashPrice,
       _deposit: state.depositAmount,
+      _interestRate: state.loanInterestRate,
+      _durationWeeks: state.loanDurationWeeks,
+      _graceDays: state.loanGracePeriodDays,
       _storeOfferNotes: state.storeOfferNotes,
     };
 
@@ -95,6 +109,9 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
             serialNumber: _serial.text.trim(),
             cashPrice: _cash.text.trim(),
             depositAmount: _deposit.text.trim(),
+            loanInterestRate: _interestRate.text.trim(),
+            loanDurationWeeks: _durationWeeks.text.trim(),
+            loanGracePeriodDays: _graceDays.text.trim(),
             storeOfferNotes: _storeOfferNotes.text.trim(),
           ),
         );
@@ -114,12 +131,20 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(kycProvider);
     final brandsAsync = ref.watch(deviceBrandsProvider);
-    final modelsAsync = ref.watch(deviceModelsProvider(state.brandId));
+    final modelsAsync = ref.watch(
+      deviceModelsProvider(
+        (
+          brandId: state.brandId,
+          preferredRepayment: state.preferredRepayment,
+        ),
+      ),
+    );
     final unitsAsync = ref.watch(
       inventoryUnitsProvider(
         (
           phoneModelId: state.phoneModelId,
           search: state.inventorySearch,
+          preferredRepayment: state.preferredRepayment,
         ),
       ),
     );
@@ -234,7 +259,12 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                           title: 'Failed to load device models.',
                           message: ApiClient.instance.parseError(error),
                           onRetry: () => ref.invalidate(
-                            deviceModelsProvider(state.brandId),
+                            deviceModelsProvider(
+                              (
+                                brandId: state.brandId,
+                                preferredRepayment: state.preferredRepayment,
+                              ),
+                            ),
                           ),
                         ),
                         data: (models) => DropdownButtonFormField<String>(
@@ -304,6 +334,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                               (
                                 phoneModelId: state.phoneModelId,
                                 search: state.inventorySearch,
+                                preferredRepayment: state.preferredRepayment,
                               ),
                             ),
                           ),
@@ -460,6 +491,8 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                       );
                     }).toList(),
                   ),
+                  const SizedBox(height: 16),
+                  _creditTermsCard(state),
                 ],
               ),
             ),
@@ -902,6 +935,220 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                   label: state.serialNumber,
                 ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _creditTermsCard(KycDraftState state) {
+    final interestTypeOptions = <(String, String)>[
+      ('flat', 'Flat Rate'),
+      ('reducing_balance', 'Reducing Balance'),
+    ];
+    final financedAmount = _safeNum(_cash.text) - _safeNum(_deposit.text);
+    final durationWeeks = _safeInt(_durationWeeks.text);
+    final installmentCount = _installmentCount(
+      durationWeeks,
+      state.preferredRepayment,
+    );
+    final preview = _estimateOfferPreview(
+      financedAmount: financedAmount,
+      annualRatePercent: _safeNum(_interestRate.text),
+      durationWeeks: durationWeeks,
+      repaymentCycle: state.preferredRepayment,
+      interestType: state.loanInterestType,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF8FBFF), Color(0xFFF3F7FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppConstants.info.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Offer Terms Snapshot',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: AppConstants.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'These terms are saved onto the customer draft and later used when the loan account is provisioned after release.',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: AppConstants.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _label('Interest Type'),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: interestTypeOptions.map((option) {
+              final value = option.$1;
+              final label = option.$2;
+              final selected = state.loanInterestType == value;
+
+              return ChoiceChip(
+                label: Text(label),
+                selected: selected,
+                onSelected: (_) {
+                  ref.read(kycProvider.notifier).update(
+                        (current) => current.copyWith(
+                          loanInterestType: value,
+                        ),
+                      );
+                },
+                selectedColor: AppConstants.primarySurface,
+                side: BorderSide(
+                  color: selected ? AppConstants.primary : AppConstants.border,
+                ),
+                labelStyle: TextStyle(
+                  color: selected
+                      ? AppConstants.primary
+                      : AppConstants.textSecondary,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _field(
+                  _interestRate,
+                  'Interest Rate (%)',
+                  required: true,
+                  keyboard: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _field(
+                  _durationWeeks,
+                  'Duration (Weeks)',
+                  required: true,
+                  keyboard: TextInputType.number,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _field(
+                  _graceDays,
+                  'Grace Period (Days)',
+                  required: true,
+                  keyboard: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppConstants.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Installments',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppConstants.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        installmentCount > 0 ? '$installmentCount' : 'Enter terms',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppConstants.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        state.preferredRepayment == 'bi-weekly'
+                            ? 'Bi-weekly plan'
+                            : '${_sentence(state.preferredRepayment)} plan',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppConstants.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppConstants.border),
+            ),
+            child: Row(
+              children: [
+                const AppColorIcon(
+                  assetName: AppIconAssets.submit,
+                  size: 18,
+                  semanticsLabel: 'Offer preview',
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Installment preview',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppConstants.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        preview == null
+                            ? 'Enter cash price, deposit, interest rate, and duration to preview the expected repayment size.'
+                            : 'Financed TZS ${_formatMoney(financedAmount)} • Total payable TZS ${_formatMoney(preview.totalPayable)} • Est. ${_cycleLabel(state.preferredRepayment)} installment TZS ${_formatMoney(preview.installment)}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          height: 1.45,
+                          color: AppConstants.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1378,6 +1625,113 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
     );
   }
 
+  _OfferPreview? _estimateOfferPreview({
+    required double financedAmount,
+    required double annualRatePercent,
+    required int durationWeeks,
+    required String repaymentCycle,
+    required String interestType,
+  }) {
+    if (financedAmount <= 0 || annualRatePercent < 0 || durationWeeks <= 0) {
+      return null;
+    }
+
+    final installments = _installmentCount(durationWeeks, repaymentCycle);
+    if (installments <= 0) {
+      return null;
+    }
+
+    final totalPayable = switch (interestType) {
+      'reducing_balance' => _reducingBalanceTotalPayable(
+          financedAmount: financedAmount,
+          annualRatePercent: annualRatePercent,
+          installments: installments,
+          repaymentCycle: repaymentCycle,
+        ),
+      _ => _flatTotalPayable(
+          financedAmount: financedAmount,
+          annualRatePercent: annualRatePercent,
+          durationWeeks: durationWeeks,
+        ),
+    };
+
+    return _OfferPreview(
+      totalPayable: totalPayable,
+      installment: installments > 0 ? totalPayable / installments : totalPayable,
+    );
+  }
+
+  double _flatTotalPayable({
+    required double financedAmount,
+    required double annualRatePercent,
+    required int durationWeeks,
+  }) {
+    final annualRate = annualRatePercent / 100;
+    final totalInterest = financedAmount * annualRate * (durationWeeks / 52);
+    return financedAmount + totalInterest;
+  }
+
+  double _reducingBalanceTotalPayable({
+    required double financedAmount,
+    required double annualRatePercent,
+    required int installments,
+    required String repaymentCycle,
+  }) {
+    final annualRate = annualRatePercent / 100;
+    final periodsPerYear = switch (repaymentCycle) {
+      'monthly' => 12,
+      'bi-weekly' => 26,
+      _ => 52,
+    };
+    final periodicRate = annualRate / periodsPerYear;
+
+    if (periodicRate <= 0) {
+      return financedAmount;
+    }
+
+    final denominator =
+        1 - math.pow(1 / (1 + periodicRate), installments).toDouble();
+    if (denominator <= 0) {
+      return financedAmount;
+    }
+
+    final installment = financedAmount * (periodicRate / denominator);
+    return installment * installments;
+  }
+
+  int _installmentCount(int durationWeeks, String repaymentCycle) {
+    if (durationWeeks <= 0) {
+      return 0;
+    }
+
+    return switch (repaymentCycle) {
+      'monthly' => (durationWeeks / 4).ceil().clamp(1, 260),
+      'bi-weekly' => (durationWeeks / 2).ceil().clamp(1, 260),
+      _ => durationWeeks.clamp(1, 260),
+    };
+  }
+
+  double _safeNum(String raw) => double.tryParse(raw.trim()) ?? 0;
+
+  int _safeInt(String raw) => int.tryParse(raw.trim()) ?? 0;
+
+  String _formatMoney(num amount) {
+    final normalized = amount < 0 ? 0 : amount;
+    final fixed = normalized.toStringAsFixed(0);
+    return fixed.replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (match) => '${match[1]},',
+    );
+  }
+
+  String _cycleLabel(String raw) {
+    return switch (raw) {
+      'bi-weekly' => 'bi-weekly',
+      'monthly' => 'monthly',
+      _ => 'weekly',
+    };
+  }
+
   String _sentence(String value) {
     if (value.isEmpty) {
       return value;
@@ -1385,4 +1739,14 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
 
     return value[0].toUpperCase() + value.substring(1);
   }
+}
+
+class _OfferPreview {
+  final double totalPayable;
+  final double installment;
+
+  const _OfferPreview({
+    required this.totalPayable,
+    required this.installment,
+  });
 }

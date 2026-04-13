@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Customer;
+use App\Models\Loan;
 use App\Models\SelcomPaymentRequest;
 use App\Models\SystemDocument;
 use App\Models\Verification;
 use App\Services\ApplicationAutoCheckService;
+use App\Services\CustomerLoanProvisioningService;
 use App\Services\DeviceIdentifierScanService;
 use App\Services\IMEITrackingService;
 use App\Services\KycAccessoryOfferService;
@@ -18,6 +20,7 @@ use App\Services\SelcomCheckoutService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -78,11 +81,19 @@ class KycApiController extends Controller
         return $this->successResponse($brands, 'Device brands retrieved.');
     }
 
-    public function deviceModels(Request $request, KycDeviceCatalogService $catalog): JsonResponse
-    {
+    public function deviceModels(
+        Request $request,
+        KycDeviceCatalogService $catalog,
+        CustomerLoanProvisioningService $loanProvisioning
+    ): JsonResponse {
         $request->validate([
             'brand_id' => ['nullable', 'uuid', 'exists:brands,id'],
+            'preferred_repayment' => ['nullable', 'in:weekly,biweekly,monthly'],
         ]);
+
+        $recommendedTerms = $loanProvisioning->defaultTerms(
+            $request->string('preferred_repayment')->toString() ?: null
+        );
 
         $models = $catalog->modelsFor($request->user(), $request->string('brand_id')->toString() ?: null)
             ->map(fn ($model) => [
@@ -93,18 +104,27 @@ class KycApiController extends Controller
                 'retail_price' => $model->retail_price,
                 'specifications' => $model->specifications,
                 'device_specs' => $catalog->buildDeviceSpecs($model),
+                'recommended_terms' => $recommendedTerms,
             ])
             ->values();
 
         return $this->successResponse($models, 'Device models retrieved.');
     }
 
-    public function deviceInventory(Request $request, KycDeviceCatalogService $catalog): JsonResponse
-    {
+    public function deviceInventory(
+        Request $request,
+        KycDeviceCatalogService $catalog,
+        CustomerLoanProvisioningService $loanProvisioning
+    ): JsonResponse {
         $request->validate([
             'phone_model_id' => ['nullable', 'exists:phone_models,id'],
             'search' => ['nullable', 'string', 'max:100'],
+            'preferred_repayment' => ['nullable', 'in:weekly,biweekly,monthly'],
         ]);
+
+        $recommendedTerms = $loanProvisioning->defaultTerms(
+            $request->string('preferred_repayment')->toString() ?: null
+        );
 
         $units = $catalog->unitsFor(
             $request->user(),
@@ -123,6 +143,7 @@ class KycApiController extends Controller
             'status' => $unit->status,
             'branch_id' => $unit->branch_id,
             'vendor_id' => $unit->vendor_id,
+            'recommended_terms' => $recommendedTerms,
         ])->values();
 
         return $this->successResponse($units, 'Available inventory retrieved.');
@@ -137,7 +158,8 @@ class KycApiController extends Controller
         KycDeviceCatalogService $catalog,
         DeviceIdentifierScanService $scanService,
         IMEITrackingService $imeiTracking,
-        KycAccessoryOfferService $accessoryOffers
+        KycAccessoryOfferService $accessoryOffers,
+        CustomerLoanProvisioningService $loanProvisioning
     ): JsonResponse {
         $validated = $request->validate([
             'brand_id' => ['nullable', 'exists:brands,id'],
@@ -150,6 +172,10 @@ class KycApiController extends Controller
             'cash_price' => ['required_without:phone_model_id', 'nullable', 'numeric', 'min:1'],
             'deposit_amount' => ['required', 'numeric', 'min:0'],
             'preferred_repayment' => ['required', 'in:weekly,biweekly,monthly'],
+            'loan_interest_rate' => ['nullable', 'numeric', 'min:0'],
+            'loan_interest_type' => ['nullable', 'in:flat,reducing_balance'],
+            'loan_duration_weeks' => ['nullable', 'integer', 'min:1', 'max:260'],
+            'loan_grace_period_days' => ['nullable', 'integer', 'min:0', 'max:60'],
             'imei_photo' => ['nullable', 'image', 'max:5120'],
             'device_box_photo' => ['nullable', 'image', 'max:5120'],
             'device_photo' => ['nullable', 'image', 'max:5120'],
@@ -166,6 +192,7 @@ class KycApiController extends Controller
 
         $normalizedAccessories = $this->normalizeAccessories($validated['accessories'] ?? [], $accessoryOffers);
         $scopeContext = $catalog->scopeContextFor($request->user());
+        $loanTerms = $this->resolvedLoanTermsSnapshot($validated, $loanProvisioning);
 
         $deviceSelection = $this->resolveDeviceSelection(
             $request,
@@ -189,12 +216,17 @@ class KycApiController extends Controller
             'cash_price' => $deviceSelection['cash_price'],
             'deposit_amount' => $validated['deposit_amount'],
             'preferred_repayment' => $validated['preferred_repayment'],
+            'loan_interest_rate' => $loanTerms['interest_rate'],
+            'loan_interest_type' => $loanTerms['interest_type'],
+            'loan_duration_weeks' => $loanTerms['duration_weeks'],
+            'loan_grace_period_days' => $loanTerms['grace_period_days'],
             'imei_photo_path' => $this->storeFile($request, 'imei_photo', 'imei'),
             'device_box_photo_path' => $this->storeFile($request, 'device_box_photo', 'device_box'),
             'device_photo_path' => $this->storeFile($request, 'device_photo', 'device'),
             'device_scan_metadata' => $deviceSelection['device_scan_metadata'],
             'device_accessories' => $normalizedAccessories !== [] ? $normalizedAccessories : null,
             'store_offer_notes' => $validated['store_offer_notes'] ?? null,
+            'metadata' => ['loan_terms' => $loanTerms],
             // Required placeholders so model is saveable
             'first_name' => '_draft_',
             'last_name' => '_draft_',
@@ -813,6 +845,11 @@ class KycApiController extends Controller
                 'cash_price' => $customer->cash_price,
                 'deposit_amount' => $customer->deposit_amount,
                 'preferred_repayment' => $customer->preferred_repayment,
+                'loan_interest_rate' => $customer->loan_interest_rate,
+                'loan_interest_type' => $customer->loan_interest_type,
+                'loan_duration_weeks' => $customer->loan_duration_weeks,
+                'loan_grace_period_days' => $customer->loan_grace_period_days,
+                'loan_terms_source' => $this->loanTermsSource($customer),
                 'scan_metadata' => $customer->device_scan_metadata,
                 'accessories' => $customer->device_accessories,
                 'store_offer_notes' => $customer->store_offer_notes,
@@ -884,7 +921,7 @@ class KycApiController extends Controller
         ], 'Customer detail retrieved.');
     }
 
-    public function releaseAsset(string $customerId): JsonResponse
+    public function releaseAsset(string $customerId, CustomerLoanProvisioningService $loanProvisioning): JsonResponse
     {
         $customer = $this->findAgentCustomerOrFail($customerId, ['inventoryUnit', 'assetReleasedBy', 'agreementDocument']);
 
@@ -913,9 +950,12 @@ class KycApiController extends Controller
         }
 
         if ($customer->isAssetReleased()) {
+            $loan = $loanProvisioning->provisionForCustomerPortal($customer->fresh());
+
             return $this->successResponse([
                 'customer_id' => $customer->id,
                 'release' => $this->serializeReleaseSummary($customer),
+                'loan' => $loan ? $this->serializeLoanSummary($loan) : null,
             ], 'This asset was already released.');
         }
 
@@ -923,15 +963,19 @@ class KycApiController extends Controller
             return $this->errorResponse('No linked stock unit was found for this application.', 422);
         }
 
-        $customer->update([
-            'asset_release_status' => 'released',
-            'asset_released_at' => now(),
-            'asset_released_by' => auth()->id(),
-        ]);
+        $loan = DB::transaction(function () use ($customer, $loanProvisioning) {
+            $customer->update([
+                'asset_release_status' => 'released',
+                'asset_released_at' => now(),
+                'asset_released_by' => auth()->id(),
+            ]);
 
-        if ($customer->inventoryUnit->status !== 'sold') {
-            $customer->inventoryUnit->update(['status' => 'assigned']);
-        }
+            if ($customer->inventoryUnit->status !== 'sold') {
+                $customer->inventoryUnit->update(['status' => 'assigned']);
+            }
+
+            return $loanProvisioning->provision($customer->fresh(['inventoryUnit', 'assetReleasedBy']), auth()->user());
+        });
 
         activity('kyc')
             ->performedOn($customer)
@@ -945,6 +989,7 @@ class KycApiController extends Controller
         return $this->successResponse([
             'customer_id' => $customer->id,
             'release' => $this->serializeReleaseSummary($customer->fresh()),
+            'loan' => $this->serializeLoanSummary($loan),
         ], 'Asset released successfully.');
     }
 
@@ -1270,6 +1315,89 @@ class KycApiController extends Controller
             'eligibility_blockers' => $this->releaseEligibilityBlockers($customer),
             'inventory_unit_id' => $customer->inventory_unit_id,
             'inventory_unit_status' => $customer->inventoryUnit?->status,
+            'loan_terms' => $this->serializeLoanTerms($customer),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array{
+     *     interest_rate: float,
+     *     interest_type: string,
+     *     duration_weeks: int,
+     *     repayment_frequency: string,
+     *     grace_period_days: int,
+     *     source: string
+     * }
+     */
+    private function resolvedLoanTermsSnapshot(
+        array $validated,
+        CustomerLoanProvisioningService $loanProvisioning
+    ): array {
+        $defaults = $loanProvisioning->defaultTerms($validated['preferred_repayment'] ?? null);
+        $hasExplicitCapture = array_key_exists('loan_interest_rate', $validated)
+            || array_key_exists('loan_interest_type', $validated)
+            || array_key_exists('loan_duration_weeks', $validated)
+            || array_key_exists('loan_grace_period_days', $validated);
+        $interestType = $validated['loan_interest_type'] ?? $defaults['interest_type'];
+
+        if (! in_array($interestType, ['flat', 'reducing_balance'], true)) {
+            $interestType = $defaults['interest_type'];
+        }
+
+        return [
+            'interest_rate' => round((float) ($validated['loan_interest_rate'] ?? $defaults['interest_rate']), 2),
+            'interest_type' => $interestType,
+            'duration_weeks' => max(1, (int) ($validated['loan_duration_weeks'] ?? $defaults['duration_weeks'])),
+            'repayment_frequency' => $validated['preferred_repayment'] ?? $defaults['repayment_frequency'],
+            'grace_period_days' => max(0, (int) ($validated['loan_grace_period_days'] ?? $defaults['grace_period_days'])),
+            'source' => $hasExplicitCapture ? 'kyc_capture' : 'credit_defaults_snapshot',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeLoanTerms(Customer $customer): array
+    {
+        return [
+            'interest_rate' => $customer->loan_interest_rate,
+            'interest_type' => $customer->loan_interest_type,
+            'duration_weeks' => $customer->loan_duration_weeks,
+            'grace_period_days' => $customer->loan_grace_period_days,
+            'repayment_frequency' => $customer->preferred_repayment,
+            'source' => $this->loanTermsSource($customer),
+        ];
+    }
+
+    private function loanTermsSource(Customer $customer): string
+    {
+        $metadata = is_array($customer->metadata) ? $customer->metadata : [];
+        $storedTerms = is_array($metadata['loan_terms'] ?? null) ? $metadata['loan_terms'] : [];
+
+        return (string) ($storedTerms['source'] ?? 'kyc_capture');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeLoanSummary(Loan $loan): array
+    {
+        return [
+            'id' => $loan->id,
+            'loan_number' => $loan->loan_number,
+            'status' => $loan->status,
+            'principal_amount' => $loan->principal_amount,
+            'deposit_paid' => $loan->deposit_paid,
+            'interest_rate' => $loan->interest_rate,
+            'interest_type' => $loan->interest_type,
+            'total_debt' => $loan->total_debt,
+            'total_payable' => $loan->total_payable,
+            'remaining_balance' => $loan->remaining_balance,
+            'repayment_frequency' => $loan->repayment_frequency,
+            'duration_weeks' => $loan->duration_weeks,
+            'disbursed_at' => $loan->disbursed_at?->toDateString(),
+            'due_date' => $loan->due_date?->toDateString(),
         ];
     }
 

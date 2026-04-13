@@ -316,8 +316,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 fillColor: fillColor,
               ),
               validator: (v) {
-                if (v == null || v.trim().length < 9)
+                if (v == null || v.trim().length < 9) {
                   return 'Weka namba sahihi ya simu';
+                }
                 return null;
               },
             ),
@@ -433,8 +434,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 ),
               ),
               validator: (v) {
-                if (v == null || v.length < 4)
+                if (v == null || v.length < 4) {
                   return 'PIN lazima iwe tarakimu 4-6';
+                }
                 return null;
               },
             ),

@@ -35,6 +35,11 @@ void main() {
                 serialNumber: 'SN-001',
                 cashPrice: '420000',
                 depositAmount: '120000',
+                preferredRepayment: 'weekly',
+                loanInterestRate: '4.5',
+                loanInterestType: 'flat',
+                loanDurationWeeks: '52',
+                loanGracePeriodDays: '3',
               ),
             ),
           ),
@@ -43,7 +48,9 @@ void main() {
               DeviceBrandOption(id: 'brand-1', name: 'Samsung'),
             ],
           ),
-          deviceModelsProvider('brand-1').overrideWith(
+          deviceModelsProvider(
+            (brandId: 'brand-1', preferredRepayment: 'weekly'),
+          ).overrideWith(
             (ref) async => const [
               DeviceModelOption(
                 id: 'model-1',
@@ -52,10 +59,18 @@ void main() {
                 name: 'Galaxy A15',
                 retailPrice: 420000,
                 deviceSpecs: 'Samsung Galaxy A15 128GB',
+                recommendedInterestRate: 4.5,
+                recommendedInterestType: 'flat',
+                recommendedDurationWeeks: 52,
+                recommendedGracePeriodDays: 3,
               ),
             ],
           ),
-          inventoryUnitsProvider((phoneModelId: 'model-1', search: ''))
+          inventoryUnitsProvider((
+            phoneModelId: 'model-1',
+            search: '',
+            preferredRepayment: 'weekly',
+          ))
               .overrideWith(
             (ref) async => const [
               InventoryUnitOption(
@@ -68,6 +83,10 @@ void main() {
                 imei1: '123456789012345',
                 serialNumber: 'SN-001',
                 status: 'available',
+                recommendedInterestRate: 4.5,
+                recommendedInterestType: 'flat',
+                recommendedDurationWeeks: 52,
+                recommendedGracePeriodDays: 3,
               ),
             ],
           ),
@@ -84,6 +103,8 @@ void main() {
     expect(find.text('Device Scan Experience'), findsOneWidget);
     expect(find.text('Stock-linked handset is ready'), findsOneWidget);
     expect(find.text('Scan lane'), findsOneWidget);
+    expect(find.text('Offer Terms Snapshot'), findsOneWidget);
+    expect(find.textContaining('Installment preview'), findsOneWidget);
   });
 
   testWidgets('Step 2 renders identity confidence and evidence guidance',

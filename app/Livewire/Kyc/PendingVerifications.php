@@ -5,6 +5,7 @@ namespace App\Livewire\Kyc;
 use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\Verification;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -80,10 +81,10 @@ class PendingVerifications extends Component
     private function loadStats(): void
     {
         $this->stageCounts = [
-            1 => Customer::whereHas('latestVerification', fn ($q) => $q->where('stage', 1)->where('status', 'pending'))->count(),
-            2 => Customer::whereHas('latestVerification', fn ($q) => $q->where('stage', 2)->where('status', 'pending'))->count(),
-            3 => Customer::whereHas('latestVerification', fn ($q) => $q->where('stage', 3)->where('status', 'pending'))->count(),
-            4 => Customer::whereHas('latestVerification', fn ($q) => $q->where('stage', 4)->where('status', 'pending'))->count(),
+            1 => Customer::whereHas('latestKycVerification', fn ($q) => $q->where('stage', 1)->where('status', 'pending'))->count(),
+            2 => Customer::whereHas('latestKycVerification', fn ($q) => $q->where('stage', 2)->where('status', 'pending'))->count(),
+            3 => Customer::whereHas('latestKycVerification', fn ($q) => $q->where('stage', 3)->where('status', 'pending'))->count(),
+            4 => Customer::whereHas('latestKycVerification', fn ($q) => $q->where('stage', 4)->where('status', 'pending'))->count(),
         ];
     }
 
@@ -116,7 +117,7 @@ class PendingVerifications extends Component
         $this->validate(['approveNotes' => 'nullable|string|max:500']);
 
         $customer = Customer::findOrFail($this->actionCustomerId);
-        $verification = Verification::where('customer_id', $customer->id)->where('type', 'kyc')->firstOrFail();
+        $verification = $this->resolveKycVerification($customer);
         $stage = $this->actionStage;
         $nextStage = $stage + 1;
 
@@ -164,7 +165,7 @@ class PendingVerifications extends Component
         ]);
 
         $customer = Customer::findOrFail($this->actionCustomerId);
-        $verification = Verification::where('customer_id', $customer->id)->where('type', 'kyc')->firstOrFail();
+        $verification = $this->resolveKycVerification($customer);
         $stage = $this->actionStage;
 
         $verification->update([
@@ -209,7 +210,7 @@ class PendingVerifications extends Component
         ]);
 
         $customer = Customer::findOrFail($this->actionCustomerId);
-        $verification = Verification::where('customer_id', $customer->id)->where('type', 'kyc')->firstOrFail();
+        $verification = $this->resolveKycVerification($customer);
 
         $isConfirmed = $this->callOutcome === 'confirmed';
 
@@ -258,7 +259,7 @@ class PendingVerifications extends Component
         ]);
 
         $customer = Customer::findOrFail($this->actionCustomerId);
-        $verification = Verification::where('customer_id', $customer->id)->where('type', 'kyc')->firstOrFail();
+        $verification = $this->resolveKycVerification($customer);
 
         $isConfirmed = $this->nokOutcome === 'confirmed';
 
@@ -293,8 +294,8 @@ class PendingVerifications extends Component
 
     public function render()
     {
-        $customers = Customer::with(['latestVerification', 'branch', 'registeredBy'])
-            ->whereHas('latestVerification', fn ($q) => $q->where('stage', $this->activeTab)->where('status', 'pending'))
+        $customers = Customer::with(['latestKycVerification', 'branch', 'registeredBy'])
+            ->whereHas('latestKycVerification', fn ($q) => $q->where('stage', $this->activeTab)->where('status', 'pending'))
             ->when($this->search, fn ($q) => $q->where(function ($q) {
                 $q->where('first_name', 'like', "%{$this->search}%")
                     ->orWhere('last_name', 'like', "%{$this->search}%")
@@ -308,7 +309,7 @@ class PendingVerifications extends Component
 
         $detailCustomer = $this->detailCustomerId
             ? Customer::with([
-                'latestVerification',
+                'latestKycVerification',
                 'branch',
                 'registeredBy',
                 'loans' => fn ($q) => $q->latest()->take(3),
@@ -320,5 +321,18 @@ class PendingVerifications extends Component
         return view('livewire.kyc.pending-verifications', compact(
             'customers', 'detailCustomer', 'branches'
         ))->layout('layouts.app', ['title' => 'KYC Verifications']);
+    }
+
+    private function resolveKycVerification(Customer $customer): Verification
+    {
+        $verification = $customer->latestKycVerification()->first();
+
+        if (! $verification) {
+            throw ValidationException::withMessages([
+                'verification' => 'No KYC verification record found for this customer.',
+            ]);
+        }
+
+        return $verification;
     }
 }

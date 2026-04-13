@@ -296,6 +296,13 @@ class Customer extends Model implements Authenticatable, HasMedia
         return $this->hasOne(Verification::class)->latest('created_at');
     }
 
+    public function latestKycVerification(): HasOne
+    {
+        return $this->hasOne(Verification::class)
+            ->where('type', 'kyc')
+            ->latest('created_at');
+    }
+
     public function loans(): HasMany
     {
         return $this->hasMany(Loan::class);

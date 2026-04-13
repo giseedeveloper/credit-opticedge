@@ -196,7 +196,7 @@
             @if($detailCustomer)
             @php
                 $dc = $detailCustomer;
-                $dcv = $dc->latestVerification;
+                $dcv = $dc->latestKycVerification;
                 $dcKycBadge = match($dcv?->status) {
                     'pending'  => 'bg-amber-100 text-amber-700',
                     'rejected' => 'bg-red-100 text-red-700',

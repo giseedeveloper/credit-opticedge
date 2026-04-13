@@ -51,9 +51,15 @@ class StockTransfers extends Component
         $this->loadStats();
     }
 
-    public function updatedSearch(): void { $this->resetPage(); }
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
-    public function updatedStatusFilter(): void { $this->resetPage(); }
+    public function updatedStatusFilter(): void
+    {
+        $this->resetPage();
+    }
 
     public function updatedTransferUnitSearch(): void
     {
@@ -79,7 +85,7 @@ class StockTransfers extends Component
         abort_unless(auth()->user()->canAccess('devices.edit'), 403);
         $transfer = StockTransfer::findOrFail($id);
         $transfer->update(['status' => 'delivered', 'received_at' => now()]);
-        $transfer->inventoryUnit?->update(['status' => $transfer->to_type === \App\Models\Vendor::class ? 'vendor_stock' : 'available']);
+        $transfer->inventoryUnit?->update(['status' => $transfer->to_type === Vendor::class ? 'vendor_stock' : 'available']);
         $this->loadStats();
         $this->dispatch('toast', message: "Transfer {$transfer->reference} marked as delivered.", type: 'success');
     }
@@ -115,27 +121,27 @@ class StockTransfers extends Component
         $this->validate([
             'transferUnitId' => 'required|exists:inventory_units,id',
             'transferToType' => 'required|in:vendor,branch',
-            'transferToId'   => 'required',
+            'transferToId' => 'required',
         ]);
 
         $unit = InventoryUnit::findOrFail($this->transferUnitId);
 
-        $toModelClass   = $this->transferToType === 'vendor' ? Vendor::class : Branch::class;
-        $toEntity       = $toModelClass::findOrFail($this->transferToId);
+        $toModelClass = $this->transferToType === 'vendor' ? Vendor::class : Branch::class;
+        $toEntity = $toModelClass::findOrFail($this->transferToId);
         $fromModelClass = $unit->vendor_id ? Vendor::class : Branch::class;
-        $fromId         = $unit->vendor_id ?? $unit->branch_id;
+        $fromId = $unit->vendor_id ?? $unit->branch_id;
 
         StockTransfer::create([
             'inventory_unit_id' => $unit->id,
-            'from_type'         => $fromModelClass,
-            'from_id'           => $fromId,
-            'to_type'           => $toModelClass,
-            'to_id'             => $toEntity->id,
-            'transferred_by'    => auth()->id(),
-            'reference'         => 'TRF-'.strtoupper(substr(uniqid(), -8)),
-            'status'            => 'in_transit',
-            'notes'             => $this->transferNotes ?: null,
-            'shipped_at'        => now(),
+            'from_type' => $fromModelClass,
+            'from_id' => $fromId,
+            'to_type' => $toModelClass,
+            'to_id' => $toEntity->id,
+            'transferred_by' => auth()->id(),
+            'reference' => 'TRF-'.strtoupper(substr(uniqid(), -8)),
+            'status' => 'in_transit',
+            'notes' => $this->transferNotes ?: null,
+            'shipped_at' => now(),
         ]);
 
         if ($this->transferToType === 'vendor') {
@@ -159,20 +165,20 @@ class StockTransfers extends Component
         $transfers = StockTransfer::with(['from', 'to', 'transferredBy', 'inventoryUnit.phoneModel.brand'])
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
             ->when($this->search, function ($q) {
-                $q->where('reference', 'ilike', "%{$this->search}%")
+                $q->whereInsensitiveLike('reference', "%{$this->search}%")
                     ->orWhereHas('inventoryUnit', fn ($u) => $u
-                        ->where('imei_1', 'ilike', "%{$this->search}%")
-                        ->orWhere('imei_2', 'ilike', "%{$this->search}%")
-                        ->orWhereHas('phoneModel', fn ($m) => $m->where('name', 'ilike', "%{$this->search}%")));
+                        ->whereInsensitiveLike('imei_1', "%{$this->search}%")
+                        ->orWhereInsensitiveLike('imei_2', "%{$this->search}%")
+                        ->orWhereHas('phoneModel', fn ($m) => $m->whereInsensitiveLike('name', "%{$this->search}%")));
             })
             ->latest()
             ->paginate(20);
 
         $availableUnits = InventoryUnit::with('phoneModel.brand')
             ->when($this->transferUnitSearch, function ($q) {
-                $q->where('imei_1', 'ilike', "%{$this->transferUnitSearch}%")
-                    ->orWhere('imei_2', 'ilike', "%{$this->transferUnitSearch}%")
-                    ->orWhereHas('phoneModel', fn ($m) => $m->where('name', 'ilike', "%{$this->transferUnitSearch}%"));
+                $q->whereInsensitiveLike('imei_1', "%{$this->transferUnitSearch}%")
+                    ->orWhereInsensitiveLike('imei_2', "%{$this->transferUnitSearch}%")
+                    ->orWhereHas('phoneModel', fn ($m) => $m->whereInsensitiveLike('name', "%{$this->transferUnitSearch}%"));
             })
             ->whereIn('status', ['hq_stock', 'vendor_stock'])
             ->orderBy('created_at', 'desc')
@@ -184,7 +190,7 @@ class StockTransfers extends Component
                 ->find($this->detailTransferId)
             : null;
 
-        $vendors  = Vendor::orderBy('name')->get();
+        $vendors = Vendor::orderBy('name')->get();
         $branches = Branch::orderBy('name')->get();
 
         return view('livewire.stock.stock-transfers', compact(

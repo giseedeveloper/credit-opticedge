@@ -46,24 +46,36 @@ class StockDashboard extends Component
         abort_unless(auth()->user()->canAccess('devices.view'), 403);
     }
 
-    public function updatedSearch(): void { $this->resetPage(); }
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
-    public function updatedStatusFilter(): void { $this->resetPage(); }
+    public function updatedStatusFilter(): void
+    {
+        $this->resetPage();
+    }
 
-    public function updatedBrandFilter(): void { $this->resetPage(); }
+    public function updatedBrandFilter(): void
+    {
+        $this->resetPage();
+    }
 
-    public function updatedBranchFilter(): void { $this->resetPage(); }
+    public function updatedBranchFilter(): void
+    {
+        $this->resetPage();
+    }
 
     // ── Detail panel ─────────────────────────────────────────────────
     public function openDetail(string $unitId): void
     {
         $this->detailUnitId = $unitId;
-        $this->showDetail   = true;
+        $this->showDetail = true;
     }
 
     public function closeDetail(): void
     {
-        $this->showDetail   = false;
+        $this->showDetail = false;
         $this->detailUnitId = null;
     }
 
@@ -71,9 +83,9 @@ class StockDashboard extends Component
     public function openStatusModal(string $unitId): void
     {
         abort_unless(auth()->user()->canAccess('devices.edit'), 403);
-        $this->detailUnitId  = $unitId;
-        $this->newStatus     = InventoryUnit::find($unitId)?->status ?? '';
-        $this->statusNote    = '';
+        $this->detailUnitId = $unitId;
+        $this->newStatus = InventoryUnit::find($unitId)?->status ?? '';
+        $this->statusNote = '';
         $this->showStatusModal = true;
     }
 
@@ -82,12 +94,12 @@ class StockDashboard extends Component
         abort_unless(auth()->user()->canAccess('devices.edit'), 403);
 
         $this->validate([
-            'newStatus'  => 'required|in:available,hq_stock,vendor_stock,in_transit,sold,returned,lost',
+            'newStatus' => 'required|in:available,hq_stock,vendor_stock,in_transit,sold,returned,lost',
             'statusNote' => 'nullable|string|max:255',
         ]);
 
         $unit = InventoryUnit::findOrFail($this->detailUnitId);
-        $old  = $unit->status;
+        $old = $unit->status;
         $unit->update(['status' => $this->newStatus]);
 
         activity('stock')
@@ -97,7 +109,7 @@ class StockDashboard extends Component
             ->log("Status changed: {$old} → {$this->newStatus}");
 
         $this->showStatusModal = false;
-        $this->showDetail      = false;
+        $this->showDetail = false;
         $this->dispatch('toast', message: 'Status updated to '.str_replace('_', ' ', $this->newStatus).'.', type: 'success');
     }
 
@@ -121,11 +133,11 @@ class StockDashboard extends Component
     {
         $query = InventoryUnit::with(['phoneModel.brand', 'branch', 'vendor', 'loan.customer'])
             ->when($this->search, fn ($q) => $q->where(function ($b) {
-                $b->where('imei_1', 'ilike', "%{$this->search}%")
-                    ->orWhere('imei_2', 'ilike', "%{$this->search}%")
-                    ->orWhere('serial_number', 'ilike', "%{$this->search}%")
-                    ->orWhereHas('phoneModel', fn ($m) => $m->where('name', 'ilike', "%{$this->search}%"))
-                    ->orWhereHas('phoneModel.brand', fn ($m) => $m->where('name', 'ilike', "%{$this->search}%"));
+                $b->whereInsensitiveLike('imei_1', "%{$this->search}%")
+                    ->orWhereInsensitiveLike('imei_2', "%{$this->search}%")
+                    ->orWhereInsensitiveLike('serial_number', "%{$this->search}%")
+                    ->orWhereHas('phoneModel', fn ($m) => $m->whereInsensitiveLike('name', "%{$this->search}%"))
+                    ->orWhereHas('phoneModel.brand', fn ($m) => $m->whereInsensitiveLike('name', "%{$this->search}%"));
             }))
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
             ->when($this->brandFilter, fn ($q) => $q->whereHas('phoneModel', fn ($m) => $m->where('brand_id', $this->brandFilter)))
@@ -143,10 +155,10 @@ class StockDashboard extends Component
             : null;
 
         return view('livewire.stock.stock-dashboard', [
-            'units'      => $query->paginate(20),
-            'summary'    => $summary,
-            'brands'     => Brand::orderBy('name')->get(),
-            'branches'   => Branch::orderBy('name')->get(),
+            'units' => $query->paginate(20),
+            'summary' => $summary,
+            'brands' => Brand::orderBy('name')->get(),
+            'branches' => Branch::orderBy('name')->get(),
             'detailUnit' => $detailUnit,
         ])->layout('layouts.app', ['title' => 'Stock Overview']);
     }

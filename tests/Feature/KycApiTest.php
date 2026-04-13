@@ -102,24 +102,22 @@ it('step1 creates a draft customer and returns customer_id', function () {
         ->and($draft?->metadata['loan_terms']['source'])->toBe('kyc_capture');
 });
 
-it('step1 snapshots default credit terms when offer inputs are omitted', function () {
+it('step1 requires explicit loan terms instead of falling back to defaults', function () {
     $this->postJson('/api/v1/kyc/application/step1', [
         'brand_id' => $this->brand->id,
         'phone_model_id' => $this->phoneModel->id,
         'inventory_unit_id' => $this->inventoryUnit->id,
         'deposit_amount' => 50000,
         'preferred_repayment' => 'monthly',
-    ])->assertOk();
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors([
+            'loan_interest_rate',
+            'loan_interest_type',
+            'loan_duration_weeks',
+            'loan_grace_period_days',
+        ]);
 
-    $draft = Customer::latest()->first();
-
-    expect($draft)->not->toBeNull()
-        ->and($draft?->loan_interest_rate)->not->toBeNull()
-        ->and($draft?->loan_interest_type)->not->toBeNull()
-        ->and($draft?->loan_duration_weeks)->not->toBeNull()
-        ->and($draft?->loan_grace_period_days)->not->toBeNull()
-        ->and($draft?->metadata['loan_terms']['source'])->toBe('credit_defaults_snapshot')
-        ->and($draft?->preferred_repayment)->toBe('monthly');
+    expect(Customer::count())->toBe(0);
 });
 
 it('step1 auto-links vendor store context from the selected stock unit', function () {
@@ -143,6 +141,10 @@ it('step1 auto-links vendor store context from the selected stock unit', functio
         'inventory_unit_id' => $vendorUnit->id,
         'deposit_amount' => 65000,
         'preferred_repayment' => 'weekly',
+        'loan_interest_rate' => 3.75,
+        'loan_interest_type' => 'flat',
+        'loan_duration_weeks' => 52,
+        'loan_grace_period_days' => 3,
     ])->assertOk();
 
     $draft = Customer::query()->whereKey(
@@ -161,6 +163,10 @@ it('step1 rejects invalid IMEI', function () {
         'cash_price' => 100,
         'deposit_amount' => 0,
         'preferred_repayment' => 'weekly',
+        'loan_interest_rate' => 3.75,
+        'loan_interest_type' => 'flat',
+        'loan_duration_weeks' => 52,
+        'loan_grace_period_days' => 3,
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['imei_number']);
 });
@@ -171,6 +177,10 @@ it('step1 can derive identifiers from a scanned payload when inventory is not li
         'cash_price' => 380000,
         'deposit_amount' => 50000,
         'preferred_repayment' => 'weekly',
+        'loan_interest_rate' => 3.75,
+        'loan_interest_type' => 'flat',
+        'loan_duration_weeks' => 52,
+        'loan_grace_period_days' => 3,
         'device_scan' => [
             'raw_text' => 'IMEI: 356789012345678 Serial Number: SN-SCAN-001',
             'detectors' => ['text'],
@@ -193,6 +203,10 @@ it('step1 rejects a scan payload that conflicts with the selected stock unit', f
         'inventory_unit_id' => $this->inventoryUnit->id,
         'deposit_amount' => 50000,
         'preferred_repayment' => 'weekly',
+        'loan_interest_rate' => 3.75,
+        'loan_interest_type' => 'flat',
+        'loan_duration_weeks' => 52,
+        'loan_grace_period_days' => 3,
         'device_scan' => [
             'raw_text' => 'IMEI: 356789012345679 Serial Number: SN-WRONG-001',
             'detectors' => ['text'],

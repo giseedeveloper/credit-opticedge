@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureSuperAdminGate();
         $this->configureDefaults();
+        $this->configureQueryMacros();
     }
 
     /**
@@ -94,5 +96,35 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+    }
+
+    /**
+     * Add database-portable case-insensitive search helpers for Livewire filters.
+     */
+    protected function configureQueryMacros(): void
+    {
+        Builder::macro('whereInsensitiveLike', function (string $column, string $pattern): Builder {
+            $driver = $this->getQuery()->getConnection()->getDriverName();
+
+            if ($driver === 'pgsql') {
+                return $this->where($column, 'ilike', $pattern);
+            }
+
+            $wrapped = $this->getQuery()->getGrammar()->wrap($column);
+
+            return $this->whereRaw("LOWER({$wrapped}) LIKE ?", [Str::lower($pattern)]);
+        });
+
+        Builder::macro('orWhereInsensitiveLike', function (string $column, string $pattern): Builder {
+            $driver = $this->getQuery()->getConnection()->getDriverName();
+
+            if ($driver === 'pgsql') {
+                return $this->orWhere($column, 'ilike', $pattern);
+            }
+
+            $wrapped = $this->getQuery()->getGrammar()->wrap($column);
+
+            return $this->whereRaw("LOWER({$wrapped}) LIKE ?", [Str::lower($pattern)], 'or');
+        });
     }
 }

@@ -312,8 +312,8 @@ class RoleManager extends Component
         if ($this->selectedRole && $this->activeTab === 'users') {
             $users = User::query()
                 ->when($this->userSearch, fn ($q) => $q->where(function ($q) {
-                    $q->where('name', 'ilike', "%{$this->userSearch}%")
-                        ->orWhere('email', 'ilike', "%{$this->userSearch}%");
+                    $q->whereInsensitiveLike('name', "%{$this->userSearch}%")
+                        ->orWhereInsensitiveLike('email', "%{$this->userSearch}%");
                 }))
                 ->where('is_active', true)
                 ->orderBy('name')

@@ -86,34 +86,40 @@ class BrandModelIndex extends Component
         abort_unless(auth()->user()->canAccess('products.view'), 403);
     }
 
-    public function updatedSearch(): void { $this->resetPage(); }
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
-    public function updatedTab(): void { $this->resetPage(); }
+    public function updatedTab(): void
+    {
+        $this->resetPage();
+    }
 
     // ── Brand Detail ─────────────────────────────────────────────────
     public function openBrandDetail(string $brandId): void
     {
-        $this->detailBrandId  = $brandId;
+        $this->detailBrandId = $brandId;
         $this->showBrandDetail = true;
     }
 
     public function closeBrandDetail(): void
     {
         $this->showBrandDetail = false;
-        $this->detailBrandId  = null;
+        $this->detailBrandId = null;
     }
 
     // ── Model Detail ─────────────────────────────────────────────────
     public function openModelDetail(string $modelId): void
     {
-        $this->detailModelId  = $modelId;
+        $this->detailModelId = $modelId;
         $this->showModelDetail = true;
     }
 
     public function closeModelDetail(): void
     {
         $this->showModelDetail = false;
-        $this->detailModelId  = null;
+        $this->detailModelId = null;
     }
 
     // ── Create Brand ─────────────────────────────────────────────────
@@ -130,8 +136,8 @@ class BrandModelIndex extends Component
     public function openEditBrand(string $brandId): void
     {
         abort_unless(auth()->user()->canAccess('products.edit'), 403);
-        $brand              = Brand::findOrFail($brandId);
-        $this->editBrandId  = $brandId;
+        $brand = Brand::findOrFail($brandId);
+        $this->editBrandId = $brandId;
         $this->editBrandName = $brand->name;
         $this->showEditBrand = true;
     }
@@ -150,19 +156,19 @@ class BrandModelIndex extends Component
     {
         abort_unless(auth()->user()->canAccess('products.create'), 403);
         $this->validate([
-            'modelName'       => 'required|string|max:150',
+            'modelName' => 'required|string|max:150',
             'selectedBrandId' => 'required|exists:brands,id',
-            'retailPrice'     => 'nullable|numeric|min:0',
-            'costPrice'       => 'nullable|numeric|min:0',
+            'retailPrice' => 'nullable|numeric|min:0',
+            'costPrice' => 'nullable|numeric|min:0',
         ]);
 
         PhoneModel::create([
-            'brand_id'       => $this->selectedBrandId,
-            'name'           => $this->modelName,
-            'slug'           => Str::slug($this->modelName.'-'.$this->selectedBrandId),
-            'retail_price'   => $this->retailPrice ?: 0,
-            'cost_price'     => $this->costPrice ?: 0,
-            'is_active'      => true,
+            'brand_id' => $this->selectedBrandId,
+            'name' => $this->modelName,
+            'slug' => Str::slug($this->modelName.'-'.$this->selectedBrandId),
+            'retail_price' => $this->retailPrice ?: 0,
+            'cost_price' => $this->costPrice ?: 0,
+            'is_active' => true,
             'specifications' => $this->buildSpecs($this->specRam, $this->specStorage, $this->specColor, $this->specDisplay, $this->specBattery),
         ]);
 
@@ -177,34 +183,34 @@ class BrandModelIndex extends Component
         $model = PhoneModel::findOrFail($modelId);
         $specs = $model->specifications ?? [];
 
-        $this->editModelId        = $modelId;
-        $this->editModelName      = $model->name;
+        $this->editModelId = $modelId;
+        $this->editModelName = $model->name;
         $this->editSelectedBrandId = (string) $model->brand_id;
-        $this->editRetailPrice    = (string) $model->retail_price;
-        $this->editCostPrice      = (string) $model->cost_price;
-        $this->editSpecRam        = $specs['ram'] ?? '';
-        $this->editSpecStorage    = $specs['storage'] ?? '';
-        $this->editSpecColor      = $specs['color'] ?? '';
-        $this->editSpecDisplay    = $specs['display'] ?? '';
-        $this->editSpecBattery    = $specs['battery'] ?? '';
-        $this->showEditModel      = true;
+        $this->editRetailPrice = (string) $model->retail_price;
+        $this->editCostPrice = (string) $model->cost_price;
+        $this->editSpecRam = $specs['ram'] ?? '';
+        $this->editSpecStorage = $specs['storage'] ?? '';
+        $this->editSpecColor = $specs['color'] ?? '';
+        $this->editSpecDisplay = $specs['display'] ?? '';
+        $this->editSpecBattery = $specs['battery'] ?? '';
+        $this->showEditModel = true;
     }
 
     public function updateModel(): void
     {
         abort_unless(auth()->user()->canAccess('products.edit'), 403);
         $this->validate([
-            'editModelName'       => 'required|string|max:150',
+            'editModelName' => 'required|string|max:150',
             'editSelectedBrandId' => 'required|exists:brands,id',
-            'editRetailPrice'     => 'nullable|numeric|min:0',
-            'editCostPrice'       => 'nullable|numeric|min:0',
+            'editRetailPrice' => 'nullable|numeric|min:0',
+            'editCostPrice' => 'nullable|numeric|min:0',
         ]);
 
         PhoneModel::findOrFail($this->editModelId)->update([
-            'brand_id'       => $this->editSelectedBrandId,
-            'name'           => $this->editModelName,
-            'retail_price'   => $this->editRetailPrice ?: 0,
-            'cost_price'     => $this->editCostPrice ?: 0,
+            'brand_id' => $this->editSelectedBrandId,
+            'name' => $this->editModelName,
+            'retail_price' => $this->editRetailPrice ?: 0,
+            'cost_price' => $this->editCostPrice ?: 0,
             'specifications' => $this->buildSpecs($this->editSpecRam, $this->editSpecStorage, $this->editSpecColor, $this->editSpecDisplay, $this->editSpecBattery),
         ]);
 
@@ -225,9 +231,9 @@ class BrandModelIndex extends Component
     private function buildSpecs(string $ram, string $storage, string $color, string $display, string $battery): array
     {
         return array_filter([
-            'ram'     => $ram,
+            'ram' => $ram,
             'storage' => $storage,
-            'color'   => $color,
+            'color' => $color,
             'display' => $display,
             'battery' => $battery,
         ]);
@@ -237,15 +243,15 @@ class BrandModelIndex extends Component
     {
         $brands = Brand::withCount('phoneModels')
             ->withCount(['inventoryUnits as stock_count'])
-            ->when($this->search, fn ($q) => $q->where('name', 'ilike', "%{$this->search}%"))
+            ->when($this->search, fn ($q) => $q->whereInsensitiveLike('name', "%{$this->search}%"))
             ->orderBy('name')
             ->paginate(15);
 
         $models = PhoneModel::with('brand')
             ->withCount(['inventoryUnits as stock_total'])
             ->withCount(['inventoryUnits as stock_available' => fn ($q) => $q->whereIn('status', ['available', 'hq_stock'])])
-            ->withCount(['inventoryUnits as stock_sold'      => fn ($q) => $q->where('status', 'sold')])
-            ->when($this->search, fn ($q) => $q->where('name', 'ilike', "%{$this->search}%"))
+            ->withCount(['inventoryUnits as stock_sold' => fn ($q) => $q->where('status', 'sold')])
+            ->when($this->search, fn ($q) => $q->whereInsensitiveLike('name', "%{$this->search}%"))
             ->orderBy('name')
             ->paginate(15);
 
@@ -253,7 +259,7 @@ class BrandModelIndex extends Component
             ? Brand::with(['phoneModels' => fn ($q) => $q->withCount([
                 'inventoryUnits as stock_total',
                 'inventoryUnits as stock_available' => fn ($q) => $q->whereIn('status', ['available', 'hq_stock']),
-                'inventoryUnits as stock_sold'      => fn ($q) => $q->where('status', 'sold'),
+                'inventoryUnits as stock_sold' => fn ($q) => $q->where('status', 'sold'),
             ])])->withCount('phoneModels')->find($this->detailBrandId)
             : null;
 
@@ -261,20 +267,20 @@ class BrandModelIndex extends Component
             ? PhoneModel::with('brand')
                 ->withCount([
                     'inventoryUnits as stock_total',
-                    'inventoryUnits as stock_available'    => fn ($q) => $q->whereIn('status', ['available', 'hq_stock']),
-                    'inventoryUnits as stock_vendor'       => fn ($q) => $q->where('status', 'vendor_stock'),
-                    'inventoryUnits as stock_in_transit'   => fn ($q) => $q->where('status', 'in_transit'),
-                    'inventoryUnits as stock_sold'         => fn ($q) => $q->where('status', 'sold'),
-                    'inventoryUnits as stock_returned'     => fn ($q) => $q->where('status', 'returned'),
+                    'inventoryUnits as stock_available' => fn ($q) => $q->whereIn('status', ['available', 'hq_stock']),
+                    'inventoryUnits as stock_vendor' => fn ($q) => $q->where('status', 'vendor_stock'),
+                    'inventoryUnits as stock_in_transit' => fn ($q) => $q->where('status', 'in_transit'),
+                    'inventoryUnits as stock_sold' => fn ($q) => $q->where('status', 'sold'),
+                    'inventoryUnits as stock_returned' => fn ($q) => $q->where('status', 'returned'),
                 ])
                 ->find($this->detailModelId)
             : null;
 
         $stats = [
-            'total_brands'  => Brand::count(),
-            'total_models'  => PhoneModel::count(),
+            'total_brands' => Brand::count(),
+            'total_models' => PhoneModel::count(),
             'active_models' => PhoneModel::where('is_active', true)->count(),
-            'total_units'   => InventoryUnit::count(),
+            'total_units' => InventoryUnit::count(),
         ];
 
         $allBrands = Brand::orderBy('name')->get();

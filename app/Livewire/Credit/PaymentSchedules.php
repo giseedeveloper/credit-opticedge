@@ -12,9 +12,11 @@ class PaymentSchedules extends Component
 {
     use WithPagination;
 
-    public string $loanSearch    = '';
-    public string $statusFilter  = '';
-    public string $branchFilter  = '';
+    public string $loanSearch = '';
+
+    public string $statusFilter = '';
+
+    public string $branchFilter = '';
 
     public ?string $selectedLoanId = null;
 
@@ -23,9 +25,20 @@ class PaymentSchedules extends Component
         abort_unless(auth()->user()->canAccess('loans.view'), 403);
     }
 
-    public function updatedLoanSearch(): void  { $this->resetPage(); }
-    public function updatedStatusFilter(): void { $this->resetPage(); }
-    public function updatedBranchFilter(): void { $this->resetPage(); }
+    public function updatedLoanSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedStatusFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedBranchFilter(): void
+    {
+        $this->resetPage();
+    }
 
     public function selectLoan(string $loanId): void
     {
@@ -57,11 +70,11 @@ class PaymentSchedules extends Component
     {
         $loans = Loan::with(['customer', 'inventoryUnit.phoneModel.brand', 'branch'])
             ->when($this->loanSearch, fn ($q) => $q->where(function ($q) {
-                $q->where('loan_number', 'ilike', "%{$this->loanSearch}%")
+                $q->whereInsensitiveLike('loan_number', "%{$this->loanSearch}%")
                     ->orWhereHas('customer', fn ($q) => $q
-                        ->where('first_name', 'ilike', "%{$this->loanSearch}%")
-                        ->orWhere('last_name', 'ilike', "%{$this->loanSearch}%")
-                        ->orWhere('phone', 'ilike', "%{$this->loanSearch}%"));
+                        ->whereInsensitiveLike('first_name', "%{$this->loanSearch}%")
+                        ->orWhereInsensitiveLike('last_name', "%{$this->loanSearch}%")
+                        ->orWhereInsensitiveLike('phone', "%{$this->loanSearch}%"));
             }))
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
             ->when(! $this->statusFilter, fn ($q) => $q->where('status', '!=', 'completed'))
@@ -70,16 +83,16 @@ class PaymentSchedules extends Component
             ->paginate(15);
 
         $stats = [
-            'due_this_week'    => RepaymentSchedule::where('status', '!=', 'paid')
+            'due_this_week' => RepaymentSchedule::where('status', '!=', 'paid')
                 ->whereBetween('due_date', [now()->startOfDay(), now()->addDays(7)->endOfDay()])
                 ->count(),
-            'overdue_count'    => RepaymentSchedule::where('status', '!=', 'paid')
+            'overdue_count' => RepaymentSchedule::where('status', '!=', 'paid')
                 ->where('due_date', '<', now()->startOfDay())
                 ->count(),
-            'collected_month'  => RepaymentSchedule::whereMonth('paid_at', now()->month)
+            'collected_month' => RepaymentSchedule::whereMonth('paid_at', now()->month)
                 ->whereYear('paid_at', now()->year)
                 ->sum('amount_paid'),
-            'active_loans'     => Loan::whereIn('status', ['active', 'overdue', 'pending'])->count(),
+            'active_loans' => Loan::whereIn('status', ['active', 'overdue', 'pending'])->count(),
         ];
 
         $branches = Branch::orderBy('name')->get();

@@ -3,7 +3,6 @@
 namespace App\Livewire\Inventory;
 
 use App\Models\Brand;
-use App\Models\Branch;
 use App\Models\InventoryUnit;
 use App\Models\PhoneModel;
 use App\Models\Vendor;
@@ -60,11 +59,20 @@ class StockGrid extends Component
         $this->loadStats();
     }
 
-    public function updatedSearch(): void { $this->resetPage(); }
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
-    public function updatedStatusFilter(): void { $this->resetPage(); }
+    public function updatedStatusFilter(): void
+    {
+        $this->resetPage();
+    }
 
-    public function updatedBrandFilter(): void { $this->resetPage(); }
+    public function updatedBrandFilter(): void
+    {
+        $this->resetPage();
+    }
 
     private function loadStats(): void
     {
@@ -78,12 +86,12 @@ class StockGrid extends Component
     public function openDetail(string $id): void
     {
         $this->detailUnitId = $id;
-        $this->showDetail   = true;
+        $this->showDetail = true;
     }
 
     public function closeDetail(): void
     {
-        $this->showDetail   = false;
+        $this->showDetail = false;
         $this->detailUnitId = null;
     }
 
@@ -91,25 +99,25 @@ class StockGrid extends Component
     public function openEditModal(string $id): void
     {
         abort_unless(auth()->user()->canAccess('devices.edit'), 403);
-        $unit                    = InventoryUnit::findOrFail($id);
-        $this->editUnitId        = $id;
-        $this->editStatus        = $unit->status;
+        $unit = InventoryUnit::findOrFail($id);
+        $this->editUnitId = $id;
+        $this->editStatus = $unit->status;
         $this->editPurchasePrice = (string) $unit->purchase_price;
-        $this->showEditModal     = true;
+        $this->showEditModal = true;
     }
 
     public function updateUnit(): void
     {
         abort_unless(auth()->user()->canAccess('devices.edit'), 403);
         $this->validate([
-            'editStatus'        => 'required|in:available,hq_stock,vendor_stock,in_transit,sold,returned,lost',
+            'editStatus' => 'required|in:available,hq_stock,vendor_stock,in_transit,sold,returned,lost',
             'editPurchasePrice' => 'nullable|numeric|min:0',
         ]);
 
         $unit = InventoryUnit::findOrFail($this->editUnitId);
-        $old  = $unit->status;
+        $old = $unit->status;
         $unit->update([
-            'status'         => $this->editStatus,
+            'status' => $this->editStatus,
             'purchase_price' => $this->editPurchasePrice ?: $unit->purchase_price,
         ]);
 
@@ -167,10 +175,10 @@ class StockGrid extends Component
             ->with(['phoneModel.brand', 'vendor', 'branch', 'loan.customer'])
             ->when($this->search, function ($q) {
                 $q->where(function ($b) {
-                    $b->where('imei_1', 'ilike', "%{$this->search}%")
-                        ->orWhere('imei_2', 'ilike', "%{$this->search}%")
-                        ->orWhere('serial_number', 'ilike', "%{$this->search}%")
-                        ->orWhereHas('phoneModel', fn ($m) => $m->where('name', 'ilike', "%{$this->search}%"));
+                    $b->whereInsensitiveLike('imei_1', "%{$this->search}%")
+                        ->orWhereInsensitiveLike('imei_2', "%{$this->search}%")
+                        ->orWhereInsensitiveLike('serial_number', "%{$this->search}%")
+                        ->orWhereHas('phoneModel', fn ($m) => $m->whereInsensitiveLike('name', "%{$this->search}%"));
                 });
             })
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
@@ -185,13 +193,13 @@ class StockGrid extends Component
                 'branch',
                 'loan.customer',
                 'loan.repaymentSchedules' => fn ($q) => $q->orderBy('due_date')->take(5),
-                'stockTransfers'          => fn ($q) => $q->latest()->take(6),
+                'stockTransfers' => fn ($q) => $q->latest()->take(6),
             ])->find($this->detailUnitId)
             : null;
 
         $phoneModels = PhoneModel::with('brand')->where('is_active', true)->orderBy('name')->get();
-        $vendors     = Vendor::orderBy('name')->get();
-        $brands      = Brand::orderBy('name')->get();
+        $vendors = Vendor::orderBy('name')->get();
+        $brands = Brand::orderBy('name')->get();
 
         return view('livewire.inventory.stock-grid', compact(
             'units', 'phoneModels', 'vendors', 'brands', 'detailUnit'

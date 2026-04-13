@@ -148,13 +148,13 @@ class DailyCollections extends Component
             ->whereDate('transacted_at', $this->date)
             ->when($this->channelFilter, fn ($q) => $q->where('channel', $this->channelFilter))
             ->when($this->search, fn ($q) => $q->where(function ($q) {
-                $q->where('reference', 'ilike', "%{$this->search}%")
-                    ->orWhere('external_reference', 'ilike', "%{$this->search}%")
-                    ->orWhereHas('loan', fn ($q) => $q->where('loan_number', 'ilike', "%{$this->search}%"))
+                $q->whereInsensitiveLike('reference', "%{$this->search}%")
+                    ->orWhereInsensitiveLike('external_reference', "%{$this->search}%")
+                    ->orWhereHas('loan', fn ($q) => $q->whereInsensitiveLike('loan_number', "%{$this->search}%"))
                     ->orWhereHas('loan.customer', fn ($q) => $q
-                        ->where('first_name', 'ilike', "%{$this->search}%")
-                        ->orWhere('last_name', 'ilike', "%{$this->search}%")
-                        ->orWhere('phone', 'ilike', "%{$this->search}%"));
+                        ->whereInsensitiveLike('first_name', "%{$this->search}%")
+                        ->orWhereInsensitiveLike('last_name', "%{$this->search}%")
+                        ->orWhereInsensitiveLike('phone', "%{$this->search}%"));
             }))
             ->latest('transacted_at')
             ->paginate(25);
@@ -177,10 +177,10 @@ class DailyCollections extends Component
 
         $searchLoans = Loan::with('customer')
             ->when($this->paymentLoanSearch, function ($q) {
-                $q->where('loan_number', 'ilike', "%{$this->paymentLoanSearch}%")
-                    ->orWhereHas('customer', fn ($c) => $c->where('first_name', 'ilike', "%{$this->paymentLoanSearch}%")
-                        ->orWhere('last_name', 'ilike', "%{$this->paymentLoanSearch}%")
-                        ->orWhere('phone', 'ilike', "%{$this->paymentLoanSearch}%")
+                $q->whereInsensitiveLike('loan_number', "%{$this->paymentLoanSearch}%")
+                    ->orWhereHas('customer', fn ($c) => $c->whereInsensitiveLike('first_name', "%{$this->paymentLoanSearch}%")
+                        ->orWhereInsensitiveLike('last_name', "%{$this->paymentLoanSearch}%")
+                        ->orWhereInsensitiveLike('phone', "%{$this->paymentLoanSearch}%")
                     );
             })
             ->whereIn('status', ['active', 'overdue', 'defaulted'])

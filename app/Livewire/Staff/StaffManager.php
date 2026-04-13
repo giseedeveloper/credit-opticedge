@@ -376,9 +376,9 @@ class StaffManager extends Component
     {
         $staff = User::with(['roles', 'branch'])
             ->when($this->search, fn ($q) => $q->where(function ($q) {
-                $q->where('name', 'ilike', "%{$this->search}%")
-                    ->orWhere('email', 'ilike', "%{$this->search}%")
-                    ->orWhere('employee_code', 'ilike', "%{$this->search}%");
+                $q->whereInsensitiveLike('name', "%{$this->search}%")
+                    ->orWhereInsensitiveLike('email', "%{$this->search}%")
+                    ->orWhereInsensitiveLike('employee_code', "%{$this->search}%");
             }))
             ->when($this->filterRole !== 'all', fn ($q) => $q->whereHas('roles', fn ($r) => $r->where('name', $this->filterRole)))
             ->when($this->filterStatus !== 'all', fn ($q) => $q->where('is_active', $this->filterStatus === 'active'))

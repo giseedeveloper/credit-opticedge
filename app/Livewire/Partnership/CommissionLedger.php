@@ -71,9 +71,9 @@ class CommissionLedger extends Component
     {
         $records = CommissionLedgerModel::with(['vendor', 'loan.customer'])
             ->when($this->search, fn ($q) => $q->where(function ($q) {
-                $q->whereHas('vendor', fn ($q) => $q->where('name', 'ilike', "%{$this->search}%"))
-                    ->orWhereHas('loan', fn ($q) => $q->where('loan_number', 'ilike', "%{$this->search}%"))
-                    ->orWhere('description', 'ilike', "%{$this->search}%");
+                $q->whereHas('vendor', fn ($q) => $q->whereInsensitiveLike('name', "%{$this->search}%"))
+                    ->orWhereHas('loan', fn ($q) => $q->whereInsensitiveLike('loan_number', "%{$this->search}%"))
+                    ->orWhereInsensitiveLike('description', "%{$this->search}%");
             }))
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
             ->when($this->vendorFilter, fn ($q) => $q->where('vendor_id', $this->vendorFilter))

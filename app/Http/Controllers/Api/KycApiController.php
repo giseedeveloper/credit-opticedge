@@ -172,10 +172,10 @@ class KycApiController extends Controller
             'cash_price' => ['required_without:phone_model_id', 'nullable', 'numeric', 'min:1'],
             'deposit_amount' => ['required', 'numeric', 'min:0'],
             'preferred_repayment' => ['required', 'in:weekly,biweekly,monthly'],
-            'loan_interest_rate' => ['nullable', 'numeric', 'min:0'],
-            'loan_interest_type' => ['nullable', 'in:flat,reducing_balance'],
-            'loan_duration_weeks' => ['nullable', 'integer', 'min:1', 'max:260'],
-            'loan_grace_period_days' => ['nullable', 'integer', 'min:0', 'max:60'],
+            'loan_interest_rate' => ['required', 'numeric', 'min:0'],
+            'loan_interest_type' => ['required', 'in:flat,reducing_balance'],
+            'loan_duration_weeks' => ['required', 'integer', 'min:1', 'max:260'],
+            'loan_grace_period_days' => ['required', 'integer', 'min:0', 'max:60'],
             'imei_photo' => ['nullable', 'image', 'max:5120'],
             'device_box_photo' => ['nullable', 'image', 'max:5120'],
             'device_photo' => ['nullable', 'image', 'max:5120'],
@@ -192,7 +192,7 @@ class KycApiController extends Controller
 
         $normalizedAccessories = $this->normalizeAccessories($validated['accessories'] ?? [], $accessoryOffers);
         $scopeContext = $catalog->scopeContextFor($request->user());
-        $loanTerms = $this->resolvedLoanTermsSnapshot($validated, $loanProvisioning);
+        $loanTerms = $this->resolvedLoanTermsSnapshot($validated);
 
         $deviceSelection = $this->resolveDeviceSelection(
             $request,
@@ -1330,28 +1330,15 @@ class KycApiController extends Controller
      *     source: string
      * }
      */
-    private function resolvedLoanTermsSnapshot(
-        array $validated,
-        CustomerLoanProvisioningService $loanProvisioning
-    ): array {
-        $defaults = $loanProvisioning->defaultTerms($validated['preferred_repayment'] ?? null);
-        $hasExplicitCapture = array_key_exists('loan_interest_rate', $validated)
-            || array_key_exists('loan_interest_type', $validated)
-            || array_key_exists('loan_duration_weeks', $validated)
-            || array_key_exists('loan_grace_period_days', $validated);
-        $interestType = $validated['loan_interest_type'] ?? $defaults['interest_type'];
-
-        if (! in_array($interestType, ['flat', 'reducing_balance'], true)) {
-            $interestType = $defaults['interest_type'];
-        }
-
+    private function resolvedLoanTermsSnapshot(array $validated): array
+    {
         return [
-            'interest_rate' => round((float) ($validated['loan_interest_rate'] ?? $defaults['interest_rate']), 2),
-            'interest_type' => $interestType,
-            'duration_weeks' => max(1, (int) ($validated['loan_duration_weeks'] ?? $defaults['duration_weeks'])),
-            'repayment_frequency' => $validated['preferred_repayment'] ?? $defaults['repayment_frequency'],
-            'grace_period_days' => max(0, (int) ($validated['loan_grace_period_days'] ?? $defaults['grace_period_days'])),
-            'source' => $hasExplicitCapture ? 'kyc_capture' : 'credit_defaults_snapshot',
+            'interest_rate' => round((float) $validated['loan_interest_rate'], 2),
+            'interest_type' => (string) $validated['loan_interest_type'],
+            'duration_weeks' => max(1, (int) $validated['loan_duration_weeks']),
+            'repayment_frequency' => (string) $validated['preferred_repayment'],
+            'grace_period_days' => max(0, (int) $validated['loan_grace_period_days']),
+            'source' => 'kyc_capture',
         ];
     }
 

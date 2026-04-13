@@ -79,9 +79,9 @@ class AuditLogDashboard extends Component
     {
         $activities = Activity::with(['causer'])
             ->when($this->search, fn ($q) => $q->where(function ($q) {
-                $q->where('description', 'ilike', "%{$this->search}%")
-                    ->orWhere('log_name', 'ilike', "%{$this->search}%")
-                    ->orWhere('subject_type', 'ilike', "%{$this->search}%");
+                $q->whereInsensitiveLike('description', "%{$this->search}%")
+                    ->orWhereInsensitiveLike('log_name', "%{$this->search}%")
+                    ->orWhereInsensitiveLike('subject_type', "%{$this->search}%");
             }))
             ->when($this->filterLogName !== 'all', fn ($q) => $q->where('log_name', $this->filterLogName))
             ->when($this->eventFilter, fn ($q) => $q->where('event', $this->eventFilter))

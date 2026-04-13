@@ -79,9 +79,9 @@ class AuditTrail extends Component
     {
         $logs = Activity::with(['causer'])
             ->when($this->search, fn ($q) => $q->where(function ($q) {
-                $q->where('description', 'ilike', "%{$this->search}%")
-                    ->orWhere('subject_type', 'ilike', "%{$this->search}%")
-                    ->orWhere('log_name', 'ilike', "%{$this->search}%");
+                $q->whereInsensitiveLike('description', "%{$this->search}%")
+                    ->orWhereInsensitiveLike('subject_type', "%{$this->search}%")
+                    ->orWhereInsensitiveLike('log_name', "%{$this->search}%");
             }))
             ->when($this->eventFilter, fn ($q) => $q->where('event', $this->eventFilter))
             ->when($this->logFilter, fn ($q) => $q->where('log_name', $this->logFilter))

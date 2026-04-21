@@ -20,7 +20,7 @@
             </div>
         </div>
         <a href="{{ route('kyc.wizard') }}" wire:navigate
-           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:opacity-90 transition-opacity shadow-sm">
+           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-oe to-oe-hover text-white hover:opacity-90 transition-opacity shadow-sm">
             <x-fluent-icon name="user-plus" size="xs" palette="emerald" />
             New KYC Wizard
         </a>
@@ -40,8 +40,8 @@
         @php
             $isActive = $activeTab === $n;
             $count    = $stageCounts[$n] ?? 0;
-            $tabRing  = $isActive ? 'ring-2 ring-orange-500' : 'border border-gray-100 dark:border-zinc-800';
-            $tabBg    = $isActive ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-white dark:bg-zinc-900';
+            $tabRing  = $isActive ? 'ring-2 ring-oe' : 'border border-gray-100 dark:border-zinc-800';
+            $tabBg    = $isActive ? 'bg-oe-soft dark:bg-orange-900/20' : 'bg-white dark:bg-zinc-900';
         @endphp
         <button wire:click="$set('activeTab', {{ $n }})"
                 class="{{ $tabBg }} {{ $tabRing }} rounded-2xl p-4 text-left shadow-sm hover:shadow-md transition-all">
@@ -49,7 +49,7 @@
                 <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ $sd['label'] }}</span>
                 <x-fluent-icon :name="$sd['icon']" size="xs" class="{{ $isActive ? 'opacity-100' : 'opacity-75' }}" />
                 @if($count > 0)
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-orange-100 text-orange-600">{{ $count }}</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-oe/15 text-oe-hover">{{ $count }}</span>
                 @endif
             </div>
             <p class="text-sm font-bold text-gray-800 dark:text-gray-100 leading-tight">{{ $sd['desc'] }}</p>
@@ -109,7 +109,7 @@
                 <tr wire:key="kyc-{{ $customer->id }}" class="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
                     <td class="px-4 py-3.5">
                         <div class="flex items-center gap-3">
-                            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 text-white text-xs font-black flex-shrink-0">
+                            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-oe/90 to-oe text-white text-xs font-black flex-shrink-0">
                                 {{ strtoupper(substr($customer->first_name, 0, 1).substr($customer->last_name, 0, 1)) }}
                             </div>
                             <div>
@@ -206,7 +206,7 @@
             @endphp
 
             {{-- Header --}}
-            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-oe to-oe-hover text-white">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-lg font-black">
                         {{ strtoupper(substr($dc->first_name, 0, 1).substr($dc->last_name, 0, 1)) }}
@@ -364,7 +364,7 @@
                         @endphp
                         <div class="flex items-center justify-between bg-gray-50 dark:bg-zinc-800 rounded-xl px-4 py-2.5">
                             <div>
-                                <p class="text-xs font-mono font-semibold text-orange-500 dark:text-blue-400">{{ $ln->loan_number }}</p>
+                                <p class="text-xs font-mono font-semibold text-oe dark:text-oe">{{ $ln->loan_number }}</p>
                                 <p class="text-[10px] text-gray-500">TZS {{ number_format($ln->principal_amount) }}</p>
                             </div>
                             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full {{ $lnBadge }}">{{ ucfirst($ln->status) }}</span>

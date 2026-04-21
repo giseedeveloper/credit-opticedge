@@ -59,8 +59,31 @@ class AdminUserSeeder extends Seeder
             'joined_at' => $admin->joined_at ?? now()->toDateString(),
         ])->save();
 
+        $adminCredity = User::updateOrCreate(
+            ['email' => 'admin@opticedgecredity.com'],
+            [
+                'name' => 'Super Admin',
+                'password' => Hash::make('Opticedge@2026'),
+                'email_verified_at' => now(),
+                'phone' => '+255 700 000 001',
+                'role' => 'admin',
+                'employee_code' => 'EMP-ADMIN-CREDITY',
+                'branch_id' => $hq->id,
+                'joined_at' => now()->toDateString(),
+                'is_active' => true,
+            ]
+        );
+
+        $adminCredity->syncRoles(['admin']);
+        $adminCredity->forceFill([
+            'role' => 'admin',
+            'joined_at' => $adminCredity->joined_at ?? now()->toDateString(),
+        ])->save();
+
         $this->command->info('✓ Admin user:  admin@opticedge.co.tz');
         $this->command->info('✓ Password:    Admin@2025!');
+        $this->command->info('✓ Admin user:  admin@opticedgecredity.com');
+        $this->command->info('✓ Password:    Opticedge@2026');
         $this->command->info('✓ Permissions: '.$adminRole->permissions()->count().' assigned to admin role');
     }
 }

@@ -58,6 +58,11 @@ it('validates step 1 device fields', function () {
     actingAs($this->fo);
 
     Livewire::test(VerificationWizard::class)
+        ->set('preferredRepayment', '')
+        ->set('loanInterestRate', '')
+        ->set('loanInterestType', '')
+        ->set('loanDurationWeeks', '')
+        ->set('loanGracePeriodDays', '')
         ->call('nextStep')
         ->assertHasErrors([
             'brandId',

@@ -4,7 +4,7 @@
     <div x-data="{ show:false, msg:'', type:'success' }"
          x-on:toast.window="msg=$event.detail.message; type=$event.detail.type; show=true; setTimeout(()=>show=false,3500)"
          x-show="show" x-transition
-         :class="type==='success' ? 'bg-teal-600' : type==='danger' ? 'bg-red-500' : 'bg-orange-500'"
+         :class="type==='success' ? 'bg-teal-600' : type==='danger' ? 'bg-red-500' : 'bg-oe'"
          class="fixed bottom-5 right-5 z-[60] text-white text-sm font-medium px-5 py-3 rounded-xl shadow-xl flex items-center gap-2">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         <span x-text="msg"></span>
@@ -72,7 +72,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-zinc-800">
                         @foreach($selectedEntry->lines as $line)
                         @php
-                        $typeBg = ['Asset'=>'bg-blue-100 text-orange-600','Liability'=>'bg-rose-100 text-rose-700','Equity'=>'bg-blue-100 text-orange-600','Revenue'=>'bg-teal-100 text-teal-700','Expense'=>'bg-amber-100 text-amber-700'];
+                        $typeBg = ['Asset'=>'bg-oe-soft text-oe-hover','Liability'=>'bg-rose-100 text-rose-700','Equity'=>'bg-oe-soft text-oe-hover','Revenue'=>'bg-teal-100 text-teal-700','Expense'=>'bg-amber-100 text-amber-700'];
                         @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800/40 transition-colors">
                             <td class="px-5 py-3">
@@ -84,7 +84,7 @@
                                     {{ $line->account?->type ?? '—' }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-right font-mono font-bold {{ (float)$line->debit > 0 ? 'text-orange-600 dark:text-blue-300' : 'text-gray-300' }}">
+                            <td class="px-4 py-3 text-right font-mono font-bold {{ (float)$line->debit > 0 ? 'text-oe-hover dark:text-oe' : 'text-gray-300' }}">
                                 {{ (float)$line->debit > 0 ? number_format((float)$line->debit, 2) : '—' }}
                             </td>
                             <td class="px-4 py-3 text-right font-mono font-bold {{ (float)$line->credit > 0 ? 'text-teal-700 dark:text-teal-300' : 'text-gray-300' }}">
@@ -112,7 +112,7 @@
             {{-- Footer --}}
             <div class="px-6 py-4 border-t border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/40 flex justify-between items-center shrink-0">
                 <p class="text-xs text-gray-400">Entry ID: <span class="font-mono">{{ $selectedEntry->id }}</span></p>
-                <button wire:click="closeJournalDetail" class="px-5 py-2 text-sm font-semibold bg-[#1a2035] hover:bg-orange-600 text-white rounded-xl transition-colors">
+                <button wire:click="closeJournalDetail" class="px-5 py-2 text-sm font-semibold bg-[#1a2035] hover:bg-oe-hover text-white rounded-xl transition-colors">
                     Close
                 </button>
             </div>
@@ -138,13 +138,13 @@
                     <div>
                         <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Account Code</label>
                         <input wire:model="acCode" type="text" placeholder="e.g. 1000"
-                               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono" />
+                               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe font-mono" />
                         @error('acCode') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Type</label>
                         <select wire:model="acType"
-                                class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe">
                             <option value="">Select type</option>
                             @foreach(['Asset','Liability','Equity','Revenue','Expense'] as $t)
                             <option value="{{ $t }}">{{ $t }}</option>
@@ -156,18 +156,18 @@
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Account Name</label>
                     <input wire:model="acName" type="text" placeholder="e.g. Cash on Hand"
-                           class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                     @error('acName') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Description <span class="normal-case font-normal text-gray-400">(optional)</span></label>
                     <input wire:model="acDescription" type="text" placeholder="Brief description"
-                           class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-50 dark:bg-zinc-800/60 rounded-b-2xl flex justify-end gap-3">
                 <button wire:click="$set('showAccountModal',false)" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-xl transition-colors">Cancel</button>
-                <button wire:click="saveAccount" class="px-5 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-colors shadow-sm">Save Account</button>
+                <button wire:click="saveAccount" class="px-5 py-2 text-sm font-semibold bg-oe hover:bg-oe-hover text-white rounded-xl transition-colors shadow-sm">Save Account</button>
             </div>
         </div>
     </div>
@@ -191,19 +191,19 @@
                     <div>
                         <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Reference</label>
                         <input wire:model="jeReference" type="text"
-                               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono" />
+                               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe font-mono" />
                         @error('jeReference') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Date</label>
                         <input wire:model="jeDate" type="date"
-                               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                         @error('jeDate') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Description</label>
                         <input wire:model="jeDescription" type="text" placeholder="e.g. Rent payment"
-                               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                               class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                         @error('jeDescription') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                     </div>
                 </div>
@@ -225,7 +225,7 @@
                             <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800/40">
                                 <td class="px-2 py-1.5">
                                     <select wire:model="jeLines.{{ $i }}.account_id"
-                                            class="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-orange-500">
+                                            class="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-oe">
                                         <option value="">Select account…</option>
                                         @foreach($allAccounts as $acc)
                                         <option value="{{ $acc->id }}">{{ $acc->code }} – {{ $acc->name }}</option>
@@ -234,15 +234,15 @@
                                 </td>
                                 <td class="px-2 py-1.5">
                                     <input wire:model="jeLines.{{ $i }}.debit" type="number" step="0.01" min="0" placeholder="0.00"
-                                           class="w-full px-2 py-1.5 text-xs text-right border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-mono" />
+                                           class="w-full px-2 py-1.5 text-xs text-right border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-oe font-mono" />
                                 </td>
                                 <td class="px-2 py-1.5">
                                     <input wire:model="jeLines.{{ $i }}.credit" type="number" step="0.01" min="0" placeholder="0.00"
-                                           class="w-full px-2 py-1.5 text-xs text-right border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-orange-500 font-mono" />
+                                           class="w-full px-2 py-1.5 text-xs text-right border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-oe font-mono" />
                                 </td>
                                 <td class="px-2 py-1.5">
                                     <input wire:model="jeLines.{{ $i }}.narration" type="text" placeholder="optional…"
-                                           class="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-orange-500" />
+                                           class="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-oe" />
                                 </td>
                                 <td class="px-2 py-1.5 text-center">
                                     @if(count($jeLines) > 2)
@@ -257,7 +257,7 @@
                         <tfoot>
                             <tr class="bg-gray-50 dark:bg-zinc-800/40">
                                 <td class="px-3 py-2 text-xs font-bold text-gray-500">TOTALS</td>
-                                <td class="px-3 py-2 text-xs font-black text-right font-mono text-orange-600 dark:text-blue-300">
+                                <td class="px-3 py-2 text-xs font-black text-right font-mono text-oe-hover dark:text-oe">
                                     {{ number_format(array_sum(array_column($jeLines, 'debit')), 2) }}
                                 </td>
                                 <td class="px-3 py-2 text-xs font-black text-right font-mono text-teal-700 dark:text-teal-300">
@@ -271,14 +271,14 @@
 
                 @error('jeLines') <p class="text-xs text-red-500 mb-2 flex items-center gap-1"><svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>{{ $message }}</p> @enderror
 
-                <button wire:click="addLine" class="text-xs text-orange-500 font-semibold hover:text-blue-800 flex items-center gap-1 transition-colors">
+                <button wire:click="addLine" class="text-xs text-oe font-semibold hover:text-blue-800 flex items-center gap-1 transition-colors">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
                     Add Line
                 </button>
             </div>
             <div class="px-6 py-4 bg-gray-50 dark:bg-zinc-800/60 rounded-b-2xl flex justify-end gap-3 shrink-0">
                 <button wire:click="$set('showJournalModal',false)" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-xl transition-colors">Cancel</button>
-                <button wire:click="saveJournalEntry" wire:loading.attr="disabled" class="px-5 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-xl transition-colors shadow-sm flex items-center gap-2">
+                <button wire:click="saveJournalEntry" wire:loading.attr="disabled" class="px-5 py-2 text-sm font-semibold bg-oe hover:bg-oe-hover disabled:opacity-60 text-white rounded-xl transition-colors shadow-sm flex items-center gap-2">
                     <span wire:loading.remove wire:target="saveJournalEntry">Post Entry</span>
                     <span wire:loading wire:target="saveJournalEntry" class="flex items-center gap-1.5">
                         <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
@@ -302,7 +302,7 @@
         @if($activeTab === 'journal')
         @can('accounting.create')
         <button wire:click="openJournalModal"
-                class="flex items-center gap-2 px-4 py-2.5 text-sm font-bold bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-colors shadow-sm">
+                class="flex items-center gap-2 px-4 py-2.5 text-sm font-bold bg-oe hover:bg-oe-hover text-white rounded-xl transition-colors shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
             Manual Entry
         </button>
@@ -310,7 +310,7 @@
         @elseif($activeTab === 'chart')
         @can('accounting.create')
         <button wire:click="openAccountModal()"
-                class="flex items-center gap-2 px-4 py-2.5 text-sm font-bold bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-colors shadow-sm">
+                class="flex items-center gap-2 px-4 py-2.5 text-sm font-bold bg-oe hover:bg-oe-hover text-white rounded-xl transition-colors shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
             New Account
         </button>
@@ -338,7 +338,7 @@
                 <button wire:click="setTab('{{ $tab['key'] }}')"
                         class="flex items-center gap-1.5 px-4 py-3.5 text-xs font-bold transition-all border-b-2 whitespace-nowrap
                                {{ $activeTab === $tab['key']
-                                    ? 'border-orange-500 text-orange-500 dark:text-blue-400'
+                                    ? 'border-oe text-oe dark:text-oe'
                                     : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:border-gray-200' }}">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $tab['icon'] }}"/></svg>
                     {{ $tab['label'] }}
@@ -362,9 +362,9 @@
                     ['label'=>'Expenses (Period)',  'value'=>$overview['Expense'],    'color'=>'amber',   'icon'=>'M2.25 6L9 12.75l4.286-4.286a11.948 11.948 0 014.306 2.43l3.658 3.158m0 0l3 2.654M7.5 15.75L3 12.375'],
                 ];
                 $colorMap = [
-                    'indigo' => ['bg'=>'bg-blue-100 dark:bg-blue-900/30','text'=>'text-orange-500 dark:text-blue-400','val'=>'text-orange-600 dark:text-blue-300'],
+                    'indigo' => ['bg'=>'bg-oe-soft dark:bg-oe/10','text'=>'text-oe dark:text-oe','val'=>'text-oe-hover dark:text-oe'],
                     'rose'   => ['bg'=>'bg-rose-100 dark:bg-rose-900/30',    'text'=>'text-rose-600 dark:text-rose-400',    'val'=>'text-rose-700 dark:text-rose-300'],
-                    'violet' => ['bg'=>'bg-blue-100 dark:bg-blue-900/30','text'=>'text-orange-500 dark:text-blue-400','val'=>'text-orange-600 dark:text-blue-300'],
+                    'violet' => ['bg'=>'bg-oe-soft dark:bg-oe/10','text'=>'text-oe dark:text-oe','val'=>'text-oe-hover dark:text-oe'],
                     'teal'   => ['bg'=>'bg-teal-100 dark:bg-teal-900/30',    'text'=>'text-teal-600 dark:text-teal-400',    'val'=>'text-teal-700 dark:text-teal-300'],
                     'amber'  => ['bg'=>'bg-amber-100 dark:bg-amber-900/30',  'text'=>'text-amber-600 dark:text-amber-400',  'val'=>'text-amber-700 dark:text-amber-300'],
                 ];
@@ -389,7 +389,7 @@
                     <div class="bg-gray-50 dark:bg-zinc-800/40 rounded-xl overflow-hidden">
                         @forelse($overview['recentEntries'] as $entry)
                         <div wire:click="viewJournalEntry('{{ $entry->id }}')" class="flex items-center gap-4 px-4 py-3 border-b border-gray-100 dark:border-zinc-800 last:border-0 hover:bg-white dark:hover:bg-zinc-800 transition-colors cursor-pointer group">
-                            <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-orange-500 flex items-center justify-center shrink-0">
+                            <div class="w-8 h-8 rounded-lg bg-oe-soft dark:bg-oe/10 text-oe flex items-center justify-center shrink-0">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
                             </div>
                             <div class="flex-1 min-w-0">
@@ -397,12 +397,12 @@
                                 <p class="text-xs text-gray-400">{{ $entry->reference }} &middot; {{ $entry->date->format('d M Y') }}</p>
                             </div>
                             <div class="text-right shrink-0">
-                                <p class="text-xs font-bold font-mono text-orange-600 dark:text-blue-300">TZS {{ number_format((float)$entry->totalDebits(), 2) }}</p>
+                                <p class="text-xs font-bold font-mono text-oe-hover dark:text-oe">TZS {{ number_format((float)$entry->totalDebits(), 2) }}</p>
                                 <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold {{ $entry->isBalanced() ? 'bg-teal-100 text-teal-700' : 'bg-red-100 text-red-700' }}">
                                     {{ $entry->isBalanced() ? 'Balanced' : 'Unbalanced' }}
                                 </span>
                             </div>
-                            <svg class="w-3.5 h-3.5 text-gray-300 group-hover:text-blue-500 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                            <svg class="w-3.5 h-3.5 text-gray-300 group-hover:text-oe-hover transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
                         </div>
                         @empty
                         <div class="py-12 text-center">
@@ -432,7 +432,7 @@
                     @endforeach
                     <div class="mt-3 p-3 rounded-xl bg-gray-50 dark:bg-zinc-800/40 flex items-center justify-between">
                         <span class="text-xs font-bold text-gray-500">Total Entries</span>
-                        <span class="text-sm font-black text-orange-500">{{ number_format($overview['totalEntries']) }}</span>
+                        <span class="text-sm font-black text-oe">{{ number_format($overview['totalEntries']) }}</span>
                     </div>
                 </div>
             </div>
@@ -478,9 +478,9 @@
         <div>
             <div class="px-5 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center gap-3 flex-wrap">
                 <input wire:model.live.debounce.300="accountSearch" type="text" placeholder="Search code or name…"
-                       class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 w-64" />
+                       class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe w-64" />
                 <select wire:model.live="accountTypeFilter"
-                        class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe">
                     <option value="">All Types</option>
                     @foreach(['Asset','Liability','Equity','Revenue','Expense'] as $t)
                     <option value="{{ $t }}">{{ $t }}</option>
@@ -502,7 +502,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-zinc-800">
                         @forelse($accounts as $acc)
                         @php
-                        $typeBg = ['Asset'=>'bg-blue-100 text-orange-600','Liability'=>'bg-rose-100 text-rose-700','Equity'=>'bg-blue-100 text-orange-600','Revenue'=>'bg-teal-100 text-teal-700','Expense'=>'bg-amber-100 text-amber-700'];
+                        $typeBg = ['Asset'=>'bg-oe-soft text-oe-hover','Liability'=>'bg-rose-100 text-rose-700','Equity'=>'bg-oe-soft text-oe-hover','Revenue'=>'bg-teal-100 text-teal-700','Expense'=>'bg-amber-100 text-amber-700'];
                         $computed = $acc->computedBalance();
                         @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800/40 transition-colors">
@@ -527,7 +527,7 @@
                             <td class="px-6 py-3 text-right">
                                 <div class="flex items-center gap-3 justify-end">
                                     <button wire:click="openAccountModal('{{ $acc->id }}')"
-                                            class="text-xs text-orange-500 hover:text-blue-800 font-semibold transition-colors">Edit</button>
+                                            class="text-xs text-oe hover:text-blue-800 font-semibold transition-colors">Edit</button>
                                     <button wire:click="toggleAccountStatus('{{ $acc->id }}')" wire:confirm="{{ $acc->is_active ? 'Deactivate this account?' : 'Activate this account?' }}"
                                             class="text-xs font-semibold transition-colors {{ $acc->is_active ? 'text-rose-500 hover:text-rose-700' : 'text-teal-600 hover:text-teal-800' }}">
                                         {{ $acc->is_active ? 'Deactivate' : 'Activate' }}
@@ -555,12 +555,12 @@
             <div class="px-5 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center gap-3 flex-wrap justify-between">
                 <div class="flex items-center gap-3 flex-wrap">
                     <input wire:model.live.debounce.300="journalSearch" type="text" placeholder="Search reference or description…"
-                           class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 w-64" />
+                           class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe w-64" />
                     <input wire:model.live="journalDateFrom" type="date"
-                           class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                     <span class="text-xs text-gray-400">to</span>
                     <input wire:model.live="journalDateTo" type="date"
-                           class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                 </div>
                 @can('accounting.export')
                 <button wire:click="exportJournalExcel" wire:loading.attr="disabled"
@@ -588,7 +588,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-zinc-800">
                         @forelse($journalEntries as $entry)
                         <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer group" wire:click="viewJournalEntry('{{ $entry->id }}')">
-                            <td class="px-6 py-3 font-mono font-bold text-orange-600 dark:text-blue-300 text-xs">{{ $entry->reference }}</td>
+                            <td class="px-6 py-3 font-mono font-bold text-oe-hover dark:text-oe text-xs">{{ $entry->reference }}</td>
                             <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ $entry->date->format('d M Y') }}</td>
                             <td class="px-4 py-3">
                                 <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-xs">{{ $entry->description }}</p>
@@ -600,7 +600,7 @@
                                 {{ number_format((float)$entry->totalDebits(), 2) }}
                             </td>
                             <td class="px-4 py-3 text-center">
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $entry->source === 'manual' ? 'bg-blue-100 text-orange-600' : 'bg-teal-100 text-teal-700' }}">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $entry->source === 'manual' ? 'bg-oe-soft text-oe-hover' : 'bg-teal-100 text-teal-700' }}">
                                     {{ ucfirst(str_replace('_', ' ', $entry->source)) }}
                                 </span>
                             </td>
@@ -613,7 +613,7 @@
                             </td>
                             <td class="px-4 py-3 text-xs text-gray-500">{{ $entry->creator?->name ?? '—' }}</td>
                             <td class="px-4 py-3 text-center">
-                                <svg class="w-3.5 h-3.5 text-gray-300 group-hover:text-blue-500 transition-colors mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                                <svg class="w-3.5 h-3.5 text-gray-300 group-hover:text-oe-hover transition-colors mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
                             </td>
                         </tr>
                         @empty
@@ -640,7 +640,7 @@
             <div class="px-5 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center gap-3 flex-wrap justify-between">
                 <div class="flex items-center gap-3 flex-wrap">
                     <select wire:model.live="ledgerAccountId"
-                            class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 min-w-[260px]">
+                            class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe min-w-[260px]">
                         <option value="">Select account to view ledger…</option>
                         @foreach($allAccounts as $acc)
                         <option value="{{ $acc->id }}">{{ $acc->code }} – {{ $acc->name }}</option>
@@ -648,17 +648,17 @@
                     </select>
                     @if($ledgerAccount)
                     <span class="px-2.5 py-1 rounded-full text-xs font-bold
-                        {{ ['Asset'=>'bg-blue-100 text-orange-600','Liability'=>'bg-rose-100 text-rose-700','Equity'=>'bg-blue-100 text-orange-600','Revenue'=>'bg-teal-100 text-teal-700','Expense'=>'bg-amber-100 text-amber-700'][$ledgerAccount->type] ?? 'bg-gray-100 text-gray-600' }}">
+                        {{ ['Asset'=>'bg-oe-soft text-oe-hover','Liability'=>'bg-rose-100 text-rose-700','Equity'=>'bg-oe-soft text-oe-hover','Revenue'=>'bg-teal-100 text-teal-700','Expense'=>'bg-amber-100 text-amber-700'][$ledgerAccount->type] ?? 'bg-gray-100 text-gray-600' }}">
                         {{ $ledgerAccount->type }}
                     </span>
                     @endif
                 </div>
                 @if($ledgerAccountId)
                 <input wire:model.live="ledgerDateFrom" type="date" title="From"
-                       class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                       class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                 <span class="text-xs text-gray-400">to</span>
                 <input wire:model.live="ledgerDateTo" type="date" title="To"
-                       class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                       class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                 @can('accounting.export')
                 <button wire:click="exportLedgerExcel"
                         class="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border border-gray-200 dark:border-zinc-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded-xl transition-colors">
@@ -686,10 +686,10 @@
                         @foreach($ledgerLines as $line)
                         <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800/40 transition-colors">
                             <td class="px-6 py-2.5 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ $line->date?->format('d M Y') }}</td>
-                            <td class="px-4 py-2.5 font-mono text-xs font-bold text-orange-600 dark:text-blue-300">{{ $line->reference }}</td>
+                            <td class="px-4 py-2.5 font-mono text-xs font-bold text-oe-hover dark:text-oe">{{ $line->reference }}</td>
                             <td class="px-4 py-2.5 text-xs text-gray-700 dark:text-gray-300 truncate max-w-xs">{{ $line->description }}</td>
                             <td class="px-4 py-2.5 text-xs text-gray-400">{{ $line->narration ?? '—' }}</td>
-                            <td class="px-4 py-2.5 text-right font-mono text-xs font-semibold {{ (float)$line->debit > 0 ? 'text-orange-600 dark:text-blue-300' : 'text-gray-300' }}">
+                            <td class="px-4 py-2.5 text-right font-mono text-xs font-semibold {{ (float)$line->debit > 0 ? 'text-oe-hover dark:text-oe' : 'text-gray-300' }}">
                                 {{ (float)$line->debit > 0 ? number_format((float)$line->debit, 2) : '—' }}
                             </td>
                             <td class="px-4 py-2.5 text-right font-mono text-xs font-semibold {{ (float)$line->credit > 0 ? 'text-teal-700 dark:text-teal-300' : 'text-gray-300' }}">
@@ -720,12 +720,12 @@
                 <div class="flex items-center gap-2">
                     <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">From</label>
                     <input wire:model.live="plDateFrom" type="date"
-                           class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                 </div>
                 <div class="flex items-center gap-2">
                     <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">To</label>
                     <input wire:model.live="plDateTo" type="date"
-                           class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="px-3 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                 </div>
                 @can('accounting.export')
                 <button wire:click="exportPnlPdf" wire:loading.attr="disabled"
@@ -811,7 +811,7 @@
 
                 <div class="flex gap-3 mt-4">
                     <button wire:click="parseSelcomStatement" wire:loading.attr="disabled"
-                            class="flex items-center gap-2 px-5 py-2.5 text-sm font-bold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-xl transition-colors shadow-sm">
+                            class="flex items-center gap-2 px-5 py-2.5 text-sm font-bold bg-oe hover:bg-oe-hover disabled:opacity-60 text-white rounded-xl transition-colors shadow-sm">
                         <span wire:loading.remove wire:target="parseSelcomStatement">Parse File</span>
                         <span wire:loading wire:target="parseSelcomStatement" class="flex items-center gap-1.5">
                             <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
@@ -871,7 +871,7 @@
         @if($activeTab === 'reconciliation')
         <div class="p-6">
             <div class="flex items-center gap-3 mb-5">
-                <div class="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-orange-500">
+                <div class="p-2 rounded-lg bg-oe-soft dark:bg-oe/10 text-oe">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></svg>
                 </div>
                 <div>
@@ -896,7 +896,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-zinc-800">
                         @forelse($recoRows as $row)
                         @php
-                        $typeBg = ['Asset'=>'bg-blue-100 text-orange-600','Liability'=>'bg-rose-100 text-rose-700','Equity'=>'bg-blue-100 text-orange-600','Revenue'=>'bg-teal-100 text-teal-700','Expense'=>'bg-amber-100 text-amber-700'];
+                        $typeBg = ['Asset'=>'bg-oe-soft text-oe-hover','Liability'=>'bg-rose-100 text-rose-700','Equity'=>'bg-oe-soft text-oe-hover','Revenue'=>'bg-teal-100 text-teal-700','Expense'=>'bg-amber-100 text-amber-700'];
                         $hasImport = $row['imported'] !== null;
                         $variance  = $row['variance'];
                         $matched   = $variance !== null && bccomp($variance, '0', 4) === 0;
@@ -910,7 +910,7 @@
                             <td class="px-4 py-3 text-right font-mono font-bold text-gray-900 dark:text-gray-100 text-xs">
                                 {{ number_format((float)$row['internal'], 2) }}
                             </td>
-                            <td class="px-4 py-3 text-right font-mono text-xs {{ $hasImport ? 'font-bold text-orange-600 dark:text-blue-300' : 'text-gray-300' }}">
+                            <td class="px-4 py-3 text-right font-mono text-xs {{ $hasImport ? 'font-bold text-oe-hover dark:text-oe' : 'text-gray-300' }}">
                                 {{ $hasImport ? number_format((float)$row['imported'], 2) : '—' }}
                             </td>
                             <td class="px-4 py-3 text-right font-mono text-xs {{ !$hasImport ? 'text-gray-300' : ($matched ? 'text-teal-600 font-bold' : 'text-red-600 font-bold') }}">

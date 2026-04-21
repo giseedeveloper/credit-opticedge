@@ -36,14 +36,32 @@ String _repaymentValueForApi(String raw) {
   }
 }
 
+String _incomeCycleValueForApi(String raw) {
+  switch (raw) {
+    case 'bi-weekly':
+    case 'biweekly':
+      return 'biweekly';
+    case 'weekly':
+    case 'monthly':
+    case 'irregular':
+      return raw;
+    case 'daily':
+      return 'irregular';
+    default:
+      return 'monthly';
+  }
+}
+
 class KycDraftState {
   final String? customerId;
   final int currentStep;
   final bool isSubmitting;
   final String? error;
   final bool stepSaved;
+
   /// Furthest step the user may open in the wizard (synced with server resume + local progress).
   final int maxReachableStep;
+
   /// Last submit that failed with a retryable network error (step 1–7).
   final int? pendingRetryStep;
 
@@ -327,8 +345,7 @@ class KycDraftState {
       loanInterestRate: loanInterestRate ?? this.loanInterestRate,
       loanInterestType: loanInterestType ?? this.loanInterestType,
       loanDurationWeeks: loanDurationWeeks ?? this.loanDurationWeeks,
-      loanGracePeriodDays:
-          loanGracePeriodDays ?? this.loanGracePeriodDays,
+      loanGracePeriodDays: loanGracePeriodDays ?? this.loanGracePeriodDays,
       includeScreenProtector:
           includeScreenProtector ?? this.includeScreenProtector,
       includePhoneCover: includePhoneCover ?? this.includePhoneCover,
@@ -493,7 +510,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       case 1:
         return submitStep1();
       case 2:
-        return submitStep2();
+        return submitStage2();
       case 3:
         return submitStep3();
       case 4:
@@ -548,14 +565,14 @@ class KycNotifier extends StateNotifier<KycDraftState> {
 
     state = _applyRecommendedTerms(
       state.copyWith(
-      brandId: model.brandId,
-      phoneModelId: model.id,
-      inventoryUnitId: '',
-      deviceSpecs: model.deviceSpecs,
-      cashPrice: model.retailPrice?.toString() ?? '',
-      imeiNumber: '',
-      imei2: '',
-      serialNumber: '',
+        brandId: model.brandId,
+        phoneModelId: model.id,
+        inventoryUnitId: '',
+        deviceSpecs: model.deviceSpecs,
+        cashPrice: model.retailPrice?.toString() ?? '',
+        imeiNumber: '',
+        imei2: '',
+        serialNumber: '',
       ),
       interestRate: model.recommendedInterestRate,
       interestType: model.recommendedInterestType,
@@ -577,12 +594,12 @@ class KycNotifier extends StateNotifier<KycDraftState> {
 
     state = _applyRecommendedTerms(
       state.copyWith(
-      inventoryUnitId: unit.id,
-      deviceSpecs: unit.deviceSpecs,
-      cashPrice: unit.recommendedCashPrice?.toString() ?? state.cashPrice,
-      imeiNumber: unit.imei1,
-      imei2: unit.imei2 ?? '',
-      serialNumber: unit.serialNumber ?? '',
+        inventoryUnitId: unit.id,
+        deviceSpecs: unit.deviceSpecs,
+        cashPrice: unit.recommendedCashPrice?.toString() ?? state.cashPrice,
+        imeiNumber: unit.imei1,
+        imei2: unit.imei2 ?? '',
+        serialNumber: unit.serialNumber ?? '',
       ),
       interestRate: unit.recommendedInterestRate,
       interestType: unit.recommendedInterestType,
@@ -599,12 +616,12 @@ class KycNotifier extends StateNotifier<KycDraftState> {
     int? gracePeriodDays,
   }) {
     return current.copyWith(
-      loanInterestRate:
-          interestRate != null ? interestRate.toString() : current.loanInterestRate,
-      loanInterestType:
-          (interestType != null && interestType.isNotEmpty)
-              ? interestType
-              : current.loanInterestType,
+      loanInterestRate: interestRate != null
+          ? interestRate.toString()
+          : current.loanInterestRate,
+      loanInterestType: (interestType != null && interestType.isNotEmpty)
+          ? interestType
+          : current.loanInterestType,
       loanDurationWeeks: durationWeeks?.toString() ?? current.loanDurationWeeks,
       loanGracePeriodDays:
           gracePeriodDays?.toString() ?? current.loanGracePeriodDays,
@@ -788,7 +805,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       });
 
       final res =
-          await ApiClient.instance.postForm('/kyc/application/step1', form);
+          await ApiClient.instance.postForm('/kyc/application/stage1', form);
       final customerId = res.data['data']['customer_id']?.toString() ?? '';
       state = state.copyWith(
         customerId: customerId,
@@ -946,7 +963,9 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         'monthly_income': state.monthlyIncome,
         if (state.monthlyExpenses.isNotEmpty)
           'monthly_expenses': state.monthlyExpenses,
-        'income_payment_cycle': state.incomePaymentCycle,
+        'income_payment_cycle': _incomeCycleValueForApi(
+          state.incomePaymentCycle,
+        ),
         if (state.durationAtWork.isNotEmpty)
           'duration_at_work': state.durationAtWork,
         if (state.businessPhoto != null)
@@ -1051,6 +1070,141 @@ class KycNotifier extends StateNotifier<KycDraftState> {
     }
   }
 
+  Future<bool> submitStage2() async {
+    state = state.copyWith(
+      isSubmitting: true,
+      error: null,
+      stepSaved: false,
+      pendingRetryStep: null,
+    );
+
+    if (!state.hasDraft) {
+      state = state.copyWith(
+        isSubmitting: false,
+        error: 'Start with device setup before saving customer details.',
+      );
+      return false;
+    }
+
+    final missingPhotos = <String>[
+      if (state.idFrontPhoto == null) 'ID front photo',
+      if (state.idBackPhoto == null) 'ID back photo',
+      if (state.headshotPhoto == null) 'Headshot',
+    ];
+    if (missingPhotos.isNotEmpty) {
+      state = state.copyWith(
+        isSubmitting: false,
+        error: 'Attach ${missingPhotos.join(', ')} before continuing.',
+      );
+      return false;
+    }
+
+    final uploadErr = KycUploadLimits.validateMany([
+      (state.idFrontPhoto, 'ID front photo'),
+      (state.idBackPhoto, 'ID back photo'),
+      (state.headshotPhoto, 'Headshot'),
+      (state.clientFoPhoto, 'Client photo'),
+      (state.businessPhoto, 'Business photo'),
+    ]);
+    if (uploadErr != null) {
+      state = state.copyWith(isSubmitting: false, error: uploadErr);
+      return false;
+    }
+
+    try {
+      final id = state.customerId!;
+      final form = FormData.fromMap({
+        'first_name': state.firstName,
+        if (state.middleName.isNotEmpty) 'middle_name': state.middleName,
+        'last_name': state.lastName,
+        'gender': state.gender,
+        if (state.dateOfBirth.isNotEmpty) 'date_of_birth': state.dateOfBirth,
+        'nida_number': state.nidaNumber,
+        'id_type': state.idType,
+        if (state.idFrontPhoto != null)
+          'id_front_photo': await MultipartFile.fromFile(
+            state.idFrontPhoto!.path,
+            filename: 'id_front.jpg',
+          ),
+        if (state.idBackPhoto != null)
+          'id_back_photo': await MultipartFile.fromFile(
+            state.idBackPhoto!.path,
+            filename: 'id_back.jpg',
+          ),
+        if (state.headshotPhoto != null)
+          'headshot_photo': await MultipartFile.fromFile(
+            state.headshotPhoto!.path,
+            filename: 'headshot.jpg',
+          ),
+        if (state.clientFoPhoto != null)
+          'client_fo_photo': await MultipartFile.fromFile(
+            state.clientFoPhoto!.path,
+            filename: 'client_fo.jpg',
+          ),
+        'phone': state.phone,
+        'phone_country': state.phoneCountry,
+        if (state.altPhone.isNotEmpty) 'alt_phone': state.altPhone,
+        if (state.altPhoneCountry.isNotEmpty)
+          'alt_phone_country': state.altPhoneCountry,
+        if (state.email.isNotEmpty) 'email': state.email,
+        if (state.branchId.isNotEmpty) 'branch_id': state.branchId,
+        if (state.address.isNotEmpty) 'address': state.address,
+        if (state.landmark.isNotEmpty) 'landmark': state.landmark,
+        if (state.region.isNotEmpty) 'region': state.region,
+        if (state.district.isNotEmpty) 'district': state.district,
+        if (state.occupation.isNotEmpty) 'occupation': state.occupation,
+        if (state.employer.isNotEmpty) 'employer': state.employer,
+        if (state.workLocation.isNotEmpty) 'work_location': state.workLocation,
+        'monthly_income': state.monthlyIncome,
+        if (state.monthlyExpenses.isNotEmpty)
+          'monthly_expenses': state.monthlyExpenses,
+        'income_payment_cycle': _incomeCycleValueForApi(
+          state.incomePaymentCycle,
+        ),
+        if (state.durationAtWork.isNotEmpty)
+          'duration_at_work': state.durationAtWork,
+        if (state.businessPhoto != null)
+          'business_photo': await MultipartFile.fromFile(
+            state.businessPhoto!.path,
+            filename: 'business.jpg',
+          ),
+        'nok_name': state.nokName,
+        'nok_phone': state.nokPhone,
+        'nok_phone_country': state.nokPhoneCountry,
+        'nok_relationship': state.nokRelationship,
+        if (state.nok2Name.isNotEmpty) 'nok2_name': state.nok2Name,
+        if (state.nok2Phone.isNotEmpty) 'nok2_phone': state.nok2Phone,
+        if (state.nok2PhoneCountry.isNotEmpty)
+          'nok2_phone_country': state.nok2PhoneCountry,
+        if (state.nok2Relationship.isNotEmpty)
+          'nok2_relationship': state.nok2Relationship,
+        'terms_accepted': state.termsAccepted ? '1' : '0',
+        'data_consent_accepted': state.dataConsentAccepted ? '1' : '0',
+        'call_consent_accepted': state.callConsentAccepted ? '1' : '0',
+      });
+
+      await ApiClient.instance.postForm('/kyc/application/$id/stage2', form);
+      state = state.copyWith(
+        isSubmitting: false,
+        stepSaved: true,
+        currentStep: 7,
+        paymentPhone: state.phone,
+        maxReachableStep: 7,
+        pendingRetryStep: null,
+      );
+      await loadFinalContext();
+      await _saveDraft();
+      return true;
+    } catch (error) {
+      state = state.copyWith(
+        isSubmitting: false,
+        error: ApiClient.instance.parseError(error),
+        pendingRetryStep: _isRecoverableNetworkError(error) ? 2 : null,
+      );
+      return false;
+    }
+  }
+
   Future<Map<String, dynamic>?> submitStep7() async {
     state = state.copyWith(
       isSubmitting: true,
@@ -1084,7 +1238,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       });
 
       final res = await ApiClient.instance.postForm(
-        '/kyc/application/$id/step7',
+        '/kyc/application/$id/stage3',
         form,
       );
       state = state.copyWith(
@@ -1150,10 +1304,16 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       final detail = CustomerDetail.fromJson(
         response.data['data'] as Map<String, dynamic>,
       );
+      final resumeStep = switch (detail.resumeStage) {
+        1 => 1,
+        2 => 2,
+        3 => 7,
+        _ => detail.resumeStep.clamp(1, 7),
+      };
 
       state = KycDraftState(
         customerId: detail.id,
-        currentStep: detail.resumeStep,
+        currentStep: resumeStep,
         brandId: detail.device['brand_id']?.toString() ?? '',
         phoneModelId: detail.device['phone_model_id']?.toString() ?? '',
         inventoryUnitId: detail.device['inventory_unit_id']?.toString() ?? '',
@@ -1165,8 +1325,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         depositAmount: detail.device['deposit_amount']?.toString() ?? '',
         preferredRepayment:
             _repaymentFromApi(detail.device['preferred_repayment']?.toString()),
-        loanInterestRate:
-            detail.device['loan_interest_rate']?.toString() ?? '',
+        loanInterestRate: detail.device['loan_interest_rate']?.toString() ?? '',
         loanInterestType:
             detail.device['loan_interest_type']?.toString() ?? 'flat',
         loanDurationWeeks:
@@ -1234,7 +1393,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         agreementContext: detail.agreement,
         releaseContext: detail.release,
         isSubmitting: false,
-        maxReachableStep: detail.resumeStep.clamp(1, 7),
+        maxReachableStep: resumeStep,
         pendingRetryStep: null,
       );
 
@@ -1346,9 +1505,13 @@ final deviceModelsProvider = FutureProvider.family<List<DeviceModelOption>,
       .toList();
 });
 
-final inventoryUnitsProvider = FutureProvider.family<List<InventoryUnitOption>,
-    ({String phoneModelId, String search, String preferredRepayment})>(
-        (ref, args) async {
+final inventoryUnitsProvider = FutureProvider.family<
+    List<InventoryUnitOption>,
+    ({
+      String phoneModelId,
+      String search,
+      String preferredRepayment
+    })>((ref, args) async {
   final modelId = args.phoneModelId.trim();
   if (modelId.isEmpty) {
     return [];

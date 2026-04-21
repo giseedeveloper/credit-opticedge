@@ -19,15 +19,15 @@
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Automated and manual SMS dispatch records</p>
             </div>
         </div>
-        <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40">
+        <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-oe-soft dark:bg-oe/10 border border-oe/20 dark:border-oe/25">
             <x-fluent-icon name="chat-bubble-left-right" size="xs" palette="teal" />
-            <span class="text-sm font-bold text-orange-500 dark:text-blue-400">{{ number_format($stats['total']) }} total messages</span>
+            <span class="text-sm font-bold text-oe dark:text-oe">{{ number_format($stats['total']) }} total messages</span>
         </div>
     </div>
 
     {{-- Stats Bar --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
+        <div class="bg-gradient-to-br from-oe to-oe-hover rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-oe/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
                 <x-fluent-icon name="chat-bubble-left-right" size="sm" palette="teal" />
@@ -65,13 +65,13 @@
     {{-- Type breakdown mini-row --}}
     @if($stats['bulk'] > 0 || $stats['automated'] > 0 || $stats['welcome'] > 0 || $stats['system'] > 0)
     <div class="flex gap-3">
-        <div class="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/30">
+        <div class="flex items-center gap-2 px-4 py-2 bg-oe-soft dark:bg-oe/10 rounded-xl border border-oe/20 dark:border-oe/20">
             <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-            <span class="text-xs font-bold text-orange-500 dark:text-blue-400">{{ number_format($stats['bulk']) }} Bulk SMS</span>
+            <span class="text-xs font-bold text-oe dark:text-oe">{{ number_format($stats['bulk']) }} Bulk SMS</span>
         </div>
-        <div class="flex items-center gap-2 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-900/30">
-            <span class="w-2 h-2 rounded-full bg-orange-500"></span>
-            <span class="text-xs font-bold text-orange-600 dark:text-orange-400">{{ number_format($stats['automated']) }} Automated</span>
+        <div class="flex items-center gap-2 px-4 py-2 bg-oe-soft dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-900/30">
+            <span class="w-2 h-2 rounded-full bg-oe"></span>
+            <span class="text-xs font-bold text-oe-hover dark:text-orange-400">{{ number_format($stats['automated']) }} Automated</span>
         </div>
         <div class="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -126,8 +126,8 @@
                     @php
                         $smsType    = \App\Livewire\Communications\SmsLogs::smsTypeFromDescription($log->description);
                         $typeMeta   = match($smsType) {
-                            'bulk'      => ['label' => 'Bulk',      'color' => 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-400'],
-                            'automated' => ['label' => 'Automated', 'color' => 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'],
+                            'bulk'      => ['label' => 'Bulk',      'color' => 'bg-oe-soft text-oe-hover dark:bg-oe/10 dark:text-oe'],
+                            'automated' => ['label' => 'Automated', 'color' => 'bg-oe/15 text-oe-hover dark:bg-orange-900/30 dark:text-orange-400'],
                             'welcome'   => ['label' => 'Welcome',   'color' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'],
                             default     => ['label' => 'System',    'color' => 'bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400'],
                         };
@@ -170,7 +170,7 @@
 
                         <td class="px-4 py-3 text-right">
                             <button wire:click.stop="openDetail('{{ $log->id }}')"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-orange-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-oe dark:text-oe hover:bg-oe-soft dark:hover:bg-oe/10 transition-colors">
                                 View
                             </button>
                         </td>
@@ -211,8 +211,8 @@
                 $dl      = $this->detailLog;
                 $dlType  = \App\Livewire\Communications\SmsLogs::smsTypeFromDescription($dl->description);
                 $dlMeta  = match($dlType) {
-                    'bulk'      => ['label' => 'Bulk SMS',       'grad' => 'from-orange-500 to-orange-600'],
-                    'automated' => ['label' => 'Automated SMS',  'grad' => 'from-orange-500 to-red-600'],
+                    'bulk'      => ['label' => 'Bulk SMS',       'grad' => 'from-oe to-oe-hover'],
+                    'automated' => ['label' => 'Automated SMS',  'grad' => 'from-oe to-red-600'],
                     'welcome'   => ['label' => 'Welcome SMS',    'grad' => 'from-emerald-600 to-teal-700'],
                     default     => ['label' => 'System SMS',     'grad' => 'from-gray-600 to-gray-700'],
                 };

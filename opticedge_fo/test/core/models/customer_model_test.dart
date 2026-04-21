@@ -26,6 +26,11 @@ void main() {
       'registered_at': '2026-04-12 10:00:00',
       'can_resume_draft': true,
       'resume_step': '5',
+      'resume_stage': '2',
+      'flow': {
+        'version': 'kyc_3_stage_v1',
+        'resume_stage': 2,
+      },
       'payment': {
         'status': 'completed',
         'amount': '2000.00',
@@ -36,6 +41,8 @@ void main() {
     expect(detail.vendor?['name'], 'Sinza Dealer');
     expect(detail.canResumeDraft, isTrue);
     expect(detail.resumeStep, 5);
+    expect(detail.resumeStage, 2);
+    expect(detail.flow['version'], 'kyc_3_stage_v1');
     expect(detail.payment?.amount, 2000);
   });
 }

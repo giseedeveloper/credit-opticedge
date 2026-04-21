@@ -5,7 +5,7 @@
     <title>Profit & Loss Report</title>
     <style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #1a1a2e; margin: 0; padding: 30px; }
-        h1 { font-size: 18px; font-weight: 900; color: #2563eb; margin: 0 0 4px; }
+        h1 { font-size: 18px; font-weight: 900; color: #F58220; margin: 0 0 4px; }
         .sub { font-size: 10px; color: #6b7280; margin-bottom: 24px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         thead tr { background: #1a2035; color: #fff; }
@@ -13,12 +13,12 @@
         th.right, td.right { text-align: right; }
         td { padding: 7px 12px; border-bottom: 1px solid #e5e7eb; }
         .section-head { background: #f3f4f6; font-weight: 700; font-size: 11px; color: #374151; }
-        .total-row td { font-weight: 900; background: #ede9fe; color: #2563eb; }
+        .total-row td { font-weight: 900; background: #ede9fe; color: #F58220; }
         .net-row td { font-weight: 900; font-size: 13px; }
         .profit td { background: #d1fae5; color: #065f46; }
         .loss td { background: #fee2e2; color: #991b1b; }
         .footer { margin-top: 30px; font-size: 9px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 10px; }
-        .code { font-family: monospace; font-weight: 700; color: #2563eb; }
+        .code { font-family: monospace; font-weight: 700; color: #F58220; }
     </style>
 </head>
 <body>

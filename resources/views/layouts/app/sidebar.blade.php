@@ -22,23 +22,29 @@
 
         </style>
     </head>
-    <body class="min-h-screen bg-page">
+    <body class="min-h-screen bg-page text-slate-800 antialiased font-sans selection:bg-[#F58220]/25 selection:text-[#2D3748]">
 
         {{-- Sidebar: stashable mobile + custom Alpine icon-only collapse desktop --}}
         <flux:sidebar stashable sticky
-            class="app-shell-sidebar border-e border-[#d9dee5] flex flex-col p-0 shadow-sm"
+            class="app-shell-sidebar border-e border-slate-200/90 flex flex-col p-0 shadow-sm bg-[var(--color-sidebar)]"
             x-data
         >
             {{-- Mobile close --}}
-            <flux:sidebar.toggle class="lg:hidden absolute top-3 right-3 text-gray-400 hover:text-gray-700 z-10" icon="x-mark" />
+            <flux:sidebar.toggle class="lg:hidden absolute top-3 right-3 text-slate-400 hover:text-slate-700 z-10 cursor-pointer" icon="x-mark" />
 
-            {{-- Brand --}}
-            <div class="flex items-center gap-3 px-4 py-4 border-b border-[#d9dee5] shrink-0"
-                 :class="$store.sidebar.open ? 'justify-start' : 'justify-center'">
-                <x-fluent-icon name="credit-card" size="md" />
-                <div x-show="$store.sidebar.open" x-transition.opacity class="leading-tight overflow-hidden">
-                    <div class="text-sm font-bold text-gray-900 whitespace-nowrap">Opticedge</div>
-                    <span class="inline-block text-[9px] font-black tracking-widest uppercase bg-orange-500 text-white px-1.5 py-0.5 rounded mt-0.5">Credit</span>
+            {{-- Brand: full wordmark expanded; compact monogram when collapsed (64px rail) --}}
+            <div class="shrink-0 border-b border-slate-200/90 bg-white/60 backdrop-blur-sm"
+                 :class="$store.sidebar.open ? 'px-3 py-4' : 'px-0 py-3'">
+                <div x-show="$store.sidebar.open" x-transition.opacity class="px-1">
+                    <x-brand.wordmark class="text-lg sm:text-xl" />
+                </div>
+                <div x-show="!$store.sidebar.open" x-cloak class="flex w-full justify-center px-0">
+                    <a href="{{ route('dashboard') }}" wire:navigate
+                       title="{{ __('Opticedge Credit') }}"
+                       class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-[#2D3748] shadow-sm ring-1 ring-slate-900/10 transition-colors hover:bg-[#1e293b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F58220]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-sidebar)]">
+                        <span class="sr-only">{{ __('Opticedge Credit') }}</span>
+                        <span class="text-[15px] font-black leading-none text-[#F58220]" aria-hidden="true">O</span>
+                    </a>
                 </div>
             </div>
 
@@ -103,61 +109,59 @@
 
                 @foreach($navGroups as $group)
                 <div class="relative"
-                     :class="$store.sidebar.open ? 'rounded-2xl border border-white/70 bg-white/45 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]' : ''">
+                     :class="$store.sidebar.open ? 'rounded-xl border border-slate-200/90 bg-white/80 p-1.5 shadow-sm backdrop-blur-sm' : ''">
 
                     {{-- EXPANDED: section label --}}
                     <div x-show="$store.sidebar.open" x-transition.opacity
                          class="flex items-center gap-2 px-2.5 pb-1.5 pt-1.5">
-                        <x-fluent-icon :name="$group['icon']" size="xs" class="{{ $group['active'] ? 'opacity-100' : 'opacity-70' }}" />
+                        <flux:icon :name="$group['icon']" class="size-4 shrink-0 {{ $group['active'] ? 'text-[#F58220]' : 'text-slate-400' }}" />
                         <span class="text-[10px] font-bold tracking-widest uppercase truncate
-                              {{ $group['active'] ? 'text-orange-500' : 'text-gray-500' }}">
+                              {{ $group['active'] ? 'text-[#F58220]' : 'text-slate-500' }}">
                             {{ $group['label'] }}
                         </span>
                     </div>
 
                     {{-- EXPANDED: sub-items --}}
                     <div x-show="$store.sidebar.open"
-                         class="space-y-1 px-1 pb-1">
+                         class="space-y-0.5 px-1 pb-1">
                         @foreach($group['links'] as $link)
                         <a href="{{ $link['href'] }}" wire:navigate
-                           class="flex items-center gap-2.5 px-3 py-2 text-[13px] rounded-lg transition-all duration-150
+                           class="group flex items-center gap-2.5 px-3 py-2 text-[13px] rounded-lg cursor-pointer motion-safe:transition-colors motion-safe:duration-200
                                {{ $link['active']
-                                   ? 'bg-white text-gray-950 font-semibold ring-1 ring-gray-200/80 shadow-sm'
-                                   : 'text-gray-700 hover:bg-white/80 hover:text-gray-950' }}">
-                            <x-fluent-icon :name="$link['icon']" size="xs" class="{{ $link['active'] ? 'scale-[1.02]' : 'opacity-80' }}" />
+                                   ? 'bg-[#F58220]/12 text-[#2D3748] font-semibold ring-1 ring-[#F58220]/25 shadow-sm'
+                                   : 'text-slate-600 hover:bg-slate-100/95 hover:text-slate-900' }}">
+                            <flux:icon :name="$link['icon']" class="size-[1.125rem] shrink-0 {{ $link['active'] ? 'text-[#F58220]' : 'text-slate-400 group-hover:text-slate-600' }}" />
                             {{ $link['label'] }}
                         </a>
                         @endforeach
                     </div>
 
-                    {{-- COLLAPSED: sub-item icons with teleported fixed-position tooltips --}}
+                    {{-- COLLAPSED: icon rail + tooltips --}}
                     <div x-show="!$store.sidebar.open" x-cloak class="space-y-1 px-1 py-0.5">
                         @foreach($group['links'] as $link)
                         <div x-data="{ hover: false, ty: 0 }"
                              @mouseenter="hover = true; ty = $el.getBoundingClientRect().top + $el.getBoundingClientRect().height / 2"
                              @mouseleave="hover = false">
                             <a href="{{ $link['href'] }}" wire:navigate
-                               class="flex items-center justify-center w-full py-2.5 rounded-lg transition-all duration-150
+                               class="flex items-center justify-center w-full py-2.5 rounded-lg cursor-pointer motion-safe:transition-colors motion-safe:duration-200
                                    {{ $link['active']
-                                       ? 'bg-white text-orange-600 ring-1 ring-gray-200/80 shadow-sm'
-                                       : 'text-gray-600 hover:bg-white/75 hover:text-gray-900' }}">
-                                <x-fluent-icon :name="$link['icon']" size="sm" class="{{ $link['active'] ? 'scale-105' : 'opacity-85' }}" />
+                                       ? 'bg-[#F58220]/15 text-[#F58220] ring-1 ring-[#F58220]/25 shadow-sm'
+                                       : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800' }}">
+                                <flux:icon :name="$link['icon']" class="size-5 shrink-0 {{ $link['active'] ? 'text-[#F58220]' : 'text-slate-500' }}" />
                             </a>
                             <template x-teleport="body">
                                 <div x-show="hover"
                                      x-transition.opacity.duration.150ms
                                      :style="`top: ${ty}px; left: 72px; transform: translateY(-50%)`"
                                      class="fixed z-[9999] pointer-events-none
-                                            bg-white border border-gray-200
-                                            text-[12px] text-gray-700 font-medium rounded-lg
-                                            px-3 py-1.5 shadow-xl whitespace-nowrap">
+                                            rounded-lg border border-slate-200 bg-white
+                                            px-3 py-1.5 text-[12px] font-medium text-slate-700 shadow-lg whitespace-nowrap">
                                     {{ $link['label'] }}
                                 </div>
                             </template>
                         </div>
                         @endforeach
-                        {{-- Group separator in collapsed mode --}}
-                        <div class="mx-2 my-1 h-px bg-gray-200/80"></div>
+                        <div class="mx-2 my-1.5 h-px bg-slate-200/90"></div>
                     </div>
 
                 </div>
@@ -167,13 +171,14 @@
         </flux:sidebar>
 
         {{-- Desktop Header --}}
-        <flux:header class="hidden lg:flex bg-white border-b border-gray-200 h-14 items-center justify-between px-4">
+        <flux:header class="hidden lg:flex h-14 items-center justify-between border-b border-slate-200/90 bg-white/90 px-4 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/80">
             {{-- Hamburger toggle --}}
             <button
                 x-data
                 @click="$store.sidebar.toggle()"
+                type="button"
                 :title="$store.sidebar.open ? 'Collapse sidebar' : 'Expand sidebar'"
-                class="flex flex-col items-center justify-center gap-[4.5px] w-9 h-9 rounded-lg bg-gray-50 border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700 active:scale-95 transition-all duration-150"
+                class="flex cursor-pointer flex-col items-center justify-center gap-[4.5px] w-9 h-9 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 motion-safe:transition-colors motion-safe:duration-200 hover:border-[#F58220]/30 hover:bg-[#F58220]/8 hover:text-[#2D3748] active:scale-95"
             >
                 <span class="block h-[2px] w-[18px] bg-current rounded-full transition-all duration-200"></span>
                 <span class="block h-[2px] bg-current rounded-full transition-all duration-200"
@@ -182,14 +187,14 @@
             </button>
 
             {{-- Search --}}
-            <div class="flex-1 max-w-xl mx-4" x-data>
+            <div class="mx-4 max-w-xl flex-1" x-data>
                 <flux:input
                     x-ref="search"
                     @keydown.window.prevent.cmd.k="$refs.search.focus()"
                     @keydown.window.prevent.ctrl.k="$refs.search.focus()"
                     icon="magnifying-glass"
                     placeholder="Search (Cmd+K)..."
-                    class="w-full bg-gray-50 border-gray-200"
+                    class="w-full border-slate-200 bg-slate-50/90 focus-within:border-[#F58220]"
                 />
             </div>
 
@@ -200,10 +205,7 @@
                 {{-- User avatar + dropdown --}}
                 <flux:dropdown position="bottom" align="end">
                     <button type="button"
-                        class="size-9 rounded-full bg-gradient-to-br from-orange-400 to-orange-600
-                               flex items-center justify-center ring-2 ring-orange-300/40
-                               hover:ring-orange-400/70 hover:shadow-lg hover:shadow-orange-400/20
-                               transition-all duration-200 cursor-pointer">
+                        class="flex size-9 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-[#F58220] to-[#e67818] ring-2 ring-[#F58220]/30 motion-safe:transition-all motion-safe:duration-200 hover:ring-[#F58220]/50 hover:shadow-md hover:shadow-[#F58220]/20">
                         <span class="text-xs font-bold text-white uppercase select-none">
                             {{ implode('', array_map(fn($w) => $w[0], array_slice(explode(' ', auth()->user()->name), 0, 2))) }}
                         </span>
@@ -231,9 +233,11 @@
         </flux:header>
 
         {{-- Mobile Header --}}
-        <flux:header class="lg:hidden bg-white border-b border-gray-200">
-            <flux:sidebar.toggle class="text-gray-500" icon="bars-2" inset="left" />
-            <span class="ml-2 text-sm font-bold text-gray-900">Opticedge Credit</span>
+        <flux:header class="lg:hidden border-b border-slate-200/90 bg-white/95 backdrop-blur-md">
+            <flux:sidebar.toggle class="cursor-pointer text-slate-500 hover:text-[#F58220]" icon="bars-2" inset="left" />
+            <div class="ml-2 min-w-0 truncate">
+                <x-brand.wordmark class="text-sm" />
+            </div>
             <flux:spacer />
             <flux:dropdown position="top" align="end">
                 <flux:profile :initials="auth()->user()->initials()" icon-trailing="chevron-down" class="text-gray-700" />

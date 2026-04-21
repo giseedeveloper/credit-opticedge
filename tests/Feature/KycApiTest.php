@@ -62,6 +62,17 @@ it('public media rejects invalid traversal paths', function () {
     $this->get('/api/v1/public-media?path=../.env')->assertNotFound();
 });
 
+it('returns the simplified three-stage kyc flow contract', function () {
+    $this->getJson('/api/v1/kyc/application/stage-flow')
+        ->assertOk()
+        ->assertJsonPath('data.version', 'kyc_3_stage_v1')
+        ->assertJsonPath('data.total_stages', 3)
+        ->assertJsonPath('data.stages.0.label', 'Device & Offer')
+        ->assertJsonPath('data.stages.1.label', 'Customer & Verification')
+        ->assertJsonPath('data.stages.2.label', 'Payment, Agreement & Handover')
+        ->assertJsonPath('data.stages.1.legacy_steps', [2, 3, 4, 5, 6]);
+});
+
 // ─── Step 1: Device ───────────────────────────────────────────────────────────
 
 it('step1 creates a draft customer and returns customer_id', function () {
@@ -84,7 +95,9 @@ it('step1 creates a draft customer and returns customer_id', function () {
 
     $response->assertOk()
         ->assertJsonPath('data.step', 1)
-        ->assertJsonStructure(['data' => ['customer_id', 'step']]);
+        ->assertJsonPath('data.stage', 1)
+        ->assertJsonPath('data.flow.total_stages', 3)
+        ->assertJsonStructure(['data' => ['customer_id', 'step', 'stage', 'flow']]);
 
     $draft = Customer::where('imei_number', $this->inventoryUnit->imei_1)
         ->where('phone_model_id', $this->phoneModel->id)
@@ -328,6 +341,94 @@ it('step3 keeps the vendor branch context without forcing branch reselection', f
 
     expect($draft->fresh()->branch_id)->toBe($this->branch->id)
         ->and($draft->fresh()->vendor_id)->toBe($vendor->id);
+});
+
+it('stage2 captures customer verification in one request and keeps vendor branch locked', function () {
+    $vendor = Vendor::factory()->create([
+        'branch_id' => $this->branch->id,
+        'name' => 'Kariakoo Dealer',
+    ]);
+
+    $draft = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'branch_id' => $this->branch->id,
+        'vendor_id' => $vendor->id,
+        'phone_model_id' => $this->phoneModel->id,
+        'inventory_unit_id' => $this->inventoryUnit->id,
+        'device_specs' => 'Samsung Galaxy A15 6GB/128GB Blue',
+        'imei_number' => '353456789012345',
+        'cash_price' => 380000,
+        'deposit_amount' => 50000,
+        'preferred_repayment' => 'weekly',
+        'loan_interest_rate' => 4.25,
+        'loan_interest_type' => 'flat',
+        'loan_duration_weeks' => 52,
+        'loan_grace_period_days' => 5,
+        'first_name' => '_draft_',
+        'last_name' => '_draft_',
+        'phone' => '_draft_'.uniqid(),
+        'nida_number' => null,
+    ]);
+
+    $response = $this->postJson("/api/v1/kyc/application/{$draft->id}/stage2", [
+        'first_name' => 'Asha',
+        'middle_name' => 'Rehema',
+        'last_name' => 'Moshi',
+        'gender' => 'female',
+        'date_of_birth' => '1994-05-12',
+        'nida_number' => '20012345678901234567',
+        'id_type' => 'nida',
+        'id_front_photo' => UploadedFile::fake()->image('id-front.jpg'),
+        'id_back_photo' => UploadedFile::fake()->image('id-back.jpg'),
+        'headshot_photo' => UploadedFile::fake()->image('headshot.jpg'),
+        'client_fo_photo' => UploadedFile::fake()->image('client-fo.jpg'),
+        'phone' => '0712345678',
+        'phone_country' => 'TZ',
+        'alt_phone' => '0712345679',
+        'alt_phone_country' => 'TZ',
+        'email' => 'asha@example.test',
+        'region' => 'Dar es Salaam',
+        'district' => 'Ilala',
+        'address' => 'Kariakoo Market',
+        'landmark' => 'Clock tower',
+        'occupation' => 'Trader',
+        'employer' => 'Self employed',
+        'work_location' => 'Kariakoo',
+        'monthly_income' => 750000,
+        'monthly_expenses' => 250000,
+        'income_payment_cycle' => 'weekly',
+        'duration_at_work' => '3 years',
+        'business_photo' => UploadedFile::fake()->image('business.jpg'),
+        'nok_name' => 'Rehema Moshi',
+        'nok_phone' => '0754111222',
+        'nok_phone_country' => 'TZ',
+        'nok_relationship' => 'sister',
+        'terms_accepted' => true,
+        'data_consent_accepted' => true,
+        'call_consent_accepted' => true,
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('data.stage', 2)
+        ->assertJsonPath('data.next_stage', 3)
+        ->assertJsonPath('data.flow.resume_stage', 3)
+        ->assertJsonPath('data.flow.stages.1.status', 'completed');
+
+    $fresh = $draft->fresh();
+
+    expect($fresh->first_name)->toBe('Asha')
+        ->and($fresh->branch_id)->toBe($this->branch->id)
+        ->and($fresh->vendor_id)->toBe($vendor->id)
+        ->and($fresh->phone)->toBe('+255712345678')
+        ->and($fresh->alt_phone)->toBe('+255712345679')
+        ->and($fresh->nok_phone)->toBe('+255754111222')
+        ->and($fresh->monthly_income)->toBe('750000.00')
+        ->and($fresh->terms_accepted)->toBeTrue()
+        ->and($fresh->kyc_stage)->toBe(2)
+        ->and($fresh->id_front_photo_path)->not->toBeNull()
+        ->and($fresh->id_back_photo_path)->not->toBeNull()
+        ->and($fresh->headshot_photo_path)->not->toBeNull()
+        ->and($fresh->business_photo_path)->not->toBeNull();
 });
 
 // ─── Step 5: NOK ─────────────────────────────────────────────────────────────
@@ -574,7 +675,8 @@ it('applicationStatus returns payment, agreement and release context', function 
         ->assertOk()
         ->assertJsonPath('data.payment.status', 'completed')
         ->assertJsonPath('data.agreement.accepted', true)
-        ->assertJsonPath('data.release.status', 'pending');
+        ->assertJsonPath('data.release.status', 'pending')
+        ->assertJsonPath('data.flow.total_stages', 3);
 });
 
 it('customer detail includes payment, agreement and release data', function () {
@@ -610,7 +712,8 @@ it('customer detail includes payment, agreement and release data', function () {
         ->assertOk()
         ->assertJsonPath('data.payment.status', 'completed')
         ->assertJsonPath('data.agreement.accepted', true)
-        ->assertJsonPath('data.release.status', 'pending');
+        ->assertJsonPath('data.release.status', 'pending')
+        ->assertJsonPath('data.flow.total_stages', 3);
 });
 
 it('customer detail exposes resume metadata and vendor context for draft editing', function () {
@@ -635,6 +738,7 @@ it('customer detail exposes resume metadata and vendor context for draft editing
         ->assertJsonPath('data.kyc_status', 'draft')
         ->assertJsonPath('data.can_resume_draft', true)
         ->assertJsonPath('data.resume_step', 5)
+        ->assertJsonPath('data.resume_stage', 1)
         ->assertJsonPath('data.vendor.name', 'Sinza Dealer');
 });
 

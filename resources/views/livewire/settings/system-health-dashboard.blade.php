@@ -25,7 +25,7 @@
             </div>
         </div>
         <button wire:click="refresh" wire:loading.attr="disabled"
-                class="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-xl shadow-sm transition-colors">
+                class="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-oe hover:bg-oe-hover disabled:opacity-60 text-white rounded-xl shadow-sm transition-colors">
             <svg wire:loading.remove wire:target="refresh" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             <svg wire:loading wire:target="refresh" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
             Refresh
@@ -42,9 +42,9 @@
             ['label' => 'Overdue / Default','value' => $overdueLoans,     'icon' => 'exclamation-triangle', 'color' => $overdueLoans > 0 ? 'red' : 'teal'],
         ];
         $colorMap = [
-            'indigo' => 'bg-blue-50 text-orange-500 dark:bg-blue-900/20 dark:text-blue-300',
+            'indigo' => 'bg-oe-soft text-oe dark:bg-oe/10 dark:text-oe',
             'teal'   => 'bg-teal-50 text-teal-600 dark:bg-teal-900/20 dark:text-teal-300',
-            'blue'   => 'bg-blue-50 text-orange-500 dark:bg-blue-900/20 dark:text-blue-300',
+            'blue'   => 'bg-oe-soft text-oe dark:bg-oe/10 dark:text-oe',
             'red'    => 'bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400',
         ];
         @endphp
@@ -238,11 +238,11 @@
                 <div class="mt-4 rounded-2xl border border-gray-100 bg-gray-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
                     <label class="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Upload New Agreement PDF</label>
                     <input wire:model="customerAgreementUpload" type="file" accept="application/pdf"
-                        class="block w-full rounded-lg border border-gray-200 p-1 text-xs text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-orange-50 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-orange-700 hover:file:bg-orange-100 dark:border-zinc-700" />
+                        class="block w-full rounded-lg border border-gray-200 p-1 text-xs text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-oe-soft file:px-2 file:py-1 file:text-xs file:font-semibold file:text-oe-hover hover:file:bg-oe/15 dark:border-zinc-700" />
                     @error('customerAgreementUpload') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     <div wire:loading wire:target="customerAgreementUpload" class="mt-1 text-[10px] text-gray-400">Uploading document…</div>
                     <button wire:click="uploadCustomerAgreement" wire:loading.attr="disabled"
-                        class="mt-3 inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-600 disabled:opacity-60">
+                        class="mt-3 inline-flex items-center gap-2 rounded-xl bg-oe px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-oe-hover disabled:opacity-60">
                         <flux:icon name="arrow-up-tray" class="size-4" />
                         Save Agreement
                     </button>

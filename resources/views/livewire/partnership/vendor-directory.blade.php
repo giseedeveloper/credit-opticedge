@@ -28,11 +28,11 @@
             </div>
 
             <div class="grid grid-cols-1 gap-4 px-6 py-5 md:grid-cols-2">
-                <div class="md:col-span-2 rounded-2xl border border-orange-200 bg-orange-50/80 p-4 dark:border-orange-900/40 dark:bg-orange-950/30">
+                <div class="md:col-span-2 rounded-2xl border border-orange-200 bg-oe-soft/80 p-4 dark:border-orange-900/40 dark:bg-orange-950/30">
                     <div class="flex items-start gap-3">
                         <x-fluent-icon name="shield-check" size="sm" palette="amber" />
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300">Branch accountability</p>
+                            <p class="text-xs font-bold uppercase tracking-wider text-oe-hover dark:text-orange-300">Branch accountability</p>
                             <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Every dealer should be tied to a branch so customers, financed devices, commissions, and cashier reports remain attributable to the correct shop floor.</p>
                         </div>
                     </div>
@@ -41,14 +41,14 @@
                 <div class="md:col-span-2">
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Vendor / Dealer Name *</label>
                     <input wire:model="newName" type="text" placeholder="Kariakoo Devices Hub"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white" />
+                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-oe dark:border-zinc-600 dark:bg-zinc-800 dark:text-white" />
                     @error('newName') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                 </div>
 
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Vendor Code</label>
                     <input wire:model="newCode" type="text" placeholder="Leave blank to auto-generate"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white" />
+                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-oe dark:border-zinc-600 dark:bg-zinc-800 dark:text-white" />
                     <p class="mt-1 text-[11px] text-gray-400">Useful when reconciling dealer reports or stock handover sheets.</p>
                     @error('newCode') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                 </div>
@@ -56,7 +56,7 @@
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Status *</label>
                     <select wire:model="newStatus"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white">
+                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-oe dark:border-zinc-600 dark:bg-zinc-800 dark:text-white">
                         <option value="active">Active</option>
                         <option value="suspended">Suspended</option>
                         <option value="closed">Closed</option>
@@ -67,7 +67,7 @@
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Branch *</label>
                     <select wire:model.live="newBranchId"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white">
+                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-oe dark:border-zinc-600 dark:bg-zinc-800 dark:text-white">
                         <option value="">Select branch…</option>
                         @foreach($branches as $branch)
                         <option value="{{ $branch->id }}">{{ $branch->code }} · {{ $branch->name }}{{ $branch->is_headquarter ? ' (HQ)' : '' }}</option>
@@ -79,7 +79,7 @@
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Account Owner</label>
                     <select wire:model="newOwnerUserId"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white dark:disabled:bg-zinc-800/60"
+                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-oe disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white dark:disabled:bg-zinc-800/60"
                         @disabled($newBranchId === '')>
                         <option value="">Select owner…</option>
                         @foreach($createOwnerOptions as $owner)
@@ -107,35 +107,35 @@
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Phone</label>
                     <input wire:model="newPhone" type="text" placeholder="+255 7XX XXX XXX"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white" />
+                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-oe dark:border-zinc-600 dark:bg-zinc-800 dark:text-white" />
                     @error('newPhone') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                 </div>
 
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Email</label>
                     <input wire:model="newEmail" type="email" placeholder="dealer@example.com"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white" />
+                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-oe dark:border-zinc-600 dark:bg-zinc-800 dark:text-white" />
                     @error('newEmail') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                 </div>
 
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">TIN Number</label>
                     <input wire:model="newTinNumber" type="text" placeholder="123-456-789"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white" />
+                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-oe dark:border-zinc-600 dark:bg-zinc-800 dark:text-white" />
                     @error('newTinNumber') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                 </div>
 
                 <div>
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Commission Rate (%) *</label>
                     <input wire:model="newCommissionRate" type="number" min="0" max="100" step="0.01" placeholder="5"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white" />
+                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-oe dark:border-zinc-600 dark:bg-zinc-800 dark:text-white" />
                     @error('newCommissionRate') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                 </div>
 
                 <div class="md:col-span-2">
                     <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Address</label>
                     <textarea wire:model="newAddress" rows="3" placeholder="Shop floor location or dealer address"
-                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"></textarea>
+                        class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-oe dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"></textarea>
                     @error('newAddress') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                 </div>
             </div>
@@ -143,7 +143,7 @@
             <div class="flex justify-end gap-3 rounded-b-3xl bg-gray-50 px-6 py-4 dark:bg-zinc-800/60">
                 <button wire:click="closeCreateModal" class="rounded-xl px-4 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-700">Cancel</button>
                 <button wire:click="createVendor" wire:loading.attr="disabled"
-                    class="rounded-xl bg-orange-500 px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-orange-600 disabled:opacity-60">
+                    class="rounded-xl bg-oe px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-oe-hover disabled:opacity-60">
                     Add Vendor
                 </button>
             </div>
@@ -161,13 +161,13 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
-            <div class="flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-2 dark:border-blue-900/40 dark:bg-blue-900/20">
+            <div class="flex items-center gap-2 rounded-xl border border-oe/20 bg-oe-soft px-4 py-2 dark:border-oe/25 dark:bg-oe/10">
                 <x-fluent-icon name="building-storefront" size="xs" palette="amber" />
-                <span class="text-sm font-bold text-orange-500 dark:text-blue-400">{{ $stats['total'] }} vendors</span>
+                <span class="text-sm font-bold text-oe dark:text-oe">{{ $stats['total'] }} vendors</span>
             </div>
             @if(auth()->user()->canAccess('vendors.create'))
             <button wire:click="openCreateModal"
-                class="flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-orange-600">
+                class="flex items-center gap-2 rounded-xl bg-oe px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-oe-hover">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 Add Vendor
             </button>
@@ -177,7 +177,7 @@
 
     {{-- Stats Bar --}}
     <div class="grid grid-cols-2 gap-4 xl:grid-cols-6">
-        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
+        <div class="bg-gradient-to-br from-oe to-oe-hover rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-oe/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
                 <x-fluent-icon name="building-storefront" size="sm" />
@@ -272,19 +272,19 @@
         <div wire:key="vendor-{{ $vendor->id }}"
              wire:click="openDetail('{{ $vendor->id }}')"
              class="group bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-5 shadow-sm
-                    hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-800 hover:-translate-y-0.5
+                    hover:shadow-lg hover:border-oe/25 dark:hover:border-oe/25 hover:-translate-y-0.5
                     transition-all duration-200 cursor-pointer">
 
             {{-- Card Header --}}
             <div class="flex items-start gap-3 mb-4">
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 text-white font-black text-sm flex-shrink-0 shadow-md shadow-blue-900/20">
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-oe/90 to-oe text-white font-black text-sm flex-shrink-0 shadow-md shadow-oe/20">
                     {{ strtoupper(substr($vendor->name, 0, 2)) }}
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="font-bold text-gray-900 dark:text-white truncate">{{ $vendor->name }}</p>
                     <p class="text-xs text-gray-400 mt-0.5">{{ $vendor->code ?? '—' }} · {{ $vendor->phone ?? '—' }}</p>
                     @if($vendor->branch)
-                    <p class="text-[10px] text-blue-500 dark:text-blue-400 mt-0.5 font-semibold">{{ $vendor->branch->name }}</p>
+                    <p class="text-[10px] text-oe-hover dark:text-oe mt-0.5 font-semibold">{{ $vendor->branch->name }}</p>
                     @endif
                 </div>
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0 {{ $statusBadge }}">
@@ -304,17 +304,17 @@
                 </div>
                 <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-2.5 text-center">
                     <p class="text-[10px] text-gray-400 uppercase font-bold">Rate</p>
-                    <p class="text-base font-black text-orange-500 dark:text-blue-400 mt-0.5">{{ $vendor->commission_rate ?? 0 }}%</p>
+                    <p class="text-base font-black text-oe dark:text-oe mt-0.5">{{ $vendor->commission_rate ?? 0 }}%</p>
                 </div>
             </div>
 
             {{-- Wallet Balance --}}
             @if($walletBal > 0 || $totalEarned > 0)
-            <div class="bg-gradient-to-r from-blue-50 to-blue-50 dark:from-blue-900/20 dark:to-blue-900/20 rounded-xl p-3 border border-blue-100 dark:border-blue-900/30 mb-3">
+            <div class="bg-gradient-to-r from-oe-soft to-oe-soft dark:from-blue-900/20 dark:to-blue-900/20 rounded-xl p-3 border border-oe/20 dark:border-oe/20 mb-3">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-[10px] text-blue-500 uppercase font-bold">Wallet Balance</p>
-                        <p class="text-sm font-black text-orange-600 dark:text-blue-300">TZS {{ number_format($walletBal, 0) }}</p>
+                        <p class="text-[10px] text-oe-hover uppercase font-bold">Wallet Balance</p>
+                        <p class="text-sm font-black text-oe-hover dark:text-oe">TZS {{ number_format($walletBal, 0) }}</p>
                     </div>
                     <div class="text-right">
                         <p class="text-[10px] text-gray-400 uppercase font-bold">Total Earned</p>
@@ -340,8 +340,8 @@
 
             {{-- Hover cta --}}
             <div class="mt-3 pt-3 border-t border-gray-50 dark:border-zinc-800 flex items-center justify-between">
-                <span class="text-[10px] text-gray-300 dark:text-zinc-600 group-hover:text-blue-400 transition-colors font-semibold">Click to view details</span>
-                <svg class="w-3.5 h-3.5 text-gray-300 dark:text-zinc-600 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span class="text-[10px] text-gray-300 dark:text-zinc-600 group-hover:text-oe transition-colors font-semibold">Click to view details</span>
+                <svg class="w-3.5 h-3.5 text-gray-300 dark:text-zinc-600 group-hover:text-oe-hover transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
             </div>
@@ -405,7 +405,7 @@
             @endphp
 
             {{-- Header --}}
-            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-oe to-oe-hover text-white">
                 <div class="flex items-center gap-4">
                     <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white font-black text-lg flex-shrink-0">
                         {{ strtoupper(substr($dv->name, 0, 2)) }}
@@ -432,7 +432,7 @@
             <div class="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100 bg-gray-50 dark:divide-zinc-700 dark:border-zinc-700 dark:bg-zinc-800/60">
                 <div class="px-4 py-3 text-center">
                     <p class="text-[10px] text-gray-400 uppercase font-bold">Wallet Balance</p>
-                    <p class="text-base font-black text-orange-500 dark:text-blue-400 mt-0.5">TZS {{ number_format($dvBalance, 0) }}</p>
+                    <p class="text-base font-black text-oe dark:text-oe mt-0.5">TZS {{ number_format($dvBalance, 0) }}</p>
                 </div>
                 <div class="px-4 py-3 text-center">
                     <p class="text-[10px] text-gray-400 uppercase font-bold">Total Earned</p>
@@ -459,9 +459,9 @@
                             <p class="mt-1 text-2xl font-black text-gray-900 dark:text-white">{{ number_format($dv->active_loans_count) }}</p>
                             <p class="text-[10px] text-red-500">{{ number_format($dv->overdue_loans_count) }} overdue</p>
                         </div>
-                        <div class="rounded-xl bg-blue-50 p-3 dark:bg-blue-900/20">
-                            <p class="text-[10px] font-bold uppercase text-blue-500">Financed Value</p>
-                            <p class="mt-1 text-lg font-black text-orange-600 dark:text-blue-300">TZS {{ number_format($dvLoanValue, 0) }}</p>
+                        <div class="rounded-xl bg-oe-soft p-3 dark:bg-oe/10">
+                            <p class="text-[10px] font-bold uppercase text-oe-hover">Financed Value</p>
+                            <p class="mt-1 text-lg font-black text-oe-hover dark:text-oe">TZS {{ number_format($dvLoanValue, 0) }}</p>
                             <p class="text-[10px] text-gray-400">Avg ticket TZS {{ number_format($dvAverageTicket, 0) }}</p>
                         </div>
                         <div class="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-900/20">
@@ -490,7 +490,7 @@
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase font-semibold">Commission Rate</p>
-                            <p class="text-sm font-black text-orange-500 dark:text-blue-400 mt-0.5">{{ $dv->commission_rate ?? 0 }}%</p>
+                            <p class="text-sm font-black text-oe dark:text-oe mt-0.5">{{ $dv->commission_rate ?? 0 }}%</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3 col-span-2">
                             <p class="text-[10px] text-gray-400 uppercase font-semibold">Address</p>
@@ -544,9 +544,9 @@
                             <p class="mt-1 text-lg font-black text-amber-700 dark:text-amber-300">TZS {{ number_format($dvRecordedCommissions, 0) }}</p>
                             <p class="text-[10px] text-gray-400">all ledgered commission value</p>
                         </div>
-                        <div class="rounded-xl bg-blue-50 p-3 dark:bg-blue-900/20">
-                            <p class="text-[10px] font-bold uppercase text-blue-500">Pending / Posted</p>
-                            <p class="mt-1 text-lg font-black text-orange-600 dark:text-blue-300">TZS {{ number_format($dvPendingCommissions, 0) }}</p>
+                        <div class="rounded-xl bg-oe-soft p-3 dark:bg-oe/10">
+                            <p class="text-[10px] font-bold uppercase text-oe-hover">Pending / Posted</p>
+                            <p class="mt-1 text-lg font-black text-oe-hover dark:text-oe">TZS {{ number_format($dvPendingCommissions, 0) }}</p>
                             <p class="text-[10px] text-gray-400">awaiting payout clearance</p>
                         </div>
                         <div class="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-900/20">
@@ -593,7 +593,7 @@
                 <div>
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
                         Recent Commissions
-                        <span class="ml-1 px-1.5 py-0.5 rounded-full bg-blue-100 text-orange-500 text-[9px] font-bold">{{ $dv->commissionLedgers->count() }}</span>
+                        <span class="ml-1 px-1.5 py-0.5 rounded-full bg-oe-soft text-oe text-[9px] font-bold">{{ $dv->commissionLedgers->count() }}</span>
                     </h3>
                     <div class="space-y-1.5">
                         @foreach($dv->commissionLedgers as $ledger)
@@ -618,7 +618,7 @@
                                 @endif
                                 </div>
                                 <div class="text-right">
-                                    <p class="text-sm font-black text-orange-500 dark:text-blue-400">
+                                    <p class="text-sm font-black text-oe dark:text-oe">
                                         TZS {{ number_format($ledger->commission_amount, 0) }}
                                     </p>
                                     <span class="px-1.5 py-0.5 rounded-full text-[9px] font-bold {{ $lBadge }}">{{ ucfirst($ledger->status) }}</span>
@@ -654,7 +654,7 @@
                         <div class="rounded-xl bg-gray-50 px-3 py-3 dark:bg-zinc-800">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
-                                <p class="text-xs font-mono font-bold text-orange-500 dark:text-blue-400">{{ $loan->loan_number }}</p>
+                                <p class="text-xs font-mono font-bold text-oe dark:text-oe">{{ $loan->loan_number }}</p>
                                 <p class="text-[10px] text-gray-400 mt-0.5">{{ $loan->customer?->full_name ?? '—' }}</p>
                                 @if($loan->inventoryUnit?->phoneModel)
                                 <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">

@@ -10,7 +10,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 #[Layout('components.layouts.guest')]
-#[Title('Secure Console - Login')]
+#[Title('Sign in')]
 class Login extends Component
 {
     public string $method = 'email';

@@ -78,7 +78,7 @@
                 @if($key === 'moderate')
                     <span class="inline-block w-2 h-2 rounded-full bg-yellow-400 mr-1.5 align-middle"></span>
                 @elseif($key === 'high')
-                    <span class="inline-block w-2 h-2 rounded-full bg-orange-500 mr-1.5 align-middle"></span>
+                    <span class="inline-block w-2 h-2 rounded-full bg-oe mr-1.5 align-middle"></span>
                 @elseif($key === 'critical')
                     <span class="inline-block w-2 h-2 rounded-full bg-red-600 mr-1.5 align-middle"></span>
                 @endif
@@ -102,7 +102,7 @@
     {{-- Risk Legend --}}
     <div class="flex items-center gap-4 text-xs text-gray-400">
         <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow-400"></span> Moderate: 1–30 days overdue</span>
-        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-orange-500"></span> High: 31–60 days overdue</span>
+        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-oe"></span> High: 31–60 days overdue</span>
         <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-600"></span> Critical: 60+ days overdue</span>
     </div>
 
@@ -136,10 +136,10 @@
                         $rowHover  = 'hover:bg-yellow-50/60 dark:hover:bg-yellow-900/10';
                     } elseif ($daysOverdue <= 60) {
                         $riskLabel = 'High';
-                        $riskDot   = 'bg-orange-500';
-                        $riskText  = 'text-orange-700 dark:text-orange-300';
-                        $riskBg    = 'bg-orange-100 dark:bg-orange-900/30';
-                        $rowHover  = 'hover:bg-orange-50/60 dark:hover:bg-orange-900/10';
+                        $riskDot   = 'bg-oe';
+                        $riskText  = 'text-oe-hover dark:text-orange-300';
+                        $riskBg    = 'bg-oe/15 dark:bg-orange-900/30';
+                        $rowHover  = 'hover:bg-oe-soft/60 dark:hover:bg-orange-900/10';
                     } else {
                         $riskLabel = 'Critical';
                         $riskDot   = 'bg-red-600';
@@ -217,8 +217,8 @@
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
                             {{ $loan->status === 'defaulted'
                                 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                                : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' }}">
-                            <span class="w-1.5 h-1.5 rounded-full {{ $loan->status === 'defaulted' ? 'bg-red-500' : 'bg-orange-500' }}"></span>
+                                : 'bg-oe/15 text-oe-hover dark:bg-orange-900/30 dark:text-orange-300' }}">
+                            <span class="w-1.5 h-1.5 rounded-full {{ $loan->status === 'defaulted' ? 'bg-red-500' : 'bg-oe' }}"></span>
                             {{ ucfirst($loan->status) }}
                         </span>
                     </td>
@@ -281,7 +281,7 @@
                     $dlRiskGrad  = 'from-yellow-500 to-amber-600';
                 } elseif ($dlDays <= 60) {
                     $dlRiskLabel = 'High Risk';
-                    $dlRiskGrad  = 'from-orange-500 to-red-600';
+                    $dlRiskGrad  = 'from-oe to-red-600';
                 } else {
                     $dlRiskLabel = 'Critical Risk';
                     $dlRiskGrad  = 'from-red-600 to-rose-800';
@@ -451,7 +451,7 @@
                         @php
                             $tBadge = match($ticket->status) {
                                 'completed'  => 'bg-emerald-100 text-emerald-700',
-                                'in_progress'=> 'bg-blue-100 text-orange-600',
+                                'in_progress'=> 'bg-oe-soft text-oe-hover',
                                 'open'       => 'bg-amber-100 text-amber-700',
                                 default      => 'bg-zinc-100 text-zinc-600',
                             };
@@ -546,7 +546,7 @@
                         @foreach($dl->transactions as $txn)
                         <div class="flex items-center justify-between bg-gray-50 dark:bg-zinc-800 rounded-xl px-3 py-2.5">
                             <div>
-                                <p class="text-xs font-mono font-semibold text-orange-500 dark:text-blue-400">{{ $txn->reference }}</p>
+                                <p class="text-xs font-mono font-semibold text-oe dark:text-oe">{{ $txn->reference }}</p>
                                 <p class="text-[10px] text-gray-400 mt-0.5">
                                     {{ ucfirst($txn->type ?? 'payment') }} · {{ $txn->channel ?? '—' }}
                                 </p>

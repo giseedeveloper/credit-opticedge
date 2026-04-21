@@ -125,6 +125,13 @@ it('releases the asset after approved payment and agreement checks are complete'
         'deposit_payment_amount' => 85000,
         'deposit_payment_reference' => 'SEL-RELEASE-001',
         'deposit_paid_at' => now()->subMinutes(12),
+        'cash_price' => 650000,
+        'deposit_amount' => 85000,
+        'preferred_repayment' => 'monthly',
+        'loan_interest_rate' => 4.75,
+        'loan_interest_type' => 'flat',
+        'loan_duration_weeks' => 52,
+        'loan_grace_period_days' => 3,
         'asset_release_status' => 'pending',
         'kyc_status' => 'approved',
     ]);

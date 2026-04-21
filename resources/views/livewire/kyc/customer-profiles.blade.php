@@ -20,7 +20,7 @@
             </div>
         </div>
         <a href="{{ route('kyc.wizard') }}"
-           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:opacity-90 transition-opacity shadow-sm">
+           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-oe to-oe-hover text-white hover:opacity-90 transition-opacity shadow-sm">
             <x-fluent-icon name="user-plus" size="xs" palette="emerald" />
             New KYC Wizard
         </a>
@@ -29,7 +29,7 @@
     {{-- Stats Bar --}}
     @php
     $statDefs = [
-        ['key' => 'total',    'label' => 'Total Customers', 'grad'   => 'from-[#2563eb] to-[#2563eb]',                              'hero' => true,  'sub' => 'All registered'],
+        ['key' => 'total',    'label' => 'Total Customers', 'grad'   => 'from-oe to-oe-hover',                              'hero' => true,  'sub' => 'All registered'],
         ['key' => 'verified', 'label' => 'Verified',        'icolor' => 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600',    'sub' => 'KYC approved'],
         ['key' => 'pending',  'label' => 'In Review',       'icolor' => 'bg-amber-100 dark:bg-amber-900/30 text-amber-600',          'sub' => 'Awaiting decision'],
         ['key' => 'rejected', 'label' => 'Rejected',        'icolor' => 'bg-red-100 dark:bg-red-900/30 text-red-600',               'sub' => 'Need re-submission'],
@@ -38,7 +38,7 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         @foreach($statDefs as $sd)
         @if(!empty($sd['hero']))
-        <div class="bg-gradient-to-br {{ $sd['grad'] }} rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
+        <div class="bg-gradient-to-br {{ $sd['grad'] }} rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-oe/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
                 <x-fluent-icon name="users" size="sm" />
@@ -123,7 +123,7 @@
                 <tr wire:key="cust-{{ $customer->id }}" class="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
                     <td class="px-4 py-3.5">
                         <div class="flex items-center gap-3">
-                            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 text-white text-xs font-black flex-shrink-0">
+                            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-oe/90 to-oe text-white text-xs font-black flex-shrink-0">
                                 {{ strtoupper(substr($customer->first_name, 0, 1).substr($customer->last_name, 0, 1)) }}
                             </div>
                             <div>
@@ -149,7 +149,7 @@
                     </td>
                     <td class="px-4 py-3.5 hidden md:table-cell">
                         @if($loanCount > 0)
-                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-300">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-oe-soft text-oe-hover dark:bg-oe/10 dark:text-oe">
                             <flux:icon name="banknotes" class="size-3" />
                             {{ $loanCount }} loan{{ $loanCount !== 1 ? 's' : '' }}
                         </span>
@@ -163,7 +163,7 @@
                     <td class="px-4 py-3.5 text-right">
                         <div class="flex items-center justify-end gap-1">
                             <button wire:click="openDetail('{{ $customer->id }}')"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-orange-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 transition-colors">
+                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-oe-soft text-oe-hover hover:bg-oe/15 dark:bg-oe/10 dark:text-oe transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 View
                             </button>
@@ -231,7 +231,7 @@
                 $autoBadge = match($autoStatus) {
                     'passed'         => 'bg-emerald-100 text-emerald-700',
                     'needs_correction'=> 'bg-amber-100 text-amber-700',
-                    'manual_review'  => 'bg-blue-100 text-blue-700',
+                    'manual_review'  => 'bg-oe-soft text-oe-hover dark:bg-oe/10 dark:text-oe',
                     'auto_rejected'  => 'bg-red-100 text-red-700',
                     default          => 'bg-zinc-100 text-zinc-500',
                 };
@@ -263,7 +263,7 @@
             @endphp
 
             {{-- ── Header ── --}}
-            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white flex-shrink-0">
+            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-oe to-oe-hover text-white flex-shrink-0">
                 <div class="flex items-center gap-4 min-w-0">
                     @if($dc->headshot_photo_path)
                     <img src="{{ $photoBase($dc->headshot_photo_path) }}"
@@ -305,7 +305,7 @@
                     ['id'=>'history',  'label'=>'History',   'icon'=>'clock'],
                 ] as $t)
                 <button @click="tab='{{ $t['id'] }}'"
-                        :class="tab==='{{ $t['id'] }}' ? 'border-b-2 border-orange-500 text-orange-600 dark:text-orange-400 font-semibold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'"
+                        :class="tab==='{{ $t['id'] }}' ? 'border-b-2 border-oe text-oe-hover dark:text-orange-400 font-semibold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'"
                         class="flex items-center gap-1.5 px-4 py-3 text-xs whitespace-nowrap transition-colors flex-shrink-0">
                     <flux:icon name="{{ $t['icon'] }}" class="size-3.5" />
                     {{ $t['label'] }}
@@ -337,7 +337,7 @@
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Cash Price</p>
-                            <p class="text-sm font-bold text-orange-600 dark:text-orange-400 mt-0.5">
+                            <p class="text-sm font-bold text-oe-hover dark:text-orange-400 mt-0.5">
                                 {{ $dc->cash_price ? 'TZS '.number_format($dc->cash_price) : '—' }}
                             </p>
                         </div>
@@ -486,12 +486,12 @@
                             <p class="text-sm text-gray-700 dark:text-gray-300 mt-0.5">{{ $dc->address ?? '—' }}</p>
                         </div>
                         @if($dc->latitude && $dc->longitude)
-                        <div class="col-span-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 flex items-center gap-3">
-                            <flux:icon name="map-pin" class="size-5 text-blue-500 flex-shrink-0" />
+                        <div class="col-span-2 bg-oe-soft dark:bg-oe/10 rounded-xl p-3 flex items-center gap-3">
+                            <flux:icon name="map-pin" class="size-5 text-oe-hover flex-shrink-0" />
                             <div>
-                                <p class="text-[10px] text-blue-500 uppercase tracking-wider font-semibold">GPS Coordinates</p>
+                                <p class="text-[10px] text-oe-hover uppercase tracking-wider font-semibold">GPS Coordinates</p>
                                 <a href="https://maps.google.com/?q={{ $dc->latitude }},{{ $dc->longitude }}" target="_blank"
-                                   class="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline mt-0.5 block">
+                                   class="text-sm font-semibold text-oe-hover dark:text-oe hover:underline mt-0.5 block">
                                     {{ $dc->latitude }}, {{ $dc->longitude }}
                                 </a>
                             </div>
@@ -810,14 +810,14 @@
                     <div class="mb-4 flex items-center gap-3 p-4 rounded-xl {{ match($autoStatus) {
                         'passed'         => 'bg-emerald-50 dark:bg-emerald-900/20',
                         'needs_correction'=> 'bg-amber-50 dark:bg-amber-900/20',
-                        'manual_review'  => 'bg-blue-50 dark:bg-blue-900/20',
+                        'manual_review'  => 'bg-oe-soft dark:bg-oe/10',
                         'auto_rejected'  => 'bg-red-50 dark:bg-red-900/20',
                         default          => 'bg-gray-50 dark:bg-zinc-800',
                     } }}">
                         <flux:icon name="clipboard-document-check" class="size-8 {{ match($autoStatus) {
                             'passed'         => 'text-emerald-500',
                             'needs_correction'=> 'text-amber-500',
-                            'manual_review'  => 'text-blue-500',
+                            'manual_review'  => 'text-oe-hover',
                             'auto_rejected'  => 'text-red-500',
                             default          => 'text-gray-400',
                         } }}" />
@@ -922,7 +922,7 @@
                         @endphp
                         <div class="flex items-center justify-between bg-gray-50 dark:bg-zinc-800 rounded-xl px-4 py-2.5">
                             <div>
-                                <p class="text-xs font-mono font-semibold text-orange-500 dark:text-orange-400">{{ $ln->loan_number }}</p>
+                                <p class="text-xs font-mono font-semibold text-oe dark:text-orange-400">{{ $ln->loan_number }}</p>
                                 <p class="text-[10px] text-gray-500">TZS {{ number_format($ln->principal_amount) }}</p>
                             </div>
                             <div class="text-right">
@@ -980,7 +980,7 @@
                 @can('loans.create')
                     @if($canReleaseAsset)
                     <button wire:click="releaseAsset('{{ $dc->id }}')"
-                            class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-colors">
+                            class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-oe hover:bg-oe-hover text-white transition-colors">
                         <flux:icon name="cube" class="size-4" />
                         Release Asset
                     </button>

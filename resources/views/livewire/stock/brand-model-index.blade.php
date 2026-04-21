@@ -31,7 +31,7 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
         {{-- Total Brands — gradient hero card --}}
-        <div class="bg-gradient-to-br from-[#2563eb] to-[#2563eb] rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
+        <div class="bg-gradient-to-br from-oe to-oe-hover rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-oe/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
                 <x-fluent-icon name="building-storefront" size="sm" />
@@ -110,7 +110,7 @@
                 <tr wire:key="brand-{{ $brand->id }}" class="hover:bg-zinc-50 dark:hover:bg-zinc-700/30 transition-colors">
                     <td class="px-4 py-3">
                         <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-sm flex-shrink-0">
+                            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-oe to-oe-hover flex items-center justify-center text-white font-black text-sm flex-shrink-0">
                                 {{ strtoupper(substr($brand->name, 0, 2)) }}
                             </div>
                             <span class="font-semibold text-zinc-900 dark:text-white">{{ $brand->name }}</span>
@@ -126,7 +126,7 @@
                     <td class="px-4 py-3 text-right">
                         <div class="flex items-center justify-end gap-1">
                             <button wire:click="openBrandDetail('{{ $brand->id }}')"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-orange-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 transition-colors">
+                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-oe-soft text-oe-hover hover:bg-oe/15 dark:bg-oe/10 dark:text-oe transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 Details
                             </button>
@@ -214,7 +214,7 @@
                     <td class="px-4 py-3 text-right">
                         <div class="flex items-center justify-end gap-1">
                             <button wire:click="openModelDetail('{{ $model->id }}')"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-orange-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 transition-colors">
+                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-oe-soft text-oe-hover hover:bg-oe/15 dark:bg-oe/10 dark:text-oe transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 Details
                             </button>
@@ -260,7 +260,7 @@
              x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
              class="relative w-full max-w-lg bg-white dark:bg-zinc-900 shadow-2xl overflow-y-auto flex flex-col">
             @if($detailBrand)
-            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-blue-700 to-orange-600 text-white">
+            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-blue-700 to-oe-hover text-white">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-white font-black text-lg">
                         {{ strtoupper(substr($detailBrand->name, 0, 2)) }}
@@ -307,7 +307,7 @@
                         </div>
                     </div>
                     <button wire:click="openModelDetail('{{ $pm->id }}')"
-                            class="w-full text-xs font-semibold text-orange-500 dark:text-blue-400 hover:underline text-left">
+                            class="w-full text-xs font-semibold text-oe dark:text-oe hover:underline text-left">
                         View full details →
                     </button>
                 </div>
@@ -318,7 +318,7 @@
             <div class="px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 flex gap-2">
                 @can('products.edit')
                 <button wire:click="openEditBrand('{{ $detailBrand->id }}')"
-                        class="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-colors">
+                        class="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl bg-oe hover:bg-oe-hover text-white transition-colors">
                     Edit Brand
                 </button>
                 @endcan
@@ -348,7 +348,7 @@
                 $dm_margin = ($dm->retail_price > 0 && $dm->cost_price > 0)
                     ? round(((float)$dm->retail_price - (float)$dm->cost_price) / (float)$dm->retail_price * 100, 1) : null;
             @endphp
-            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+            <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-oe to-oe-hover text-white">
                 <div>
                     <p class="text-xs font-semibold text-white/70 uppercase tracking-wider">{{ $dm->brand?->name }}</p>
                     <h2 class="text-xl font-bold mt-0.5">{{ $dm->name }}</h2>
@@ -391,9 +391,9 @@
                     <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Specifications</h3>
                     <div class="grid grid-cols-3 gap-3">
                         @foreach($dspecs as $specK => $specV)
-                        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center">
-                            <p class="text-[10px] text-blue-400 uppercase tracking-wider">{{ ucfirst($specK) }}</p>
-                            <p class="text-sm font-bold text-orange-600 dark:text-blue-300 mt-0.5">{{ $specV }}</p>
+                        <div class="bg-oe-soft dark:bg-oe/10 rounded-xl p-3 text-center">
+                            <p class="text-[10px] text-oe uppercase tracking-wider">{{ ucfirst($specK) }}</p>
+                            <p class="text-sm font-bold text-oe-hover dark:text-oe mt-0.5">{{ $specV }}</p>
                         </div>
                         @endforeach
                     </div>
@@ -423,7 +423,7 @@
             <div class="px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 flex gap-2">
                 @can('products.edit')
                 <button wire:click="openEditModel('{{ $dm->id }}')"
-                        class="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-colors">
+                        class="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl bg-oe hover:bg-oe-hover text-white transition-colors">
                     Edit Model
                 </button>
                 <button wire:click="toggleModelActive('{{ $dm->id }}')"

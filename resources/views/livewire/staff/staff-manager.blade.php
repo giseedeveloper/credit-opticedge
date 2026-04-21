@@ -4,7 +4,7 @@
     <div x-data="{ show:false, msg:'', type:'success' }"
          x-on:toast.window="msg=$event.detail.message; type=$event.detail.type; show=true; setTimeout(()=>show=false,3500)"
          x-show="show" x-transition
-         :class="type==='success' ? 'bg-teal-600' : type==='danger' ? 'bg-red-500' : 'bg-orange-500'"
+         :class="type==='success' ? 'bg-teal-600' : type==='danger' ? 'bg-red-500' : 'bg-oe'"
          class="fixed bottom-5 right-5 z-[60] text-white text-sm font-medium px-5 py-3 rounded-xl shadow-xl flex items-center gap-2">
         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         <span x-text="msg"></span>
@@ -27,11 +27,11 @@
                 </button>
             </div>
             <div class="px-6 py-5 grid grid-cols-2 gap-4">
-                <div class="col-span-2 rounded-2xl border {{ $newRoleRequiresBranch ? 'border-orange-200 bg-orange-50/80 dark:border-orange-900/40 dark:bg-orange-950/30' : 'border-blue-100 bg-blue-50/80 dark:border-blue-900/40 dark:bg-blue-950/20' }} p-4">
+                <div class="col-span-2 rounded-2xl border {{ $newRoleRequiresBranch ? 'border-orange-200 bg-oe-soft/80 dark:border-orange-900/40 dark:bg-orange-950/30' : 'border-oe/20 bg-blue-50/80 dark:border-oe/25 dark:bg-blue-950/20' }} p-4">
                     <div class="flex items-start gap-3">
                         <x-fluent-icon name="{{ $newRoleRequiresBranch ? 'building-office' : 'shield-check' }}" size="sm" palette="{{ $newRoleRequiresBranch ? 'orange' : 'sky' }}" />
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-wider {{ $newRoleRequiresBranch ? 'text-orange-700 dark:text-orange-300' : 'text-blue-700 dark:text-blue-300' }}">
+                            <p class="text-xs font-bold uppercase tracking-wider {{ $newRoleRequiresBranch ? 'text-oe-hover dark:text-oe' : 'text-slate-600 dark:text-slate-300' }}">
                                 {{ $newRole ? ($newRoleRequiresBranch ? 'Branch-bound role' : 'Global role') : 'Role scope' }}
                             </p>
                             <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ $this->roleScopeDescription($newRole) }}</p>
@@ -41,31 +41,31 @@
                 <div class="col-span-2">
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Full Name</label>
                     <input wire:model="newName" type="text" placeholder="John Doe"
-                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                     @error('newName') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Email</label>
                     <input wire:model="newEmail" type="email" placeholder="john@opticedge.co"
-                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                     @error('newEmail') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Phone</label>
                     <input wire:model="newPhone" type="text" placeholder="+255 7XX XXX XXX"
-                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                     @error('newPhone') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Password</label>
                     <input wire:model="newPassword" type="password" placeholder="Min 8 characters"
-                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                     @error('newPassword') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Role</label>
                     <select wire:model.live="newRole"
-                            class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe">
                         <option value="">Select role…</option>
                         @foreach($roles as $role)
                         <option value="{{ $role->name }}">{{ ucwords(str_replace(['-','_'],' ',$role->name)) }}</option>
@@ -78,7 +78,7 @@
                         Branch {{ $newRoleRequiresBranch ? '*' : '' }}
                     </label>
                     <select wire:model="newBranchId"
-                            class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe">
                         <option value="">Select branch…</option>
                         @foreach($branches as $branch)
                         <option value="{{ $branch->id }}">{{ $branch->code }} · {{ $branch->name }}{{ $branch->is_headquarter ? ' (HQ)' : '' }}</option>
@@ -92,13 +92,13 @@
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Joined Date *</label>
                     <input wire:model="newJoinedAt" type="date"
-                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                     @error('newJoinedAt') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-50 dark:bg-zinc-800/60 rounded-b-2xl flex justify-end gap-3">
                 <button wire:click="closeCreateModal" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-xl transition-colors">Cancel</button>
-                <button wire:click="createStaff" wire:loading.attr="disabled" class="px-5 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-xl transition-colors shadow-sm">Add Member</button>
+                <button wire:click="createStaff" wire:loading.attr="disabled" class="px-5 py-2 text-sm font-semibold bg-oe hover:bg-oe-hover disabled:opacity-60 text-white rounded-xl transition-colors shadow-sm">Add Member</button>
             </div>
         </div>
     </div>
@@ -121,11 +121,11 @@
                 </button>
             </div>
             <div class="px-6 py-5 grid grid-cols-2 gap-4">
-                <div class="col-span-2 rounded-2xl border {{ $editRoleRequiresBranch ? 'border-orange-200 bg-orange-50/80 dark:border-orange-900/40 dark:bg-orange-950/30' : 'border-blue-100 bg-blue-50/80 dark:border-blue-900/40 dark:bg-blue-950/20' }} p-4">
+                <div class="col-span-2 rounded-2xl border {{ $editRoleRequiresBranch ? 'border-orange-200 bg-oe-soft/80 dark:border-orange-900/40 dark:bg-orange-950/30' : 'border-oe/20 bg-blue-50/80 dark:border-oe/25 dark:bg-blue-950/20' }} p-4">
                     <div class="flex items-start gap-3">
                         <x-fluent-icon name="{{ $editRoleRequiresBranch ? 'building-office' : 'shield-check' }}" size="sm" palette="{{ $editRoleRequiresBranch ? 'orange' : 'sky' }}" />
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-wider {{ $editRoleRequiresBranch ? 'text-orange-700 dark:text-orange-300' : 'text-blue-700 dark:text-blue-300' }}">
+                            <p class="text-xs font-bold uppercase tracking-wider {{ $editRoleRequiresBranch ? 'text-oe-hover dark:text-oe' : 'text-slate-600 dark:text-slate-300' }}">
                                 {{ $editRole ? ($editRoleRequiresBranch ? 'Branch-bound role' : 'Global role') : 'Role scope' }}
                             </p>
                             <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ $this->roleScopeDescription($editRole) }}</p>
@@ -135,24 +135,24 @@
                 <div class="col-span-2">
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Full Name</label>
                     <input wire:model="editName" type="text"
-                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                     @error('editName') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Email</label>
                     <input wire:model="editEmail" type="email"
-                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                     @error('editEmail') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Phone</label>
                     <input wire:model="editPhone" type="text"
-                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Role</label>
                     <select wire:model.live="editRole"
-                            class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe">
                         <option value="">Select role…</option>
                         @foreach($roles as $role)
                         <option value="{{ $role->name }}">{{ ucwords(str_replace(['-','_'],' ',$role->name)) }}</option>
@@ -165,7 +165,7 @@
                         Branch {{ $editRoleRequiresBranch ? '*' : '' }}
                     </label>
                     <select wire:model="editBranchId"
-                            class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe">
                         <option value="">Select branch…</option>
                         @foreach($branches as $branch)
                         <option value="{{ $branch->id }}">{{ $branch->code }} · {{ $branch->name }}{{ $branch->is_headquarter ? ' (HQ)' : '' }}</option>
@@ -179,19 +179,19 @@
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Joined Date *</label>
                     <input wire:model="editJoinedAt" type="date"
-                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                     @error('editJoinedAt') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div class="col-span-2">
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">New Password <span class="font-normal text-gray-400">(leave blank to keep current)</span></label>
                     <input wire:model="editPassword" type="password" placeholder="Leave blank to keep current"
-                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                           class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                     @error('editPassword') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-50 dark:bg-zinc-800/60 rounded-b-2xl flex justify-end gap-3">
                 <button wire:click="closeEditModal" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-xl transition-colors">Cancel</button>
-                <button wire:click="saveEdit" wire:loading.attr="disabled" class="px-5 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-xl transition-colors shadow-sm">Save Changes</button>
+                <button wire:click="saveEdit" wire:loading.attr="disabled" class="px-5 py-2 text-sm font-semibold bg-oe hover:bg-oe-hover disabled:opacity-60 text-white rounded-xl transition-colors shadow-sm">Save Changes</button>
             </div>
         </div>
     </div>
@@ -244,7 +244,7 @@
             </div>
         </div>
         <button wire:click="openCreateModal"
-                class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-xl shadow-sm transition-colors">
+                class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-oe hover:bg-oe-hover text-white rounded-xl shadow-sm transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Add Staff
         </button>
@@ -252,7 +252,7 @@
 
     {{-- ── Stats Bar ────────────────────────────────────────────────── --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
-        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-blue-900/20">
+        <div class="bg-gradient-to-br from-oe to-oe-hover rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-oe/20">
             <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="flex items-center gap-2 mb-3">
                 <x-fluent-icon name="users" size="sm" />
@@ -291,10 +291,10 @@
     @if($roleCounts->isNotEmpty())
     <div class="flex gap-2 flex-wrap mb-5">
         @foreach($roleCounts->take(6) as $rc)
-        <div class="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/30">
+        <div class="flex items-center gap-2 px-3 py-1.5 bg-oe-soft dark:bg-oe/10 rounded-xl border border-oe/20 dark:border-oe/20">
             <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-            <span class="text-xs font-bold text-orange-600 dark:text-blue-400">{{ ucwords(str_replace(['-','_'],' ',$rc->name)) }}</span>
-            <span class="text-[10px] font-black text-blue-400 dark:text-blue-500">{{ $rc->users_count }}</span>
+            <span class="text-xs font-bold text-oe-hover dark:text-oe">{{ ucwords(str_replace(['-','_'],' ',$rc->name)) }}</span>
+            <span class="text-[10px] font-black text-oe dark:text-oe-hover">{{ $rc->users_count }}</span>
         </div>
         @endforeach
     </div>
@@ -305,17 +305,17 @@
         <div class="px-5 py-4 flex flex-wrap items-center gap-4">
             <div class="flex-1 min-w-48">
                 <input wire:model.live.debounce.300="search" type="text" placeholder="Search by name or email…"
-                       class="w-full px-3.5 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                       class="w-full px-3.5 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
             </div>
             <select wire:model.live="filterRole"
-                    class="px-3.5 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    class="px-3.5 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-oe">
                 <option value="all">All Roles</option>
                 @foreach($roles as $role)
                 <option value="{{ $role->name }}">{{ ucwords(str_replace(['-','_'],' ',$role->name)) }}</option>
                 @endforeach
             </select>
             <select wire:model.live="filterStatus"
-                    class="px-3.5 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    class="px-3.5 py-2 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-oe">
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -341,7 +341,7 @@
                 <tr class="hover:bg-gray-50 dark:hover:bg-zinc-800/40 transition-colors">
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-3">
-                            <div class="size-9 rounded-full bg-gradient-to-br from-blue-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                            <div class="size-9 rounded-full bg-gradient-to-br from-blue-400 to-oe flex items-center justify-center text-white text-xs font-bold shrink-0">
                                 {{ $member->initials() }}
                             </div>
                             <div>
@@ -352,7 +352,7 @@
                     </td>
                     <td class="px-5 py-4">
                         @if($member->roles->isNotEmpty())
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-orange-600 dark:bg-blue-900/30 dark:text-blue-300">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-oe-soft text-oe-hover dark:bg-oe/10 dark:text-oe">
                             {{ ucwords(str_replace(['-','_'],' ',$member->roles->first()->name)) }}
                         </span>
                         @else
@@ -380,10 +380,10 @@
                     <td class="px-5 py-4 text-center">
                         <div class="flex items-center justify-center gap-1">
                             <button wire:click="openDetail('{{ $member->id }}')"
-                                    class="px-2.5 py-1.5 text-xs font-semibold text-orange-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                    class="px-2.5 py-1.5 text-xs font-semibold text-oe dark:text-oe hover:bg-oe-soft dark:hover:bg-oe/10 rounded-lg transition-colors"
                                     title="View Profile">View</button>
                             <button wire:click="startEdit('{{ $member->id }}')"
-                                    class="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                    class="p-1.5 text-gray-400 hover:text-oe hover:bg-oe-soft dark:hover:bg-oe/10 rounded-lg transition-colors"
                                     title="Edit">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
                             </button>
@@ -510,8 +510,8 @@
                 <div>
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Activity Summary</h3>
                     <div class="grid grid-cols-3 gap-2">
-                        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center border border-blue-100 dark:border-blue-900/30">
-                            <p class="text-xl font-black text-orange-500 dark:text-blue-400">{{ number_format($loansCount) }}</p>
+                        <div class="bg-oe-soft dark:bg-oe/10 rounded-xl p-3 text-center border border-oe/20 dark:border-oe/20">
+                            <p class="text-xl font-black text-oe dark:text-oe">{{ number_format($loansCount) }}</p>
                             <p class="text-[10px] text-gray-400 mt-0.5 font-semibold">Loans<br>Disbursed</p>
                         </div>
                         <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 text-center border border-emerald-100 dark:border-emerald-900/30">
@@ -531,7 +531,7 @@
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Roles</h3>
                     <div class="flex flex-wrap gap-2">
                         @foreach($detailStaff->roles as $role)
-                        <span class="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-300">
+                        <span class="px-3 py-1.5 rounded-xl text-xs font-bold bg-oe-soft text-oe-hover dark:bg-oe/10 dark:text-oe">
                             {{ ucwords(str_replace(['-','_'],' ',$role->name)) }}
                         </span>
                         @endforeach
@@ -557,7 +557,7 @@
                     Close
                 </button>
                 <button wire:click="startEdit('{{ $detailStaff->id }}'); $wire.closeDetail()"
-                        class="flex-1 py-2.5 text-sm font-semibold rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-colors">
+                        class="flex-1 py-2.5 text-sm font-semibold rounded-xl bg-oe hover:bg-oe-hover text-white transition-colors">
                     Edit Profile
                 </button>
             </div>

@@ -16,6 +16,7 @@ use App\Services\IMEITrackingService;
 use App\Services\KycAccessoryOfferService;
 use App\Services\KycDeviceCatalogService;
 use App\Services\KycPhoneService;
+use App\Services\KycStageFlowService;
 use App\Services\SelcomCheckoutService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -149,6 +150,11 @@ class KycApiController extends Controller
         return $this->successResponse($units, 'Available inventory retrieved.');
     }
 
+    public function stageFlow(KycStageFlowService $stageFlow): JsonResponse
+    {
+        return $this->successResponse($stageFlow->contract(), 'KYC stage flow retrieved.');
+    }
+
     // ──────────────────────────────────────────────────────────────
     // STEP 1 — Device
     // POST /api/v1/kyc/application/step1
@@ -159,7 +165,8 @@ class KycApiController extends Controller
         DeviceIdentifierScanService $scanService,
         IMEITrackingService $imeiTracking,
         KycAccessoryOfferService $accessoryOffers,
-        CustomerLoanProvisioningService $loanProvisioning
+        CustomerLoanProvisioningService $loanProvisioning,
+        KycStageFlowService $stageFlow
     ): JsonResponse {
         $validated = $request->validate([
             'brand_id' => ['nullable', 'exists:brands,id'],
@@ -238,7 +245,10 @@ class KycApiController extends Controller
         return $this->successResponse([
             'customer_id' => $draft->id,
             'step' => 1,
-        ], 'Step 1 (Device) saved. Proceed to Step 2.');
+            'stage' => 1,
+            'next_stage' => 2,
+            'flow' => $stageFlow->summary($draft),
+        ], 'Stage 1 (Device & Offer) saved. Proceed to Customer & Verification.');
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -447,11 +457,186 @@ class KycApiController extends Controller
         return $this->successResponse(['customer_id' => $customer->id, 'step' => 6], 'Step 6 (Consent) recorded.');
     }
 
+    public function stage2CustomerVerification(
+        Request $request,
+        string $customerId,
+        KycPhoneService $phoneService,
+        KycStageFlowService $stageFlow
+    ): JsonResponse {
+        $customer = $this->findAgentCustomerOrFail($customerId, ['vendor']);
+
+        $validated = $request->validate([
+            'first_name' => ['required', 'string', 'min:2', 'max:60'],
+            'middle_name' => ['nullable', 'string', 'max:60'],
+            'last_name' => ['required', 'string', 'min:2', 'max:60'],
+            'gender' => ['required', 'in:male,female,other'],
+            'date_of_birth' => ['nullable', 'date', 'before:today'],
+            'nida_number' => ['required', 'string', 'size:20', 'unique:customers,nida_number,'.$customer->id],
+            'id_type' => ['required', 'in:nida,passport,driving_license,voter_card'],
+            'id_front_photo' => ['nullable', 'image', 'max:5120'],
+            'id_back_photo' => ['nullable', 'image', 'max:5120'],
+            'headshot_photo' => ['nullable', 'image', 'max:5120'],
+            'client_fo_photo' => ['nullable', 'image', 'max:5120'],
+            'phone' => ['required', 'string', 'min:7', 'max:20'],
+            'phone_country' => ['required', 'string'],
+            'alt_phone' => ['nullable', 'string', 'min:7', 'max:20'],
+            'alt_phone_country' => ['nullable', 'string'],
+            'email' => ['nullable', 'email'],
+            'branch_id' => ['nullable', 'exists:branches,id'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'landmark' => ['nullable', 'string', 'max:255'],
+            'region' => ['nullable', 'string', 'max:80'],
+            'district' => ['nullable', 'string', 'max:80'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'occupation' => ['nullable', 'string', 'max:100'],
+            'employer' => ['nullable', 'string', 'max:100'],
+            'work_location' => ['nullable', 'string', 'max:200'],
+            'monthly_income' => ['required', 'numeric', 'min:0'],
+            'monthly_expenses' => ['nullable', 'numeric', 'min:0'],
+            'income_payment_cycle' => ['nullable', 'in:weekly,biweekly,monthly,irregular'],
+            'duration_at_work' => ['nullable', 'string', 'max:60'],
+            'business_photo' => ['nullable', 'image', 'max:5120'],
+            'nok_name' => ['required', 'string', 'min:2', 'max:100'],
+            'nok_phone' => ['required', 'string', 'min:7', 'max:20'],
+            'nok_phone_country' => ['required', 'string'],
+            'nok_relationship' => ['required', 'string', 'max:60'],
+            'nok2_name' => ['nullable', 'string', 'max:100'],
+            'nok2_phone' => ['nullable', 'string', 'min:7', 'max:20'],
+            'nok2_phone_country' => ['nullable', 'string'],
+            'nok2_relationship' => ['nullable', 'string', 'max:60'],
+            'terms_accepted' => ['required', 'accepted'],
+            'data_consent_accepted' => ['required', 'accepted'],
+            'call_consent_accepted' => ['required', 'accepted'],
+        ]);
+
+        $missingPhotoErrors = [];
+
+        if (! $request->hasFile('id_front_photo') && ! $customer->id_front_photo_path) {
+            $missingPhotoErrors['id_front_photo'] = 'ID front photo is required.';
+        }
+
+        if (! $request->hasFile('id_back_photo') && ! $customer->id_back_photo_path) {
+            $missingPhotoErrors['id_back_photo'] = 'ID back photo is required.';
+        }
+
+        if (! $request->hasFile('headshot_photo') && ! $customer->headshot_photo_path) {
+            $missingPhotoErrors['headshot_photo'] = 'Headshot photo is required.';
+        }
+
+        if ($missingPhotoErrors !== []) {
+            throw ValidationException::withMessages($missingPhotoErrors);
+        }
+
+        $contactPhones = $this->normalizeContactPhones($customer, $validated, $phoneService);
+        $lockedBranchId = $customer->vendor?->branch_id ?: $customer->branch_id ?: $request->user()->branch_id;
+        $requestedBranchId = $validated['branch_id'] ?? null;
+
+        if ($customer->vendor?->branch_id && $requestedBranchId && $requestedBranchId !== $customer->vendor->branch_id) {
+            throw ValidationException::withMessages([
+                'branch_id' => 'This application is already tied to the selected vendor store branch and cannot be moved to a different branch.',
+            ]);
+        }
+
+        $resolvedBranchId = $requestedBranchId ?: $lockedBranchId;
+
+        if (! $resolvedBranchId) {
+            throw ValidationException::withMessages([
+                'branch_id' => 'Select the branch that will serve this customer.',
+            ]);
+        }
+
+        $customer->forceFill([
+            'phone' => $contactPhones['phone'],
+            'phone_metadata' => $contactPhones['phone_metadata'],
+        ]);
+
+        $nokPhones = $this->normalizeNokPhones($customer, $validated, $phoneService);
+
+        $idFrontPhotoPath = $this->storeFile($request, 'id_front_photo', 'id_front') ?? $customer->id_front_photo_path;
+        $idBackPhotoPath = $this->storeFile($request, 'id_back_photo', 'id_back') ?? $customer->id_back_photo_path;
+        $headshotPhotoPath = $this->storeFile($request, 'headshot_photo', 'headshot') ?? $customer->headshot_photo_path;
+        $clientFoPhotoPath = $this->storeFile($request, 'client_fo_photo', 'client_fo') ?? $customer->client_fo_photo_path;
+        $businessPhotoPath = $this->storeFile($request, 'business_photo', 'business') ?? $customer->business_photo_path;
+
+        DB::transaction(function () use (
+            $customer,
+            $validated,
+            $contactPhones,
+            $nokPhones,
+            $resolvedBranchId,
+            $idFrontPhotoPath,
+            $idBackPhotoPath,
+            $headshotPhotoPath,
+            $clientFoPhotoPath,
+            $businessPhotoPath
+        ): void {
+            $customer->update([
+                'first_name' => ucfirst(strtolower(trim($validated['first_name']))),
+                'middle_name' => isset($validated['middle_name']) ? ucfirst(strtolower(trim($validated['middle_name']))) : null,
+                'last_name' => ucfirst(strtolower(trim($validated['last_name']))),
+                'gender' => $validated['gender'],
+                'date_of_birth' => $validated['date_of_birth'] ?? null,
+                'nida_number' => strtoupper(trim($validated['nida_number'])),
+                'id_type' => $validated['id_type'],
+                'id_front_photo_path' => $idFrontPhotoPath,
+                'id_back_photo_path' => $idBackPhotoPath,
+                'headshot_photo_path' => $headshotPhotoPath,
+                'client_fo_photo_path' => $clientFoPhotoPath,
+                'phone' => $contactPhones['phone'],
+                'alt_phone' => $contactPhones['alt_phone'],
+                'phone_metadata' => $nokPhones['phone_metadata'],
+                'email' => isset($validated['email']) ? strtolower(trim($validated['email'])) : null,
+                'branch_id' => $resolvedBranchId,
+                'address' => $validated['address'] ?? null,
+                'landmark' => $validated['landmark'] ?? null,
+                'region' => $validated['region'] ?? null,
+                'district' => $validated['district'] ?? null,
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
+                'occupation' => $validated['occupation'] ?? null,
+                'employer' => $validated['employer'] ?? null,
+                'work_location' => $validated['work_location'] ?? null,
+                'monthly_income' => $validated['monthly_income'],
+                'monthly_expenses' => $validated['monthly_expenses'] ?? null,
+                'income_payment_cycle' => $validated['income_payment_cycle'] ?? null,
+                'duration_at_work' => $validated['duration_at_work'] ?? null,
+                'business_photo_path' => $businessPhotoPath,
+                'nok_name' => trim($validated['nok_name']),
+                'nok_phone' => $nokPhones['nok_phone'],
+                'nok_relationship' => $validated['nok_relationship'],
+                'nok2_name' => isset($validated['nok2_name']) ? trim($validated['nok2_name']) : null,
+                'nok2_phone' => $nokPhones['nok2_phone'],
+                'nok2_relationship' => $validated['nok2_relationship'] ?? null,
+                'terms_accepted' => true,
+                'data_consent_accepted' => true,
+                'call_consent_accepted' => true,
+                'consent_timestamp' => now(),
+                'kyc_stage' => 2,
+            ]);
+        });
+
+        $customer = $customer->fresh();
+
+        return $this->successResponse([
+            'customer_id' => $customer->id,
+            'stage' => 2,
+            'next_stage' => 3,
+            'legacy_steps_completed' => [2, 3, 4, 5, 6],
+            'flow' => $stageFlow->summary(
+                $customer,
+                $this->latestDraftPaymentFor($customer),
+                $this->activeAgreementDocument()
+            ),
+        ], 'Stage 2 (Customer & Verification) saved. Proceed to Payment, Agreement & Handover.');
+    }
+
     public function paymentRequest(
         Request $request,
         string $customerId,
         KycPhoneService $phoneService,
-        SelcomCheckoutService $selcom
+        SelcomCheckoutService $selcom,
+        KycStageFlowService $stageFlow
     ): JsonResponse {
         $customer = $this->findAgentCustomerOrFail($customerId);
 
@@ -487,6 +672,7 @@ class KycApiController extends Controller
                 'payment' => $this->serializePaymentSummary($latestCompletedPayment->fresh()),
                 'agreement' => $this->serializeAgreementSummary($this->activeAgreementDocument(), $customer->fresh()),
                 'release' => $this->serializeReleaseSummary($customer->fresh()),
+                'flow' => $stageFlow->summary($customer->fresh(), $latestCompletedPayment->fresh(), $this->activeAgreementDocument()),
             ], 'This application already has a successful deposit payment.');
         }
 
@@ -513,12 +699,14 @@ class KycApiController extends Controller
             'payment' => $this->serializePaymentSummary($payment),
             'agreement' => $this->serializeAgreementSummary($this->activeAgreementDocument(), $customer->fresh()),
             'release' => $this->serializeReleaseSummary($customer->fresh()),
+            'flow' => $stageFlow->summary($customer->fresh(), $payment, $this->activeAgreementDocument()),
         ], 'Payment prompt sent successfully.');
     }
 
     public function paymentStatus(
         string $customerId,
-        SelcomCheckoutService $selcom
+        SelcomCheckoutService $selcom,
+        KycStageFlowService $stageFlow
     ): JsonResponse {
         $customer = $this->findAgentCustomerOrFail($customerId);
         $payment = $this->latestDraftPaymentFor($customer);
@@ -538,6 +726,7 @@ class KycApiController extends Controller
             'payment' => $this->serializePaymentSummary($payment),
             'agreement' => $this->serializeAgreementSummary($this->activeAgreementDocument(), $customer->fresh()),
             'release' => $this->serializeReleaseSummary($customer->fresh()),
+            'flow' => $stageFlow->summary($customer->fresh(), $payment, $this->activeAgreementDocument()),
         ], $payment->isCompleted()
             ? 'Deposit payment confirmed successfully.'
             : 'Payment status refreshed.');
@@ -551,7 +740,8 @@ class KycApiController extends Controller
         Request $request,
         string $customerId,
         ApplicationAutoCheckService $checker,
-        SelcomCheckoutService $selcom
+        SelcomCheckoutService $selcom,
+        KycStageFlowService $stageFlow
     ): JsonResponse {
         $customer = $this->findAgentCustomerOrFail($customerId);
 
@@ -642,7 +832,7 @@ class KycApiController extends Controller
             'deposit_paid_at' => $successfulPayment->paid_at,
             'asset_release_status' => 'pending',
             'kyc_status' => 'pending',
-            'kyc_stage' => 1,
+            'kyc_stage' => 3,
         ]);
 
         $verification = Verification::firstOrCreate(
@@ -667,12 +857,14 @@ class KycApiController extends Controller
 
         return $this->successResponse([
             'customer_id' => $customer->id,
+            'stage' => 3,
             'verification_id' => $verification->id,
             'auto_check_status' => $result['status'],
             'auto_check_results' => $result['checks'],
             'payment' => $this->serializePaymentSummary($successfulPayment->fresh()),
             'agreement' => $this->serializeAgreementSummary($activeAgreement, $customer->fresh()),
             'release' => $this->serializeReleaseSummary($customer->fresh()),
+            'flow' => $stageFlow->summary($customer->fresh(), $successfulPayment->fresh(), $activeAgreement),
         ], 'Application submitted successfully.');
     }
 
@@ -680,7 +872,7 @@ class KycApiController extends Controller
     // GET application draft status
     // GET /api/v1/kyc/application/{customer_id}/status
     // ──────────────────────────────────────────────────────────────
-    public function applicationStatus(string $customerId): JsonResponse
+    public function applicationStatus(string $customerId, KycStageFlowService $stageFlow): JsonResponse
     {
         $customer = $this->findAgentCustomerOrFail($customerId, ['latestVerification', 'agreementDocument', 'assetReleasedBy']);
         $activeAgreement = $this->activeAgreementDocument();
@@ -695,6 +887,7 @@ class KycApiController extends Controller
             'payment' => $this->serializePaymentSummary($latestPayment),
             'agreement' => $this->serializeAgreementSummary($activeAgreement, $customer),
             'release' => $this->serializeReleaseSummary($customer),
+            'flow' => $stageFlow->summary($customer, $latestPayment, $activeAgreement),
             'can_submit' => $latestPayment?->isCompleted() === true
                 && $activeAgreement !== null,
         ], 'Application status retrieved.');
@@ -788,7 +981,7 @@ class KycApiController extends Controller
     // CUSTOMER FULL DETAIL
     // GET /api/v1/kyc/customers/{id}
     // ──────────────────────────────────────────────────────────────
-    public function customerDetail(string $customerId): JsonResponse
+    public function customerDetail(string $customerId, KycStageFlowService $stageFlow): JsonResponse
     {
         $customer = Customer::with([
             'latestVerification.fo',
@@ -883,6 +1076,7 @@ class KycApiController extends Controller
             'payment' => $this->serializePaymentSummary($latestPayment),
             'agreement' => $this->serializeAgreementSummary($activeAgreement, $customer),
             'release' => $this->serializeReleaseSummary($customer),
+            'flow' => $stageFlow->summary($customer, $latestPayment, $activeAgreement),
             'photos' => [
                 'imei' => $this->photoUrl($customer->imei_photo_path),
                 'device_box' => $this->photoUrl($customer->device_box_photo_path),
@@ -903,6 +1097,7 @@ class KycApiController extends Controller
             'can_release_asset' => $customer->isReadyForAssetRelease(),
             'can_resume_draft' => $isDraftApplication,
             'resume_step' => $resumeStep,
+            'resume_stage' => $stageFlow->determineResumeStage($customer),
             'verification' => $v ? [
                 'id' => $v->id,
                 'status' => $v->status,

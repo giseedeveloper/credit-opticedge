@@ -93,9 +93,12 @@ Route::prefix('v1')->group(function () {
                 Route::get('/device/brands', [KycApiController::class, 'deviceBrands']);
                 Route::get('/device/models', [KycApiController::class, 'deviceModels']);
                 Route::get('/device/inventory', [KycApiController::class, 'deviceInventory']);
+                Route::get('/stage-flow', [KycApiController::class, 'stageFlow']);
                 // Step 1: creates the draft customer, returns customer_id
+                Route::post('/stage1', [KycApiController::class, 'step1Device']);
                 Route::post('/step1', [KycApiController::class, 'step1Device']);
                 // Steps 2-7: enrich the draft using the customer_id from step 1
+                Route::post('/{customer_id}/stage2', [KycApiController::class, 'stage2CustomerVerification']);
                 Route::post('/{customer_id}/step2', [KycApiController::class, 'step2Identity']);
                 Route::post('/{customer_id}/step3', [KycApiController::class, 'step3Contact']);
                 Route::post('/{customer_id}/step4', [KycApiController::class, 'step4Income']);
@@ -103,6 +106,7 @@ Route::prefix('v1')->group(function () {
                 Route::post('/{customer_id}/step6', [KycApiController::class, 'step6Consent']);
                 Route::post('/{customer_id}/payment/request', [KycApiController::class, 'paymentRequest']);
                 Route::get('/{customer_id}/payment/status', [KycApiController::class, 'paymentStatus']);
+                Route::post('/{customer_id}/stage3', [KycApiController::class, 'step7Submit']);
                 Route::post('/{customer_id}/step7', [KycApiController::class, 'step7Submit']);
                 Route::get('/{customer_id}/status', [KycApiController::class, 'applicationStatus']);
             });

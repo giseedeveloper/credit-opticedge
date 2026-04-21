@@ -5,10 +5,10 @@
     <title>Opticedge Credit - Loan Agreement</title>
     <style>
         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; font-size: 14px; }
-        .header { text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 20px; margin-bottom: 20px; }
-        .logo-text { color: #2563eb; font-size: 24px; font-weight: bold; }
+        .header { text-align: center; border-bottom: 2px solid #F58220; padding-bottom: 20px; margin-bottom: 20px; }
+        .logo-text { color: #F58220; font-size: 24px; font-weight: bold; }
         .section { margin-bottom: 20px; }
-        .section h3 { background-color: #E5E4E2; padding: 10px; margin-bottom: 10px; color: #2563eb; }
+        .section h3 { background-color: #E5E4E2; padding: 10px; margin-bottom: 10px; color: #F58220; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         table, th, td { border: 1px solid #ddd; }
         th, td { padding: 8px; text-align: left; }
@@ -16,7 +16,7 @@
         .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #777; border-top: 1px solid #ddd; padding-top: 10px; }
         .page-break { page-break-after: always; }
         /* Customer photo box */
-        .photo-box { width: 100px; height: 100px; border: 1px dashed #2563eb; display: inline-block; vertical-align: top; text-align: center; line-height: 100px; font-size: 10px; color: #999; }
+        .photo-box { width: 100px; height: 100px; border: 1px dashed #F58220; display: inline-block; vertical-align: top; text-align: center; line-height: 100px; font-size: 10px; color: #999; }
         .sign-area { margin-top: 40px; }
         .sign-line { border-bottom: 1px solid #333; width: 250px; display: inline-block; margin-top: 30px; }
     </style>

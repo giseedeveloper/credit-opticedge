@@ -1,4 +1,4 @@
-{{-- KYC Wizard — 7-Step Front Office Application --}}
+{{-- KYC Wizard — 3-Stage Front Office Application --}}
 <div class="flex flex-col gap-6">
 
     {{-- Toast --}}
@@ -11,13 +11,58 @@
         <span x-text="msg"></span>
     </div>
 
+    @php
+        $stageDefinitions = [
+            1 => [
+                'label' => 'Device & Offer',
+                'short' => 'Device',
+                'icon' => 'device-phone-mobile',
+                'palette' => 'amber',
+                'summary' => 'Lock handset, IMEI, deposit, offer terms and evidence.',
+                'legacy' => 'Step 1',
+            ],
+            2 => [
+                'label' => 'Customer & Verification',
+                'short' => 'Customer',
+                'icon' => 'identification',
+                'palette' => 'sky',
+                'summary' => 'Capture identity, contact, income, NOK and consent cleanly.',
+                'legacy' => 'Steps 2-6',
+            ],
+            3 => [
+                'label' => 'Payment, Agreement & Handover',
+                'short' => 'Finalize',
+                'icon' => 'clipboard-document-check',
+                'palette' => 'emerald',
+                'summary' => 'Confirm payment, present agreement, sign and submit.',
+                'legacy' => 'Step 7',
+            ],
+        ];
+        $activeStage = match (true) {
+            $step === 1 => 1,
+            $step >= 2 && $step <= 6 => 2,
+            default => 3,
+        };
+        $stageProgress = [
+            1 => $step > 1 ? 100 : 55,
+            2 => $step < 2 ? 0 : min(100, max(20, (($step - 1) / 5) * 100)),
+            3 => $step < 7 ? 0 : 100,
+        ];
+        $currentStage = $stageDefinitions[$activeStage];
+        $subStepLabel = match ($activeStage) {
+            1 => 'Device scan and offer setup',
+            2 => 'Customer packet item '.($step - 1).' of 5',
+            default => 'Payment, agreement and final handover',
+        };
+    @endphp
+
     {{-- Header --}}
     <div class="flex items-center justify-between">
         <div class="flex items-start gap-4">
             <x-fluent-icon name="identification" size="lg" palette="teal" />
             <div>
             <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Customer Acquisition Center</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">7-step agent KYC onboarding — device, identity, contact, income, NOK, consent &amp; submit</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">3-stage guided KYC onboarding — focused, faster, and still audit-safe</p>
             </div>
         </div>
         <div class="flex items-center gap-2">
@@ -77,7 +122,7 @@
                         {{ $acLabel }}
                     </span>
                     <div class="flex justify-center gap-3 mt-5">
-                        <button wire:click="startNew" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:opacity-90 transition-opacity">
+                        <button wire:click="startNew" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-oe to-oe-hover text-white hover:opacity-90 transition-opacity">
                             <flux:icon name="plus" class="size-4" /> Register Another
                         </button>
                         <a href="{{ route('kyc.pending') }}" wire:navigate class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 transition-colors">
@@ -110,43 +155,64 @@
             </div>
             @else
 
-            {{-- Stepper --}}
+            {{-- Stage Navigator --}}
             <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
 
-                {{-- Step Header --}}
-                <div class="px-6 pt-5 pb-4 border-b border-gray-100 dark:border-zinc-800 bg-gray-50/60 dark:bg-zinc-800/60">
-                    @php
-                    $steps = [
-                        1 => ['label' => 'Device',   'desc' => 'IMEI & price'],
-                        2 => ['label' => 'Identity', 'desc' => 'NIDA & docs'],
-                        3 => ['label' => 'Contact',  'desc' => 'Phone & area'],
-                        4 => ['label' => 'Income',   'desc' => 'Work & pay'],
-                        5 => ['label' => 'NOK',      'desc' => 'Next of kin'],
-                        6 => ['label' => 'Consent',  'desc' => 'Terms & data'],
-                        7 => ['label' => 'Submit',   'desc' => 'FO notes'],
-                    ];
-                    @endphp
-                    <div class="flex items-center gap-0">
-                        @foreach($steps as $n => $s)
-                        <div class="flex items-center {{ $n < 7 ? 'flex-1' : '' }}">
-                            <div class="flex flex-col items-center flex-shrink-0">
-                                <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-colors
-                                    {{ $step > $n ? 'bg-emerald-500 text-white' : ($step === $n ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-md' : 'bg-gray-200 dark:bg-zinc-700 text-gray-500 dark:text-gray-400') }}">
-                                    @if($step > $n)
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                {{-- Stage Header --}}
+                <div class="border-b border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 px-4 py-5 sm:px-6">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="max-w-2xl">
+                            <p class="text-[10px] font-black uppercase tracking-[0.28em] text-amber-300">Stage {{ $activeStage }} of 3</p>
+                            <h2 class="mt-2 text-2xl font-black tracking-tight text-white">{{ $currentStage['label'] }}</h2>
+                            <p class="mt-1 max-w-xl text-sm leading-6 text-slate-300">{{ $currentStage['summary'] }}</p>
+                        </div>
+                        <div class="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-bold text-white shadow-sm">
+                            <x-fluent-icon :name="$currentStage['icon']" size="xs" :palette="$currentStage['palette']" />
+                            {{ $subStepLabel }}
+                        </div>
+                    </div>
+
+                    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+                        @foreach($stageDefinitions as $stageNumber => $stageItem)
+                        @php
+                            $isStageDone = $activeStage > $stageNumber;
+                            $isStageActive = $activeStage === $stageNumber;
+                            $percent = $isStageDone ? 100 : ($isStageActive ? $stageProgress[$stageNumber] : 0);
+                        @endphp
+                        <div @class([
+                            'relative overflow-hidden rounded-2xl border p-4 transition-colors',
+                            'border-white/20 bg-white/15 shadow-lg shadow-black/10' => $isStageActive,
+                            'border-emerald-300/20 bg-emerald-400/10' => $isStageDone,
+                            'border-white/10 bg-white/5' => ! $isStageActive && ! $isStageDone,
+                        ])>
+                            <div class="flex items-start gap-3">
+                                <div @class([
+                                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl',
+                                    'bg-white text-slate-950' => $isStageActive,
+                                    'bg-emerald-400/20 text-emerald-200' => $isStageDone,
+                                    'bg-white/10 text-slate-300' => ! $isStageActive && ! $isStageDone,
+                                ])>
+                                    @if($isStageDone)
+                                    <flux:icon name="check" class="size-5" />
                                     @else
-                                    {{ $n }}
+                                    <x-fluent-icon :name="$stageItem['icon']" size="xs" :palette="$stageItem['palette']" />
                                     @endif
                                 </div>
-                                <span class="text-[9px] mt-1 font-semibold {{ $step >= $n ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400' }}">{{ $s['label'] }}</span>
+                                <div class="min-w-0">
+                                    <p @class([
+                                        'text-sm font-black leading-5',
+                                        'text-white' => $isStageActive || $isStageDone,
+                                        'text-slate-300' => ! $isStageActive && ! $isStageDone,
+                                    ])>{{ $stageItem['short'] }}</p>
+                                    <p class="mt-0.5 text-[11px] font-semibold text-slate-400">{{ $stageItem['legacy'] }}</p>
+                                </div>
                             </div>
-                            @if($n < 7)
-                            <div class="flex-1 h-[2px] mx-1 mt-[-12px] rounded {{ $step > $n ? 'bg-emerald-400' : 'bg-gray-200 dark:bg-zinc-700' }}"></div>
-                            @endif
+                            <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+                                <div class="h-full rounded-full bg-gradient-to-r from-amber-300 to-emerald-300 transition-all duration-500" style="width: {{ $percent }}%"></div>
+                            </div>
                         </div>
                         @endforeach
                     </div>
-                    <div class="mt-2 text-[10px] text-gray-400">Step {{ $step }} of 7</div>
                 </div>
 
                 {{-- Form Body --}}
@@ -259,7 +325,7 @@
                                 <div class="mt-4 flex flex-wrap gap-2">
                                     @foreach($accessoryPresets as $preset)
                                     <button type="button" wire:click="addAccessoryPreset('{{ $preset['code'] }}')"
-                                            class="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700 hover:bg-orange-100">
+                                            class="inline-flex items-center rounded-full border border-orange-200 bg-oe-soft px-3 py-1.5 text-xs font-semibold text-oe-hover hover:bg-oe/15">
                                         {{ $preset['name'] }}
                                     </button>
                                     @endforeach
@@ -418,7 +484,7 @@
                                     <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{{ $label }} <span class="text-gray-400 font-normal">({{ $hint }})</span></label>
                                     <input wire:model="{{ $field }}" type="file" accept="image/*"
                                            @if($supportsScan) capture="environment" x-on:change="scan($event)" @endif
-                                           class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-gray-200 rounded-lg p-1" />
+                                           class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-oe-soft file:text-oe-hover hover:file:bg-oe/15 border border-gray-200 rounded-lg p-1" />
                                     @error($field) <p class="mt-0.5 text-xs text-red-500">{{ $message }}</p> @enderror
                                     <div wire:loading wire:target="{{ $field }}" class="mt-0.5 text-[10px] text-gray-400">Uploading…</div>
                                     @if($supportsScan)
@@ -522,7 +588,7 @@
                                         @if($hint === 'required') <span class="text-red-500">*</span> @else <span class="text-gray-400">(opt)</span> @endif
                                     </label>
                                     <input wire:model="{{ $field }}" type="file" accept="image/*"
-                                           class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-gray-200 rounded-lg p-1" />
+                                           class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-oe-soft file:text-oe-hover hover:file:bg-oe/15 border border-gray-200 rounded-lg p-1" />
                                     @error($field) <p class="mt-0.5 text-xs text-red-500">{{ $message }}</p> @enderror
                                     <div wire:loading wire:target="{{ $field }}" class="mt-0.5 text-[10px] text-gray-400">Uploading…</div>
                                 </div>
@@ -678,7 +744,7 @@
                             <div>
                                 <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Business / Workplace Photo <span class="text-gray-400 font-normal">(optional)</span></label>
                                 <input wire:model="businessPhoto" type="file" accept="image/*"
-                                       class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 border border-gray-200 rounded-lg p-1" />
+                                       class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-oe-soft file:text-oe-hover hover:file:bg-oe/15 border border-gray-200 rounded-lg p-1" />
                                 @error('businessPhoto') <p class="mt-0.5 text-xs text-red-500">{{ $message }}</p> @enderror
                                 <div wire:loading wire:target="businessPhoto" class="mt-0.5 text-[10px] text-gray-400">Uploading…</div>
                             </div>
@@ -808,9 +874,9 @@
                                 </label>
                                 @error('callConsentAccepted') <p class="text-xs text-red-500 -mt-1 ml-1">{{ $message }}</p> @enderror
                             </div>
-                            <div class="p-3 rounded-xl bg-blue-50 border border-blue-100 flex items-start gap-2">
-                                <flux:icon name="information-circle" class="size-4 text-blue-600 mt-0.5 shrink-0" />
-                                <p class="text-xs text-blue-700">By checking all boxes, you as the Front Officer confirm that the customer has verbally agreed to each statement above. This is recorded with a timestamp.</p>
+                            <div class="p-3 rounded-xl bg-oe-soft border border-oe/20 flex items-start gap-2">
+                                <flux:icon name="information-circle" class="size-4 text-oe-hover mt-0.5 shrink-0" />
+                                <p class="text-xs dark:text-oe">By checking all boxes, you as the Front Officer confirm that the customer has verbally agreed to each statement above. This is recorded with a timestamp.</p>
                             </div>
                         </div>
                         @endif
@@ -863,7 +929,7 @@
                                     </flux:field>
                                     <div class="flex flex-wrap items-end gap-2">
                                         <button type="button" wire:click="initiateDepositPayment"
-                                                class="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-orange-600">
+                                                class="inline-flex items-center gap-2 rounded-xl bg-oe px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-oe-hover">
                                             <flux:icon name="device-phone-mobile" class="size-4" />
                                             Send Prompt
                                         </button>
@@ -901,7 +967,7 @@
                                     Admin or owner must upload the active agreement PDF in Settings → System Health before this application can be completed.
                                 </div>
                                 @elseif($paymentRecord?->status !== 'completed')
-                                <div class="mt-4 rounded-2xl border border-dashed border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700 dark:border-blue-900/40 dark:bg-blue-900/10 dark:text-blue-300">
+                                <div class="mt-4 rounded-2xl border border-dashed border-oe/25 bg-oe-soft px-4 py-3 text-xs text-[#2D3748] dark:border-oe/25 dark:bg-oe/10 dark:text-slate-200">
                                     Waiting for successful deposit payment. Once payment is confirmed, the agreement preview and signature pads below become the required next action.
                                 </div>
                                 @else
@@ -963,7 +1029,7 @@
                                         <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
                                             <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Asset Handover List <span class="text-red-500">*</span></label>
                                             <input wire:model="assetHandoverList" type="file" accept=".pdf,image/*"
-                                                   class="mt-2 block w-full rounded-lg border border-gray-200 p-1 text-xs text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-orange-50 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-orange-700 hover:file:bg-orange-100" />
+                                                   class="mt-2 block w-full rounded-lg border border-gray-200 p-1 text-xs text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-oe-soft file:px-2 file:py-1 file:text-xs file:font-semibold file:text-oe-hover hover:file:bg-oe/15" />
                                             @error('assetHandoverList') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                                             <div wire:loading wire:target="assetHandoverList" class="mt-1 text-[10px] text-gray-400">Uploading handover list…</div>
                                             <flux:field class="mt-3">
@@ -1040,7 +1106,7 @@
 
                             @if($step < 7)
                             <button type="submit" wire:loading.attr="disabled" wire:target="nextStep"
-                                    class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:opacity-90 disabled:opacity-60 transition-opacity">
+                                    class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-oe to-oe-hover text-white hover:opacity-90 disabled:opacity-60 transition-opacity">
                                 <span wire:loading.remove wire:target="nextStep">Continue</span>
                                 <span wire:loading wire:target="nextStep">Validating…</span>
                                 <svg wire:loading.remove wire:target="nextStep" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -1064,7 +1130,7 @@
         <div class="lg:col-span-2 flex flex-col gap-4">
             <div class="flex items-center justify-between">
                 <h3 class="font-bold text-gray-900 dark:text-white text-sm">Recently Registered</h3>
-                <a href="{{ route('kyc.customers') }}" wire:navigate class="text-xs text-orange-500 hover:text-blue-800 font-semibold">View all →</a>
+                <a href="{{ route('kyc.customers') }}" wire:navigate class="text-xs text-oe hover:text-blue-800 font-semibold">View all →</a>
             </div>
 
             <div class="flex flex-col gap-3">
@@ -1091,8 +1157,8 @@
                     };
                 @endphp
                 <div wire:key="vault-{{ $profile->id }}"
-                     class="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm p-4 flex items-center gap-3 hover:border-blue-200 dark:hover:border-blue-700 transition-colors">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+                     class="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm p-4 flex items-center gap-3 hover:border-oe/25 dark:hover:border-oe/30 transition-colors">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-oe/90 to-oe flex items-center justify-center text-white text-xs font-black flex-shrink-0">
                         {{ strtoupper(substr($profile->first_name, 0, 1).substr($profile->last_name, 0, 1)) }}
                     </div>
                     <div class="flex-1 min-w-0">
@@ -1118,7 +1184,7 @@
             </div>
 
             {{-- Quick Stats --}}
-            <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white mt-2">
+            <div class="bg-gradient-to-br from-oe to-oe-hover rounded-2xl p-5 text-white mt-2">
                 <p class="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1">Today's Registrations</p>
                 <p class="text-3xl font-black">{{ \App\Models\Customer::whereDate('created_at', today())->count() }}</p>
                 <p class="text-xs text-white/60 mt-1">customers registered today</p>

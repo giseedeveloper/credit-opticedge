@@ -74,9 +74,11 @@ class CustomerDetail {
   final KycPaymentContext? payment;
   final KycAgreementContext? agreement;
   final KycReleaseContext? release;
+  final Map<String, dynamic> flow;
   final bool canReleaseAsset;
   final bool canResumeDraft;
   final int resumeStep;
+  final int resumeStage;
 
   const CustomerDetail({
     required this.id,
@@ -113,9 +115,11 @@ class CustomerDetail {
     this.payment,
     this.agreement,
     this.release,
+    this.flow = const {},
     this.canReleaseAsset = false,
     this.canResumeDraft = false,
     this.resumeStep = 2,
+    this.resumeStage = 1,
   });
 
   factory CustomerDetail.fromJson(Map<String, dynamic> json) {
@@ -165,9 +169,13 @@ class CustomerDetail {
       release: _jsonMap(json['release']) != null
           ? KycReleaseContext.fromJson(_jsonMap(json['release'])!)
           : null,
+      flow: _jsonMap(json['flow']) ?? {},
       canReleaseAsset: json['can_release_asset'] == true,
       canResumeDraft: json['can_resume_draft'] == true,
       resumeStep: _nullableInt(json['resume_step']) ?? 2,
+      resumeStage: _nullableInt(json['resume_stage']) ??
+          _nullableInt(_jsonMap(json['flow'])?['resume_stage']) ??
+          1,
     );
   }
 }

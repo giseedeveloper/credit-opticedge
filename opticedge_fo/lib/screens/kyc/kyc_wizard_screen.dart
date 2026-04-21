@@ -2,15 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../config/app_icon_assets.dart';
 import '../../config/constants.dart';
 import '../../core/providers/connectivity_provider.dart';
 import '../../core/providers/kyc_provider.dart';
+import '../../widgets/common/app_color_icon.dart';
+import 'steps/stage2_customer_verification.dart';
 import 'steps/step1_device.dart';
-import 'steps/step2_identity.dart';
-import 'steps/step3_contact.dart';
-import 'steps/step4_income.dart';
-import 'steps/step5_nok.dart';
-import 'steps/step6_consent.dart';
 import 'steps/step7_submit.dart';
 
 class KycWizardScreen extends ConsumerStatefulWidget {
@@ -30,14 +28,22 @@ class KycWizardScreen extends ConsumerStatefulWidget {
 class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
   bool _bootstrappingDraft = true;
 
-  static const _stepLabels = [
+  static const _stageLabels = [
+    'Device & Offer',
+    'Customer & Verification',
+    'Payment & Handover',
+  ];
+
+  static const _stageShortLabels = [
     'Device',
-    'Identity',
-    'Contact',
-    'Income',
-    'NOK',
-    'Consent',
-    'Submit',
+    'Customer',
+    'Finalize',
+  ];
+
+  static const _stageIcons = [
+    AppIconAssets.handset,
+    AppIconAssets.identity,
+    AppIconAssets.receipt,
   ];
 
   static const _stepSummaries = [
@@ -101,8 +107,30 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
     return '?draft=${Uri.encodeComponent(customerId)}';
   }
 
-  void _goToStep(int step, String? customerId) {
+  int _canonicalStep(int step) {
     final s = step.clamp(1, 7);
+    if (s <= 1) {
+      return 1;
+    }
+    if (s < 7) {
+      return 2;
+    }
+    return 7;
+  }
+
+  int _previousCanonicalStep(int step) {
+    final s = _canonicalStep(step);
+    if (s == 7) {
+      return 2;
+    }
+    if (s == 2) {
+      return 1;
+    }
+    return 1;
+  }
+
+  void _goToStep(int step, String? customerId) {
+    final s = _canonicalStep(step);
     context.go('/kyc/new/step/$s${_draftQuery(customerId)}');
   }
 
@@ -117,8 +145,8 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
       }
 
       if (loaded) {
-        final current = ref.read(kycProvider).currentStep.clamp(1, 7);
-        if (current != widget.routeStep) {
+        final current = _canonicalStep(ref.read(kycProvider).currentStep);
+        if (current != _canonicalStep(widget.routeStep)) {
           _goToStep(current, ref.read(kycProvider).customerId);
         }
       }
@@ -140,9 +168,14 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
       return;
     }
     final kyc = ref.read(kycProvider);
-    final max = kyc.maxReachableStep.clamp(1, 7);
-    if (widget.routeStep > max) {
+    final requested = _canonicalStep(widget.routeStep);
+    final max = _canonicalStep(kyc.maxReachableStep.clamp(1, 7));
+    if (requested > max) {
       _goToStep(max, kyc.customerId);
+      return;
+    }
+    if (widget.routeStep != requested) {
+      _goToStep(requested, kyc.customerId);
     }
   }
 
@@ -156,10 +189,12 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
   }
 
   Future<void> _onWillPop() async {
-    if (widget.routeStep > 1) {
+    final currentStep = _canonicalStep(widget.routeStep);
+    if (currentStep > 1) {
       final id = ref.read(kycProvider).customerId;
-      ref.read(kycProvider.notifier).setActiveStep(widget.routeStep - 1);
-      _goToStep(widget.routeStep - 1, id);
+      final previousStep = _previousCanonicalStep(currentStep);
+      ref.read(kycProvider.notifier).setActiveStep(previousStep);
+      _goToStep(previousStep, id);
       return;
     }
     FocusManager.instance.primaryFocus?.unfocus();
@@ -202,26 +237,294 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
       case 1:
         return const Step1DeviceScreen();
       case 2:
-        return const Step2IdentityScreen();
       case 3:
-        return const Step3ContactScreen();
       case 4:
-        return const Step4IncomeScreen();
       case 5:
-        return const Step5NokScreen();
       case 6:
-        return const Step6ConsentScreen();
+        return const Stage2CustomerVerificationScreen();
       case 7:
       default:
         return const Step7SubmitScreen();
     }
   }
 
+  int _stageForStep(int step) {
+    if (step <= 1) {
+      return 1;
+    }
+    if (step <= 6) {
+      return 2;
+    }
+    return 3;
+  }
+
+  double _stageProgressForStep(int step) {
+    final stage = _stageForStep(step);
+    if (stage == 1) {
+      return step > 1 ? 1 : 0.55;
+    }
+    if (stage == 2) {
+      return 0.72;
+    }
+    return 1;
+  }
+
+  String _stageSubstepForStep(int step) {
+    final stage = _stageForStep(step);
+    if (stage == 1) {
+      return 'Scan and offer setup';
+    }
+    if (stage == 2) {
+      return 'Identity, contact, income, NOK and consent';
+    }
+    return 'Payment, agreement and handover';
+  }
+
+  Widget _buildStageHeader({
+    required int stepIndex,
+    required ({String title, String subtitle, String outcome}) descriptor,
+    required KycDraftState kycState,
+  }) {
+    final activeStage = _stageForStep(stepIndex);
+    final activeStageIndex = activeStage - 1;
+    final stageProgress = _stageProgressForStep(stepIndex);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withValues(alpha: 0.08),
+            Colors.white.withValues(alpha: 0.02),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.14),
+                  ),
+                ),
+                child: Center(
+                  child: AppColorIcon(
+                    assetName: _stageIcons[activeStageIndex],
+                    size: 27,
+                    semanticsLabel: _stageLabels[activeStageIndex],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Stage $activeStage of 3',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 2.2,
+                        color: AppConstants.kycWizardAccentLine
+                            .withValues(alpha: 0.95),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _stageLabels[activeStageIndex],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.45,
+                        color: AppConstants.kycWizardHeaderTitle,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      descriptor.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        height: 1.28,
+                        color: Colors.white.withValues(alpha: 0.72),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: AppConstants.kycWizardHeaderTitle,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  minimumSize: const Size(0, 38),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () async {
+                  if (_canonicalStep(stepIndex) > 1) {
+                    final id = ref.read(kycProvider).customerId;
+                    final previousStep = _previousCanonicalStep(stepIndex);
+                    ref.read(kycProvider.notifier).setActiveStep(previousStep);
+                    _goToStep(previousStep, id);
+                    return;
+                  }
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  final shouldExit = await _showExitDialog();
+                  if (!mounted) {
+                    return;
+                  }
+                  if (shouldExit) {
+                    context.go('/dashboard');
+                  }
+                },
+                child: Text(
+                  stepIndex > 1 ? 'Back' : 'Exit',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: List.generate(3, (index) {
+              final stageNumber = index + 1;
+              final done = activeStage > stageNumber;
+              final active = activeStage == stageNumber;
+              final progress = done ? 1.0 : (active ? stageProgress : 0.0);
+
+              return Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 260),
+                  margin: EdgeInsets.only(right: index == 2 ? 0 : 8),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: active
+                        ? Colors.white.withValues(alpha: 0.15)
+                        : done
+                            ? AppConstants.success.withValues(alpha: 0.16)
+                            : Colors.white.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: active
+                          ? Colors.white.withValues(alpha: 0.18)
+                          : done
+                              ? AppConstants.success.withValues(alpha: 0.24)
+                              : Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          if (done)
+                            const Icon(
+                              Icons.check_circle_rounded,
+                              color: AppConstants.success,
+                              size: 18,
+                            )
+                          else
+                            AppColorIcon(
+                              assetName: _stageIcons[index],
+                              size: 18,
+                              opacity: active ? 1 : 0.64,
+                              semanticsLabel: _stageShortLabels[index],
+                            ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _stageShortLabels[index],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: active || done
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 0.62),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          minHeight: 4,
+                          value: progress,
+                          backgroundColor: Colors.white.withValues(alpha: 0.11),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            done
+                                ? AppConstants.success
+                                : AppConstants.kycWizardAccentLine,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _stageSubstepForStep(stepIndex),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white.withValues(alpha: 0.72),
+                  ),
+                ),
+              ),
+              if (kycState.maxReachableStep > stepIndex)
+                Text(
+                  'Resume ready',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: AppConstants.success.withValues(alpha: 0.95),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final stepIndex = widget.routeStep.clamp(1, 7);
+    final stepIndex = _canonicalStep(widget.routeStep);
     final descriptor = _stepSummaries[stepIndex - 1];
-    final progress = stepIndex / 7;
     final media = MediaQuery.of(context);
     final isKeyboardVisible = media.viewInsets.bottom > 0;
     final showOutcomeBanner = !isKeyboardVisible && media.size.height >= 700;
@@ -299,8 +602,8 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: AppConstants.textPrimary.withValues(
-                                    alpha: 0.92),
+                                color: AppConstants.textPrimary
+                                    .withValues(alpha: 0.92),
                                 height: 1.35,
                               ),
                             ),
@@ -326,8 +629,8 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
-                                color: AppConstants.textPrimary.withValues(
-                                    alpha: 0.9),
+                                color: AppConstants.textPrimary
+                                    .withValues(alpha: 0.9),
                               ),
                             ),
                           ),
@@ -343,112 +646,10 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                       ),
                     ),
                   ),
-                Container(
-                  padding: const EdgeInsets.fromLTRB(14, 6, 18, 0),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _stepLabels[stepIndex - 1],
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppConstants.kycWizardHeaderTitle,
-                                    letterSpacing: -0.2,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _stepSummaries[stepIndex - 1].title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white.withValues(alpha: 0.72),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              foregroundColor:
-                                  AppConstants.kycWizardHeaderTitle,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              minimumSize: const Size(48, 40),
-                            ),
-                            onPressed: () async {
-                              if (widget.routeStep > 1) {
-                                final id = ref.read(kycProvider).customerId;
-                                ref
-                                    .read(kycProvider.notifier)
-                                    .setActiveStep(widget.routeStep - 1);
-                                _goToStep(widget.routeStep - 1, id);
-                                return;
-                              }
-                              FocusManager.instance.primaryFocus?.unfocus();
-                              final shouldExit = await _showExitDialog();
-                              if (!context.mounted) {
-                                return;
-                              }
-                              if (shouldExit) {
-                                context.go('/dashboard');
-                              }
-                            },
-                            child: Text(
-                              widget.routeStep > 1 ? 'Previous' : 'Exit',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.14),
-                              ),
-                            ),
-                            child: Text(
-                              'Step $stepIndex/7',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: AppConstants.kycWizardHeaderTitle,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          minHeight: 4,
-                          value: progress,
-                          backgroundColor:
-                              Colors.white.withValues(alpha: 0.12),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            AppConstants.kycWizardAccentLine,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                    ],
-                  ),
+                _buildStageHeader(
+                  stepIndex: stepIndex,
+                  descriptor: descriptor,
+                  kycState: kycState,
                 ),
                 Expanded(
                   child: Container(
@@ -460,7 +661,8 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF0B1220).withValues(alpha: 0.08),
+                          color:
+                              const Color(0xFF0B1220).withValues(alpha: 0.08),
                           blurRadius: 28,
                           offset: const Offset(0, -12),
                         ),

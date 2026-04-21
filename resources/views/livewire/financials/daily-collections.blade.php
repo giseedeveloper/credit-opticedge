@@ -75,7 +75,7 @@
             </div>
         </div>
         <div class="bg-white dark:bg-zinc-900 rounded-xl p-4 border border-gray-100 dark:border-zinc-800 shadow-sm flex items-center gap-3">
-            <span class="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-oe flex-shrink-0"></span>
             <div>
                 <p class="text-[10px] font-bold text-gray-400 uppercase">Halo Pesa</p>
                 <p class="text-sm font-black text-gray-900 dark:text-white">TZS {{ number_format($summary['halopesa'], 0) }}</p>
@@ -134,10 +134,10 @@
                     @php
                         $channelColor = match($txn->channel) {
                             'mpesa'       => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-                            'cash'        => 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-400',
-                            'tigopesa'    => 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-400',
-                            'halopesa'    => 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-                            'bank'        => 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-400',
+                            'cash'        => 'bg-oe-soft text-oe-hover dark:bg-oe/10 dark:text-oe',
+                            'tigopesa'    => 'bg-oe-soft text-oe-hover dark:bg-oe/10 dark:text-oe',
+                            'halopesa'    => 'bg-oe/15 text-oe-hover dark:bg-orange-900/30 dark:text-orange-400',
+                            'bank'        => 'bg-oe-soft text-oe-hover dark:bg-oe/10 dark:text-oe',
                             default       => 'bg-gray-100 text-gray-600',
                         };
                         $channelLabel = match($txn->channel) {
@@ -162,7 +162,7 @@
                         </td>
 
                         <td class="px-4 py-3">
-                            <p class="font-mono text-xs font-bold text-orange-500 dark:text-blue-400">{{ $txn->loan?->loan_number ?? '—' }}</p>
+                            <p class="font-mono text-xs font-bold text-oe dark:text-oe">{{ $txn->loan?->loan_number ?? '—' }}</p>
                             @if($txn->description)
                             <p class="text-[10px] text-gray-400 mt-0.5 max-w-[140px] truncate">{{ $txn->description }}</p>
                             @endif
@@ -199,7 +199,7 @@
 
                         <td class="px-4 py-3 text-right">
                             <button wire:click.stop="openDetail('{{ $txn->id }}')"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-orange-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-oe dark:text-oe hover:bg-oe-soft dark:hover:bg-oe/10 transition-colors">
                                 Details
                             </button>
                         </td>
@@ -244,10 +244,10 @@
                 };
                 $dtColorGrad  = match($dt->channel) {
                     'mpesa'    => 'from-green-600 to-teal-700',
-                    'cash'     => 'from-orange-500 to-orange-600',
-                    'tigopesa' => 'from-orange-500 to-orange-600',
-                    'halopesa' => 'from-orange-500 to-red-600',
-                    'bank'     => 'from-orange-500 to-orange-600',
+                    'cash'     => 'from-oe to-oe-hover',
+                    'tigopesa' => 'from-oe to-oe-hover',
+                    'halopesa' => 'from-oe to-red-600',
+                    'bank'     => 'from-oe to-oe-hover',
                     default    => 'from-gray-600 to-gray-700',
                 };
             @endphp
@@ -290,7 +290,7 @@
                                 <p class="text-[10px] text-gray-400">NID: {{ $dt->loan->customer->national_id }}</p>
                                 @endif
                             </div>
-                            <p class="font-mono text-sm font-bold text-orange-500 dark:text-blue-400">{{ $dt->loan->loan_number }}</p>
+                            <p class="font-mono text-sm font-bold text-oe dark:text-oe">{{ $dt->loan->loan_number }}</p>
                         </div>
                         <div class="grid grid-cols-3 gap-2 pt-2 border-t border-gray-100 dark:border-zinc-700">
                             <div class="text-center">
@@ -319,7 +319,7 @@
                                         default     => 'bg-zinc-100 text-zinc-600',
                                     } }}">{{ ucfirst($dt->loan->status) }}</span>
                                 @if($dt->loan->branch)
-                                <span class="text-[10px] text-blue-500 font-semibold">{{ $dt->loan->branch->name }}</span>
+                                <span class="text-[10px] text-oe-hover font-semibold">{{ $dt->loan->branch->name }}</span>
                                 @endif
                             </div>
                             @if($dt->loan->inventoryUnit?->phoneModel)
@@ -403,8 +403,8 @@
                             @foreach($searchLoans as $ln)
                                 <button type="button"
                                     wire:click="$set('paymentLoanId', '{{ $ln->id }}')"
-                                    class="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-zinc-800 transition-colors @if($paymentLoanId === $ln->id) bg-blue-50 dark:bg-zinc-800 font-semibold text-orange-500 @endif">
-                                    <span class="font-mono text-orange-500">{{ $ln->loan_number }}</span>
+                                    class="w-full text-left px-4 py-2.5 text-sm hover:bg-oe-soft dark:hover:bg-zinc-800 transition-colors @if($paymentLoanId === $ln->id) bg-oe-soft dark:bg-zinc-800 font-semibold text-oe @endif">
+                                    <span class="font-mono text-oe">{{ $ln->loan_number }}</span>
                                     &mdash; {{ $ln->customer?->first_name }} {{ $ln->customer?->last_name }}
                                     <span class="text-xs text-gray-400 ml-1">(bal: TZS {{ number_format($ln->remaining_balance) }})</span>
                                 </button>
@@ -413,7 +413,7 @@
                     @endif
                     @if($paymentLoanId)
                         @php $selLoan = $searchLoans->firstWhere('id', $paymentLoanId); @endphp
-                        <div class="mt-1 flex items-center gap-2 text-sm text-orange-500 dark:text-blue-400">
+                        <div class="mt-1 flex items-center gap-2 text-sm text-oe dark:text-oe">
                             <flux:icon name="check-circle" class="size-4" />
                             {{ $selLoan?->loan_number }} &mdash; Balance: TZS {{ number_format($selLoan?->remaining_balance ?? 0) }}
                         </div>

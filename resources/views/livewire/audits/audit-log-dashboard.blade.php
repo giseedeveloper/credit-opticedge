@@ -71,9 +71,9 @@
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
             <span class="text-xs font-bold text-emerald-700 dark:text-emerald-400">{{ number_format($stats['created']) }} Created</span>
         </div>
-        <div class="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/30">
+        <div class="flex items-center gap-2 px-4 py-2 bg-oe-soft dark:bg-oe/10 rounded-xl border border-oe/20 dark:border-oe/20">
             <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-            <span class="text-xs font-bold text-orange-600 dark:text-blue-400">{{ number_format($stats['updated']) }} Updated</span>
+            <span class="text-xs font-bold text-oe-hover dark:text-oe">{{ number_format($stats['updated']) }} Updated</span>
         </div>
         <div class="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900/30">
             <span class="w-2 h-2 rounded-full bg-red-500"></span>
@@ -137,17 +137,17 @@
                     @php
                         $eventColor = match($log->event) {
                             'created' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-                            'updated' => 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-400',
+                            'updated' => 'bg-oe-soft text-oe-hover dark:bg-oe/10 dark:text-oe',
                             'deleted' => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
                             default   => 'bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400',
                         };
                         $channelColor = match($log->log_name) {
-                            'loan'      => 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-400',
+                            'loan'      => 'bg-oe-soft text-oe-hover dark:bg-oe/10 dark:text-oe',
                             'system'    => 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
                             'inventory' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
                             'security'  => 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
                             'payment'   => 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
-                            default     => 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-400',
+                            default     => 'bg-oe-soft text-oe-hover dark:bg-oe/10 dark:text-oe',
                         };
                         $hasChanges  = $log->properties?->has('attributes') || $log->properties?->has('old');
                         $subjectName = $log->subject_type ? class_basename($log->subject_type) : null;
@@ -180,7 +180,7 @@
                         <td class="px-4 py-3 max-w-xs">
                             <p class="text-xs text-gray-800 dark:text-gray-200 truncate font-medium">{{ $log->description }}</p>
                             @if($hasChanges)
-                            <p class="text-[10px] text-blue-400 mt-0.5 font-semibold">Has field changes →</p>
+                            <p class="text-[10px] text-oe mt-0.5 font-semibold">Has field changes →</p>
                             @endif
                         </td>
 
@@ -195,7 +195,7 @@
 
                         <td class="px-4 py-3 hidden lg:table-cell">
                             <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white text-[9px] font-black flex-shrink-0">
+                                <div class="w-6 h-6 rounded-full bg-gradient-to-br from-oe/90 to-oe flex items-center justify-center text-white text-[9px] font-black flex-shrink-0">
                                     {{ strtoupper(substr($log->causer?->name ?? 'S', 0, 1)) }}
                                 </div>
                                 <div>
@@ -209,7 +209,7 @@
 
                         <td class="px-4 py-3 text-right">
                             <button wire:click.stop="openDetail('{{ $log->id }}')"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-orange-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold text-oe dark:text-oe hover:bg-oe-soft dark:hover:bg-oe/10 transition-colors">
                                 View
                             </button>
                         </td>
@@ -293,7 +293,7 @@
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Identity & Timing</h3>
                     <div class="grid grid-cols-2 gap-2">
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3 flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-[#2563eb] to-orange-500 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-oe to-oe-hover flex items-center justify-center text-white text-xs font-black flex-shrink-0">
                                 {{ strtoupper(substr($dl->causer?->name ?? 'S', 0, 1)) }}
                             </div>
                             <div>
@@ -328,7 +328,7 @@
                                 @elseif(isset($dl->subject->full_name))
                                 <p class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ $dl->subject->full_name }}</p>
                                 @elseif(isset($dl->subject->loan_number))
-                                <p class="text-xs font-semibold text-orange-500 font-mono">{{ $dl->subject->loan_number }}</p>
+                                <p class="text-xs font-semibold text-oe font-mono">{{ $dl->subject->loan_number }}</p>
                                 @endif
                                 @if(isset($dl->subject->phone))
                                 <p class="text-[10px] text-gray-400 mt-0.5">{{ $dl->subject->phone }}</p>

@@ -115,6 +115,51 @@ it('step1 creates a draft customer and returns customer_id', function () {
         ->and($draft?->metadata['loan_terms']['source'])->toBe('kyc_capture');
 });
 
+it('step1 with customer_id updates the existing draft in place', function () {
+    $countBefore = Customer::count();
+
+    $this->postJson('/api/v1/kyc/application/step1', [
+        'brand_id' => $this->brand->id,
+        'phone_model_id' => $this->phoneModel->id,
+        'inventory_unit_id' => $this->inventoryUnit->id,
+        'deposit_amount' => 50000,
+        'preferred_repayment' => 'weekly',
+    ])->assertOk();
+
+    $customerId = (string) Customer::query()->latest()->value('id');
+    expect(Customer::count())->toBe($countBefore + 1);
+
+    $nida = str_pad((string) random_int(1, 9), 20, '0', STR_PAD_LEFT);
+
+    $this->postJson("/api/v1/kyc/application/{$customerId}/step2", [
+        'first_name' => 'Amina',
+        'last_name' => 'Juma',
+        'gender' => 'female',
+        'nida_number' => $nida,
+        'id_type' => 'nida',
+        'id_front_photo' => UploadedFile::fake()->image('id_front.jpg'),
+        'id_back_photo' => UploadedFile::fake()->image('id_back.jpg'),
+        'headshot_photo' => UploadedFile::fake()->image('selfie.jpg'),
+    ])->assertOk();
+
+    $this->postJson('/api/v1/kyc/application/step1', [
+        'customer_id' => $customerId,
+        'brand_id' => $this->brand->id,
+        'phone_model_id' => $this->phoneModel->id,
+        'inventory_unit_id' => $this->inventoryUnit->id,
+        'deposit_amount' => 75000,
+        'preferred_repayment' => 'weekly',
+    ])->assertOk()->assertJsonPath('data.customer_id', $customerId);
+
+    expect(Customer::count())->toBe($countBefore + 1);
+
+    $fresh = Customer::query()->findOrFail($customerId);
+
+    expect((float) $fresh->deposit_amount)->toBe(75000.0)
+        ->and($fresh->nida_number)->toBe($nida)
+        ->and($fresh->first_name)->toBe('Amina');
+});
+
 it('step1 falls back to default loan terms when omitted', function () {
     $this->postJson('/api/v1/kyc/application/step1', [
         'brand_id' => $this->brand->id,

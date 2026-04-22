@@ -136,17 +136,6 @@ class _DetailViewState extends ConsumerState<_DetailView>
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      bottomNavigationBar: customer.canReleaseAsset && !isReleased
-          ? SafeArea(
-              minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: AppButton(
-                label: 'Release Asset',
-                icon: Icons.inventory_2_outlined,
-                isLoading: _releasing,
-                onPressed: _releaseAsset,
-              ),
-            )
-          : null,
       body: PremiumGlassBackground(
         child: CustomScrollView(
           slivers: [
@@ -160,7 +149,7 @@ class _DetailViewState extends ConsumerState<_DetailView>
                     if (verification != null) const SizedBox(height: 12),
                     _resumeDraftCard(context),
                   ],
-                  if (customer.release?.status == 'released') ...[
+                  if (isReleased) ...[
                     const SizedBox(height: 12),
                     _releasedBanner(),
                   ],

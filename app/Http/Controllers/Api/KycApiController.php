@@ -169,6 +169,7 @@ class KycApiController extends Controller
         KycStageFlowService $stageFlow
     ): JsonResponse {
         $validated = $request->validate([
+            'customer_id' => ['nullable', 'uuid', 'exists:customers,id'],
             'brand_id' => ['nullable', 'exists:brands,id'],
             'phone_model_id' => ['nullable', 'exists:phone_models,id'],
             'inventory_unit_id' => ['nullable', 'exists:inventory_units,id'],
@@ -217,6 +218,66 @@ class KycApiController extends Controller
             $scanService,
             $imeiTracking
         );
+
+        $existingCustomerId = $validated['customer_id'] ?? null;
+
+        if ($existingCustomerId) {
+            $draft = $this->findAgentCustomerOrFail((string) $existingCustomerId);
+
+            if ($draft->isAssetReleased()) {
+                throw ValidationException::withMessages([
+                    'customer_id' => 'This application cannot be edited after the asset has been released.',
+                ]);
+            }
+
+            if ($draft->hasApprovedKyc()) {
+                throw ValidationException::withMessages([
+                    'customer_id' => 'This application is already approved; device details cannot be changed here.',
+                ]);
+            }
+
+            $imeiPhotoPath = $this->storeFile($request, 'imei_photo', 'imei');
+            $deviceBoxPhotoPath = $this->storeFile($request, 'device_box_photo', 'device_box');
+            $devicePhotoPath = $this->storeFile($request, 'device_photo', 'device');
+
+            $metadata = is_array($draft->metadata) ? $draft->metadata : [];
+            $metadata['loan_terms'] = $loanTerms;
+
+            $draft->update([
+                'branch_id' => $deviceSelection['branch_id'] ?? $draft->branch_id ?? $scopeContext['branch_id'],
+                'vendor_id' => $deviceSelection['vendor_id'] ?? $draft->vendor_id ?? $scopeContext['vendor_id'],
+                'phone_model_id' => $deviceSelection['phone_model_id'],
+                'inventory_unit_id' => $deviceSelection['inventory_unit_id'],
+                'device_specs' => $deviceSelection['device_specs'],
+                'imei_number' => $deviceSelection['imei_number'],
+                'imei_2' => $deviceSelection['imei_2'],
+                'serial_number' => $deviceSelection['serial_number'],
+                'cash_price' => $deviceSelection['cash_price'],
+                'deposit_amount' => $validated['deposit_amount'],
+                'preferred_repayment' => $validated['preferred_repayment'],
+                'loan_interest_rate' => $loanTerms['interest_rate'],
+                'loan_interest_type' => $loanTerms['interest_type'],
+                'loan_duration_weeks' => $loanTerms['duration_weeks'],
+                'loan_grace_period_days' => $loanTerms['grace_period_days'],
+                'imei_photo_path' => $imeiPhotoPath ?? $draft->imei_photo_path,
+                'device_box_photo_path' => $deviceBoxPhotoPath ?? $draft->device_box_photo_path,
+                'device_photo_path' => $devicePhotoPath ?? $draft->device_photo_path,
+                'device_scan_metadata' => $deviceSelection['device_scan_metadata'],
+                'device_accessories' => $normalizedAccessories !== [] ? $normalizedAccessories : null,
+                'store_offer_notes' => $validated['store_offer_notes'] ?? null,
+                'metadata' => $metadata,
+            ]);
+
+            $draft = $draft->fresh();
+
+            return $this->successResponse([
+                'customer_id' => $draft->id,
+                'step' => 1,
+                'stage' => 1,
+                'next_stage' => 2,
+                'flow' => $stageFlow->summary($draft),
+            ], 'Stage 1 (Device & Offer) updated. Proceed to Customer & Verification.');
+        }
 
         $draft = Customer::create([
             'registered_by' => auth()->id(),

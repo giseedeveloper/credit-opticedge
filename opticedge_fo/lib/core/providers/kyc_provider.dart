@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -753,6 +754,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
   }
 
   Future<bool> submitStep1() async {
+    final prevMaxReachable = state.maxReachableStep;
     state = state.copyWith(
       isSubmitting: true,
       error: null,
@@ -790,6 +792,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       }
 
       final form = FormData.fromMap({
+        if (state.customerId != null && state.customerId!.isNotEmpty)
+          'customer_id': state.customerId!,
         if (state.brandId.isNotEmpty) 'brand_id': state.brandId,
         if (state.phoneModelId.isNotEmpty) 'phone_model_id': state.phoneModelId,
         if (state.inventoryUnitId.isNotEmpty)
@@ -837,7 +841,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         isSubmitting: false,
         stepSaved: true,
         currentStep: 2,
-        maxReachableStep: 2,
+        maxReachableStep: math.max(prevMaxReachable, 2),
         pendingRetryStep: null,
       );
       await _saveDraft();
@@ -853,6 +857,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
   }
 
   Future<bool> submitStep2() async {
+    final prevMaxReachable = state.maxReachableStep;
     state = state.copyWith(
       isSubmitting: true,
       error: null,
@@ -907,7 +912,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         isSubmitting: false,
         stepSaved: true,
         currentStep: 3,
-        maxReachableStep: 3,
+        maxReachableStep: math.max(prevMaxReachable, 3),
         pendingRetryStep: null,
       );
       await _saveDraft();
@@ -923,6 +928,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
   }
 
   Future<bool> submitStep3() async {
+    final prevMaxReachable = state.maxReachableStep;
     state = state.copyWith(
       isSubmitting: true,
       error: null,
@@ -949,7 +955,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         stepSaved: true,
         currentStep: 4,
         paymentPhone: state.phone,
-        maxReachableStep: 4,
+        maxReachableStep: math.max(prevMaxReachable, 4),
         pendingRetryStep: null,
       );
       await _saveDraft();
@@ -965,6 +971,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
   }
 
   Future<bool> submitStep4() async {
+    final prevMaxReachable = state.maxReachableStep;
     state = state.copyWith(
       isSubmitting: true,
       error: null,
@@ -1005,7 +1012,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         isSubmitting: false,
         stepSaved: true,
         currentStep: 5,
-        maxReachableStep: 5,
+        maxReachableStep: math.max(prevMaxReachable, 5),
         pendingRetryStep: null,
       );
       await _saveDraft();
@@ -1021,6 +1028,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
   }
 
   Future<bool> submitStep5() async {
+    final prevMaxReachable = state.maxReachableStep;
     state = state.copyWith(
       isSubmitting: true,
       error: null,
@@ -1045,7 +1053,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         isSubmitting: false,
         stepSaved: true,
         currentStep: 6,
-        maxReachableStep: 6,
+        maxReachableStep: math.max(prevMaxReachable, 6),
         pendingRetryStep: null,
       );
       await _saveDraft();
@@ -1061,6 +1069,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
   }
 
   Future<bool> submitStep6() async {
+    final prevMaxReachable = state.maxReachableStep;
     state = state.copyWith(
       isSubmitting: true,
       error: null,
@@ -1080,7 +1089,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         stepSaved: true,
         currentStep: 7,
         paymentPhone: state.phone,
-        maxReachableStep: 7,
+        maxReachableStep: math.max(prevMaxReachable, 7),
         pendingRetryStep: null,
       );
       await loadFinalContext();
@@ -1097,6 +1106,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
   }
 
   Future<bool> submitStage2() async {
+    final prevMaxReachable = state.maxReachableStep;
     state = state.copyWith(
       isSubmitting: true,
       error: null,
@@ -1215,7 +1225,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         stepSaved: true,
         currentStep: 7,
         paymentPhone: state.phone,
-        maxReachableStep: 7,
+        maxReachableStep: math.max(prevMaxReachable, 7),
         pendingRetryStep: null,
       );
       await loadFinalContext();

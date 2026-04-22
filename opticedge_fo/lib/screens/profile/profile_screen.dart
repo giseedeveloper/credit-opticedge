@@ -36,8 +36,8 @@ class ProfileScreen extends ConsumerWidget {
           child: Column(
             children: [
               // Avatar card
-              GlassCard(
-                tint: Colors.white,
+              GlassCard.surface(
+                context,
                 borderRadius: BorderRadius.circular(26),
                 padding: const EdgeInsets.all(18),
                 child: Row(
@@ -85,11 +85,13 @@ class ProfileScreen extends ConsumerWidget {
                             runSpacing: 8,
                             children: [
                               _pill(
+                                context,
                                 label: (user?.role?.toUpperCase() ?? ''),
                                 icon: Icons.verified_user_outlined,
                               ),
                               if (user?.branch != null)
                                 _pill(
+                                  context,
                                   label: user!.branch!.name,
                                   icon: Icons.location_on_outlined,
                                 ),
@@ -182,28 +184,36 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _pill({required String label, required IconData icon}) {
+  Widget _pill(BuildContext context,
+      {required String label, required IconData icon}) {
     if (label.trim().isEmpty) {
       return const SizedBox.shrink();
     }
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final fg = theme.textTheme.bodyMedium?.color;
+    final bg = isDark
+        ? DesignTokens.darkBorder.withValues(alpha: 0.35)
+        : AppConstants.borderLight.withValues(alpha: 0.75);
+    final bd = isDark ? DesignTokens.darkBorder : AppConstants.border;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: AppConstants.borderLight.withValues(alpha: 0.75),
+        color: bg,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppConstants.border),
+        border: Border.all(color: bd),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppConstants.textSecondary),
+          Icon(icon, size: 14, color: fg),
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: AppConstants.textSecondary,
+              color: fg,
             ),
           ),
         ],
@@ -217,10 +227,9 @@ class ProfileScreen extends ConsumerWidget {
     final borderColor =
         isDark ? DesignTokens.darkBorder : AppConstants.border;
 
-    return GlassCard(
-      tint: Colors.white,
+    return GlassCard.surface(
+      context,
       borderRadius: BorderRadius.circular(20),
-      borderColor: borderColor,
       padding: EdgeInsets.zero,
       child: Column(
         children: rows.asMap().entries.map((e) {

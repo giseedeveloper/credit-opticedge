@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../config/constants.dart';
+import '../../../config/design_tokens.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/models/kyc_flow_model.dart';
 import '../../../core/providers/customer_provider.dart';
@@ -1023,28 +1024,28 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     required String subtitle,
     required Widget child,
   }) {
-    return GlassCard(
-      tint: Colors.white,
+    return GlassCard.surface(
+      context,
       borderRadius: BorderRadius.circular(22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w800,
-              color: AppConstants.textPrimary,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
           if (subtitle.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 height: 1.45,
-                color: AppConstants.textSecondary,
+                color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
             ),
           ],
@@ -1060,17 +1061,27 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     required bool paymentReady,
   }) {
     final document = agreementContext.activeDocument!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppConstants.surfaceRaised, AppConstants.infoSurface],
+        gradient: LinearGradient(
+          colors: isDark
+              ? [
+                  DesignTokens.darkSurfaceElevated,
+                  DesignTokens.statBlueBgDark,
+                ]
+              : const [
+                  AppConstants.surfaceRaised,
+                  AppConstants.infoSurface,
+                ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppConstants.border),
+        border: Border.all(
+            color: isDark ? DesignTokens.darkBorder : AppConstants.border),
       ),
       child: Column(
         children: [
@@ -1081,9 +1092,13 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                 width: 48,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color:
+                      isDark ? DesignTokens.darkSurface : Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppConstants.border),
+                  border: Border.all(
+                      color: isDark
+                          ? DesignTokens.darkBorder
+                          : AppConstants.border),
                 ),
                 child: const Icon(
                   Icons.picture_as_pdf_outlined,
@@ -1097,10 +1112,10 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                   children: [
                     Text(
                       document.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
-                        color: AppConstants.textPrimary,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -1108,10 +1123,10 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                       paymentReady
                           ? 'Malipo tayari. Onyesha mkataba.'
                           : 'Malipo kwanza.',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         height: 1.45,
-                        color: AppConstants.textSecondary,
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
                       ),
                     ),
                   ],
@@ -1134,16 +1149,18 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
   }
 
   Widget _agreementPreviewSheetCard(KycDocumentOption document) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? DesignTokens.darkSurfaceElevated : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppConstants.border),
+        border: Border.all(
+            color: isDark ? DesignTokens.darkBorder : AppConstants.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.03),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),

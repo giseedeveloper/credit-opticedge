@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../config/constants.dart';
+import '../../config/design_tokens.dart';
 
 class GlassCard extends StatelessWidget {
   final Widget child;
@@ -29,6 +30,50 @@ class GlassCard extends StatelessWidget {
       ),
     ],
   });
+
+  /// Glass panel that matches Settings: theme [card]/surface tint and borders.
+  factory GlassCard.surface(
+    BuildContext context, {
+    Key? key,
+    required Widget child,
+    EdgeInsetsGeometry padding = const EdgeInsets.all(16),
+    BorderRadiusGeometry borderRadius = const BorderRadius.all(Radius.circular(22)),
+    double blurSigma = 20,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surface = theme.cardTheme.color ?? theme.colorScheme.surface;
+    final border = isDark ? DesignTokens.darkBorder : AppConstants.border;
+    return GlassCard(
+      key: key,
+      padding: padding,
+      borderRadius: borderRadius,
+      blurSigma: blurSigma,
+      tint: surface,
+      borderColor: border,
+      boxShadow: isDark
+          ? [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.38),
+                blurRadius: 26,
+                offset: const Offset(0, 14),
+              ),
+              BoxShadow(
+                color: const Color(0xFF5B8FC9).withValues(alpha: 0.05),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ]
+          : const [
+              BoxShadow(
+                color: Color(0x140B1220),
+                blurRadius: 22,
+                offset: Offset(0, 14),
+              ),
+            ],
+      child: child,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

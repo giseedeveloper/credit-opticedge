@@ -95,6 +95,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
@@ -102,7 +103,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           width: double.infinity,
           height: double.infinity,
           decoration: BoxDecoration(
-            gradient: DesignTokens.heroGradientWithPrimaryHint,
+            gradient: isDark
+                ? DesignTokens.heroGradientWithPrimaryHintDark
+                : DesignTokens.heroGradientWithPrimaryHint,
           ),
           child: Stack(
           children: [

@@ -50,6 +50,21 @@ abstract final class DesignTokens {
   static const Color statGreenBg = AppConstants.successSurface;
   static const Color statGreenAccent = Color(0xFFCFF8E3);
 
+  /// Dashboard stats / quick-action glass (dark)
+  static const Color statBlueBgDark = Color(0xFF152A3F);
+  static const Color statBlueAccentDark = Color(0xFF1C3A56);
+  static const Color statAmberBgDark = Color(0xFF2B2318);
+  static const Color statAmberAccentDark = Color(0xFF3D2E1A);
+  static const Color statVioletBgDark = Color(0xFF221C35);
+  static const Color statVioletAccentDark = Color(0xFF2E2650);
+  static const Color statGreenBgDark = Color(0xFF142925);
+  static const Color statGreenAccentDark = Color(0xFF1B3D35);
+  static const Color statRegisterBgDark = Color(0xFF2A1F18);
+
+  /// KYC outcome banner (dark)
+  static const Color kycInsightTopDark = Color(0xFF1A2538);
+  static const Color kycInsightBottomDark = Color(0xFF152030);
+
   /// Bottom navigation (light)
   static const Color navSelectedBg = AppConstants.primarySurface;
   static const Color navSelectedFg = primary;
@@ -81,5 +96,28 @@ abstract final class DesignTokens {
           Color.lerp(const Color(0xFF10263F), primary, 0.08)!,
         ],
         stops: const [0.0, 0.58, 1.0],
+      );
+
+  /// Hero for dashboard / auth when app is in dark mode (keeps light typography)
+  static LinearGradient get heroGradientDark => const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFF0C1528),
+          Color(0xFF132A45),
+          Color(0xFF0B1220),
+        ],
+        stops: [0.0, 0.6, 1.0],
+      );
+
+  static LinearGradient get heroGradientWithPrimaryHintDark => LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          const Color(0xFF0D1729),
+          const Color(0xFF16324E),
+          Color.lerp(const Color(0xFF0B1220), primary, 0.07)!,
+        ],
+        stops: const [0.0, 0.56, 1.0],
       );
 }

@@ -66,6 +66,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final authState = ref.watch(authProvider);
     final size = MediaQuery.of(context).size;
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     ref.listen(authProvider, (_, next) {
       if (next.error != null) {
@@ -94,7 +95,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 width: double.infinity,
                 height: size.height * 0.44,
                 decoration: BoxDecoration(
-                  gradient: DesignTokens.heroGradientWithPrimaryHint,
+                  gradient: isDark
+                      ? DesignTokens.heroGradientWithPrimaryHintDark
+                      : DesignTokens.heroGradientWithPrimaryHint,
                 ),
               ),
               Positioned(
@@ -243,11 +246,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final fillColor =
         isDark ? DesignTokens.darkSurface : AppConstants.borderLight;
 
-    return GlassCard(
-      tint: Colors.white,
+    return GlassCard.surface(
+      context,
       borderRadius: BorderRadius.circular(26),
-      borderColor: borderColor,
       padding: const EdgeInsets.all(24),
+      blurSigma: 22,
       child: Form(
         key: _formKey,
         child: Column(
@@ -402,9 +405,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppConstants.primary,
+                    foregroundColor: theme.colorScheme.primary,
                     side: BorderSide(
-                      color: AppConstants.primary.withValues(alpha: 0.25),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.35),
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(

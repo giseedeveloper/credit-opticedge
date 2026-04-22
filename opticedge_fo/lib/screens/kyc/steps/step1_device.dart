@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/app_icon_assets.dart';
 import '../../../config/constants.dart';
+import '../../../config/design_tokens.dart';
 import '../../../core/models/kyc_flow_model.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../core/utils/imei_scan.dart';
@@ -221,17 +222,17 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
               attachedPhotos: attachedPhotos,
             ).animate().fadeIn(duration: 260.ms).slideY(begin: 0.08, end: 0),
             const SizedBox(height: 18),
-            GlassCard(
-              tint: Colors.white,
+            GlassCard.surface(
+              context,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Picha (Scan)',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
-                      color: AppConstants.textPrimary,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -284,11 +285,11 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                       minHeight: 2,
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Scanning IMEI…',
                       style: TextStyle(
                         fontSize: 11,
-                        color: AppConstants.textSecondary,
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -311,17 +312,17 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                   ),
                 ),
               ),
-              data: (brands) => GlassCard(
-                tint: Colors.white,
+              data: (brands) => GlassCard.surface(
+                context,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Selection (Kuchagua)',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
-                        color: AppConstants.textPrimary,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -399,12 +400,12 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    const Text(
+                    Text(
                       'Repayment Cycle',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
-                        color: AppConstants.textPrimary,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -426,13 +427,16 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                               ),
                           selectedColor: AppConstants.primarySurface,
                           side: BorderSide(
-                            color:
-                                selected ? AppConstants.primary : AppConstants.border,
+                            color: selected
+                                ? AppConstants.primary
+                                : Theme.of(context).brightness == Brightness.dark
+                                    ? DesignTokens.darkBorder
+                                    : AppConstants.border,
                           ),
                           labelStyle: TextStyle(
                             color: selected
                                 ? AppConstants.primary
-                                : AppConstants.textSecondary,
+                                : Theme.of(context).textTheme.bodyMedium?.color,
                             fontWeight:
                                 selected ? FontWeight.w800 : FontWeight.w600,
                           ),
@@ -444,17 +448,17 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
               ),
             ).animate().fadeIn(delay: 70.ms).slideY(begin: 0.06, end: 0),
             const SizedBox(height: 16),
-            GlassCard(
-              tint: Colors.white,
+            GlassCard.surface(
+              context,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Store Extras',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
-                      color: AppConstants.textPrimary,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -485,17 +489,17 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
               ),
             ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.06, end: 0),
             const SizedBox(height: 16),
-            GlassCard(
-              tint: Colors.white,
+            GlassCard.surface(
+              context,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Manual (Mkono)',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
-                      color: AppConstants.textPrimary,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -712,6 +716,14 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
     required bool selected,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final mutedSurface = isDark
+        ? DesignTokens.darkBorder.withValues(alpha: 0.35)
+        : AppConstants.borderLight;
+    final iconPlate =
+        isDark ? DesignTokens.darkSurfaceElevated : Colors.white;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -719,11 +731,12 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
         duration: 220.ms,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color:
-              selected ? AppConstants.primarySurface : AppConstants.borderLight,
+          color: selected ? AppConstants.primarySurface : mutedSurface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? AppConstants.primary : AppConstants.border,
+            color: selected
+                ? AppConstants.primary
+                : (isDark ? DesignTokens.darkBorder : AppConstants.border),
             width: selected ? 1.4 : 1,
           ),
         ),
@@ -733,14 +746,14 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: iconPlate,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 icon,
                 color: selected
                     ? AppConstants.primary
-                    : AppConstants.textSecondary,
+                    : theme.textTheme.bodyMedium?.color,
               ),
             ),
             const SizedBox(width: 12),
@@ -750,19 +763,19 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: AppConstants.textPrimary,
+                      color: theme.textTheme.bodyLarge?.color,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       height: 1.45,
-                      color: AppConstants.textSecondary,
+                      color: theme.textTheme.bodyMedium?.color,
                     ),
                   ),
                 ],
@@ -781,10 +794,10 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
   Widget _label(String text) {
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: AppConstants.textPrimary,
+        color: Theme.of(context).textTheme.bodyLarge?.color,
       ),
     );
   }

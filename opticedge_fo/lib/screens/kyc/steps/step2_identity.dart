@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/constants.dart';
+import '../../../config/design_tokens.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
 import '../../../widgets/common/glass_card.dart';
@@ -475,27 +476,27 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
     required String subtitle,
     required Widget child,
   }) {
-    return GlassCard(
-      tint: Colors.white,
+    return GlassCard.surface(
+      context,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w800,
-              color: AppConstants.textPrimary,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
           if (subtitle.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 height: 1.45,
-                color: AppConstants.textSecondary,
+                color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
             ),
           ],
@@ -507,16 +508,26 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
   }
 
   Widget _evidenceBanner({required int capturedPhotos}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppConstants.infoSurface, AppConstants.surfaceRaised],
+        gradient: LinearGradient(
+          colors: isDark
+              ? [
+                  DesignTokens.statBlueBgDark,
+                  DesignTokens.darkSurfaceElevated,
+                ]
+              : const [
+                  AppConstants.infoSurface,
+                  AppConstants.surfaceRaised,
+                ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppConstants.info.withValues(alpha: 0.14)),
+        border: Border.all(
+            color: AppConstants.info.withValues(alpha: isDark ? 0.22 : 0.14)),
       ),
       child: Row(
         children: [
@@ -524,7 +535,9 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark
+                  ? DesignTokens.darkSurface
+                  : Colors.white,
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(
@@ -533,7 +546,11 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
             ),
           )
               .animate(onPlay: (controller) => controller.repeat(reverse: true))
-              .shimmer(duration: 1400.ms, color: Colors.white54),
+              .shimmer(
+                  duration: 1400.ms,
+                  color: isDark
+                      ? Colors.white24
+                      : Colors.white54),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -543,19 +560,19 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                   capturedPhotos == 0
                       ? 'No evidence photo captured yet'
                       : '$capturedPhotos of 4 evidence items ready',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    color: AppConstants.textPrimary,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Mbele, nyuma, sura, picha mteja + FO.',
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.45,
-                    color: AppConstants.textSecondary,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
                   ),
                 ),
               ],

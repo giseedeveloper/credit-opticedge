@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/constants.dart';
+import '../../../config/design_tokens.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
 import '../../../widgets/common/glass_card.dart';
@@ -195,8 +196,8 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
     required bool required,
     VoidCallback? onRemove,
   }) {
-    return GlassCard(
-      tint: Colors.white,
+    return GlassCard.surface(
+      context,
       borderRadius: BorderRadius.circular(18),
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -220,10 +221,10 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(title,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: AppConstants.textPrimary),
+                            color: Theme.of(context).textTheme.bodyLarge?.color),
                         overflow: TextOverflow.ellipsis),
                   ),
                 ]),
@@ -266,11 +267,16 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
                   decoration: BoxDecoration(
                     color: selected
                         ? AppConstants.primarySurface
-                        : AppConstants.borderLight,
+                        : (Theme.of(context).brightness == Brightness.dark
+                            ? DesignTokens.darkBorder.withValues(alpha: 0.35)
+                            : AppConstants.borderLight),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color:
-                          selected ? AppConstants.primary : AppConstants.border,
+                      color: selected
+                          ? AppConstants.primary
+                          : (Theme.of(context).brightness == Brightness.dark
+                              ? DesignTokens.darkBorder
+                              : AppConstants.border),
                       width: selected ? 1.5 : 1,
                     ),
                   ),
@@ -281,7 +287,7 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
                       fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                       color: selected
                           ? AppConstants.primary
-                          : AppConstants.textSecondary,
+                          : Theme.of(context).textTheme.bodyMedium?.color,
                     ),
                   ),
                 ),
@@ -303,36 +309,39 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: AppConstants.textPrimary)),
+                  color: Theme.of(context).textTheme.bodyLarge?.color)),
           if (subtitle.isNotEmpty) ...[
             const SizedBox(height: 2),
             Text(subtitle,
-                style: const TextStyle(
-                    fontSize: 12, color: AppConstants.textSecondary)),
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).textTheme.bodyMedium?.color)),
           ],
         ],
       );
 
   Widget _label(String text, {bool optional = false}) => Row(children: [
         Text(text,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: AppConstants.textPrimary)),
+                color: Theme.of(context).textTheme.bodyLarge?.color)),
         if (optional) ...[
           const SizedBox(width: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-                color: AppConstants.borderLight,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? DesignTokens.darkBorder.withValues(alpha: 0.35)
+                    : AppConstants.borderLight,
                 borderRadius: BorderRadius.circular(4)),
-            child: const Text('Optional',
+            child: Text('Optional',
                 style: TextStyle(
                     fontSize: 9,
-                    color: AppConstants.textHint,
+                    color: Theme.of(context).textTheme.bodySmall?.color,
                     fontWeight: FontWeight.w500)),
           ),
         ],

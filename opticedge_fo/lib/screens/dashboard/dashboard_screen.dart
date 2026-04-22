@@ -106,9 +106,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                         ),
                         TextButton(
                           onPressed: () => context.go('/customers'),
-                          child: Text(s.seeAll,
-                              style: const TextStyle(
-                                  fontSize: 13, color: AppConstants.primary)),
+                          style: TextButton.styleFrom(
+                            foregroundColor: theme.colorScheme.primary,
+                          ),
+                          child: Text(
+                            s.seeAll,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -137,18 +144,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final s = S.of(ref);
     final insight = stats ?? DashboardStats.empty;
     final isOnline = onlineAsync.maybeWhen(data: (v) => v, orElse: () => true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SliverAppBar(
       expandedHeight: 400,
       pinned: true,
       elevation: 0,
-      backgroundColor: AppConstants.heroStart,
+      backgroundColor:
+          isDark ? DesignTokens.darkBackground : AppConstants.heroStart,
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           fit: StackFit.expand,
           children: [
             Container(
-              decoration: BoxDecoration(gradient: DesignTokens.heroGradient),
+              decoration: BoxDecoration(
+                gradient: isDark
+                    ? DesignTokens.heroGradientDark
+                    : DesignTokens.heroGradient,
+              ),
             ),
             Positioned(
               top: -40,
@@ -540,6 +553,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Widget _buildStatsGrid(DashboardStats stats) {
     final s = S.of(ref);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final items = [
       _StatData(
         label: s.total,
@@ -547,8 +561,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         note: 'Customers onboarded',
         iconAsset: AppIconAssets.customers,
         color: DesignTokens.statBlue,
-        background: DesignTokens.statBlueBg,
-        accent: DesignTokens.statBlueAccent,
+        background:
+            isDark ? DesignTokens.statBlueBgDark : DesignTokens.statBlueBg,
+        accent: isDark
+            ? DesignTokens.statBlueAccentDark
+            : DesignTokens.statBlueAccent,
       ),
       _StatData(
         label: s.drafts,
@@ -556,8 +573,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         note: 'Need completion',
         iconAsset: AppIconAssets.drafts,
         color: DesignTokens.statAmber,
-        background: DesignTokens.statAmberBg,
-        accent: DesignTokens.statAmberAccent,
+        background:
+            isDark ? DesignTokens.statAmberBgDark : DesignTokens.statAmberBg,
+        accent: isDark
+            ? DesignTokens.statAmberAccentDark
+            : DesignTokens.statAmberAccent,
       ),
       _StatData(
         label: s.pending,
@@ -565,8 +585,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         note: 'Waiting review',
         iconAsset: AppIconAssets.pending,
         color: DesignTokens.statViolet,
-        background: DesignTokens.statVioletBg,
-        accent: DesignTokens.statVioletAccent,
+        background: isDark
+            ? DesignTokens.statVioletBgDark
+            : DesignTokens.statVioletBg,
+        accent: isDark
+            ? DesignTokens.statVioletAccentDark
+            : DesignTokens.statVioletAccent,
       ),
       _StatData(
         label: s.verified,
@@ -574,8 +598,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         note: 'Ready to release',
         iconAsset: AppIconAssets.verified,
         color: DesignTokens.statGreen,
-        background: DesignTokens.statGreenBg,
-        accent: DesignTokens.statGreenAccent,
+        background: isDark
+            ? DesignTokens.statGreenBgDark
+            : DesignTokens.statGreenBg,
+        accent: isDark
+            ? DesignTokens.statGreenAccentDark
+            : DesignTokens.statGreenAccent,
       ),
     ];
 
@@ -600,6 +628,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Widget _buildQuickActions(user, S s) {
     final canRegister = user?.canRegisterCustomers ?? false;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final actions = [
       if (canRegister)
@@ -608,7 +637,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           caption: 'Start a new KYC flow',
           iconAsset: AppIconAssets.register,
           color: AppConstants.primary,
-          surface: const Color(0xFFFFF4EC),
+          surface: isDark
+              ? DesignTokens.statRegisterBgDark
+              : const Color(0xFFFFF4EC),
           onTap: () => context.go('/kyc/new'),
         ),
       _ActionData(
@@ -616,7 +647,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         caption: 'Review active customers',
         iconAsset: AppIconAssets.customers,
         color: DesignTokens.statBlue,
-        surface: DesignTokens.statBlueBg,
+        surface:
+            isDark ? DesignTokens.statBlueBgDark : DesignTokens.statBlueBg,
         onTap: () => context.go('/customers'),
       ),
       _ActionData(
@@ -624,7 +656,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         caption: 'Find by name, phone or NIDA',
         iconAsset: AppIconAssets.search,
         color: DesignTokens.statViolet,
-        surface: DesignTokens.statVioletBg,
+        surface: isDark
+            ? DesignTokens.statVioletBgDark
+            : DesignTokens.statVioletBg,
         onTap: () => context.go('/customers'),
       ),
       _ActionData(
@@ -632,7 +666,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         caption: 'Resume unfinished onboarding',
         iconAsset: AppIconAssets.checklist,
         color: DesignTokens.statAmber,
-        surface: DesignTokens.statAmberBg,
+        surface: isDark
+            ? DesignTokens.statAmberBgDark
+            : DesignTokens.statAmberBg,
         onTap: () => context.go('/customers?tab=draft'),
       ),
     ];
@@ -649,6 +685,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   Widget _buildActionCard(_ActionData action) {
+    final captionColor = Theme.of(context).textTheme.bodyMedium?.color;
     return GestureDetector(
       onTap: action.onTap,
       child: GlassCard(
@@ -696,10 +733,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               action.caption,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppConstants.textSecondary,
+                color: captionColor,
                 height: 1.35,
               ),
             ),
@@ -913,6 +950,13 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final noteColor = theme.textTheme.bodyMedium?.color;
+    final valueChipBg = isDark
+        ? widget.data.color.withValues(alpha: 0.14)
+        : Colors.white.withValues(alpha: 0.7);
+
     return AnimatedBuilder(
       animation: widget.parentController,
       builder: (_, __) => Opacity(
@@ -922,12 +966,12 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> {
           child: GlassCard(
             tint: widget.data.background,
             borderRadius: BorderRadius.circular(24),
-            borderColor: widget.data.color.withValues(alpha: 0.24),
+            borderColor: widget.data.color.withValues(alpha: isDark ? 0.35 : 0.24),
             blurSigma: 22,
             padding: const EdgeInsets.all(16),
             boxShadow: [
               BoxShadow(
-                color: widget.data.color.withValues(alpha: 0.10),
+                color: widget.data.color.withValues(alpha: isDark ? 0.18 : 0.10),
                 blurRadius: 28,
                 offset: const Offset(0, 14),
               ),
@@ -960,7 +1004,7 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: valueChipBg,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
@@ -989,10 +1033,10 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> {
                     const SizedBox(height: 6),
                     Text(
                       widget.data.note,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppConstants.textSecondary,
+                        color: noteColor,
                       ),
                     ),
                   ],
@@ -1025,7 +1069,6 @@ class _CustomerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final borderColor = isDark ? DesignTokens.darkBorder : AppConstants.border;
     final statusColor =
         AppConstants.statusColors[status] ?? AppConstants.textSecondary;
     final statusBg = AppConstants.statusBg[status] ?? AppConstants.borderLight;
@@ -1033,19 +1076,11 @@ class _CustomerTile extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: GlassCard(
-        tint: Colors.white,
-        borderColor: borderColor,
+      child: GlassCard.surface(
+        context,
         borderRadius: BorderRadius.circular(20),
         blurSigma: 20,
         padding: const EdgeInsets.all(14),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x180B1220),
-            blurRadius: 22,
-            offset: Offset(0, 12),
-          ),
-        ],
         child: Row(
           children: [
             _CustomerAvatar(
@@ -1095,7 +1130,9 @@ class _CustomerTile extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: AppConstants.surfaceMuted,
+                color: isDark
+                    ? DesignTokens.darkBorder.withValues(alpha: 0.4)
+                    : AppConstants.surfaceMuted,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(Icons.chevron_right_rounded,

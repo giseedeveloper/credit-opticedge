@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/constants.dart';
+import '../../../config/design_tokens.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
@@ -434,27 +435,27 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
     required String subtitle,
     required Widget child,
   }) {
-    return GlassCard(
-      tint: Colors.white,
+    return GlassCard.surface(
+      context,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w800,
-              color: AppConstants.textPrimary,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
           if (subtitle.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 height: 1.45,
-                color: AppConstants.textSecondary,
+                color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
             ),
           ],
@@ -480,13 +481,17 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
       if (landmark.isNotEmpty) 'Near $landmark',
     ];
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppConstants.surfaceMuted,
+        color: isDark
+            ? DesignTokens.darkBorder.withValues(alpha: 0.28)
+            : AppConstants.surfaceMuted,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppConstants.border),
+        border: Border.all(
+            color: isDark ? DesignTokens.darkBorder : AppConstants.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -495,7 +500,8 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color:
+                  isDark ? DesignTokens.darkSurfaceElevated : Colors.white,
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
@@ -508,12 +514,12 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Location summary',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    color: AppConstants.textPrimary,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -521,10 +527,10 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
                   rows.isEmpty
                       ? 'Jaza branch na anwani.'
                       : rows.join(' • '),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     height: 1.45,
-                    color: AppConstants.textSecondary,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
                   ),
                 ),
               ],

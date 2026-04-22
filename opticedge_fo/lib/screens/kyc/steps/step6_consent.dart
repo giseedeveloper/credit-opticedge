@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/constants.dart';
+import '../../../config/design_tokens.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
 import '../../../widgets/common/glass_card.dart';
@@ -147,13 +148,17 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
     required bool value,
     required ValueChanged<bool?> onChanged,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final idleSurface = theme.cardTheme.color ?? theme.colorScheme.surface;
     return GestureDetector(
       onTap: () => onChanged(!value),
       child: GlassCard(
-        tint: value ? AppConstants.primarySurface : Colors.white,
+        tint: value ? AppConstants.primarySurface : idleSurface,
         borderRadius: BorderRadius.circular(18),
-        borderColor:
-            value ? AppConstants.primary : AppConstants.border,
+        borderColor: value
+            ? AppConstants.primary
+            : (isDark ? DesignTokens.darkBorder : AppConstants.border),
         padding: const EdgeInsets.all(14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,11 +169,15 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
               decoration: BoxDecoration(
                 color: value
                     ? AppConstants.primary
-                    : AppConstants.borderLight,
+                    : (isDark
+                        ? DesignTokens.darkBorder.withValues(alpha: 0.35)
+                        : AppConstants.borderLight),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon,
-                  color: value ? Colors.white : AppConstants.textSecondary,
+                  color: value
+                      ? Colors.white
+                      : theme.textTheme.bodyMedium?.color,
                   size: 18),
             ),
             const SizedBox(width: 12),
@@ -183,16 +192,16 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
                       fontWeight: FontWeight.w600,
                       color: value
                           ? AppConstants.primary
-                          : AppConstants.textPrimary,
+                          : theme.textTheme.bodyLarge?.color,
                     ),
                   ),
                   if (description.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
                       description,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: AppConstants.textSecondary,
+                        color: theme.textTheme.bodyMedium?.color,
                         height: 1.4,
                       ),
                     ),
@@ -220,15 +229,16 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: AppConstants.textPrimary)),
+                  color: Theme.of(context).textTheme.bodyLarge?.color)),
           if (subtitle.isNotEmpty) ...[
             const SizedBox(height: 2),
             Text(subtitle,
-                style: const TextStyle(
-                    fontSize: 12, color: AppConstants.textSecondary)),
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).textTheme.bodyMedium?.color)),
           ],
         ],
       );

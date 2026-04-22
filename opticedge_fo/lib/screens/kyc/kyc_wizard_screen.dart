@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/app_icon_assets.dart';
 import '../../config/constants.dart';
+import '../../config/design_tokens.dart';
 import '../../core/providers/connectivity_provider.dart';
 import '../../core/providers/kyc_provider.dart';
 import '../../widgets/common/app_color_icon.dart';
@@ -409,9 +410,12 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
     final showOutcomeBanner = !isKeyboardVisible && media.size.height >= 700;
 
     if (_bootstrappingDraft) {
-      return const Scaffold(
-        backgroundColor: AppConstants.kycWizardSurface,
-        body: Center(
+      final bootDark = Theme.of(context).brightness == Brightness.dark;
+      return Scaffold(
+        backgroundColor: bootDark
+            ? DesignTokens.darkBackground
+            : AppConstants.kycWizardSurface,
+        body: const Center(
           child: CircularProgressIndicator(color: AppConstants.primary),
         ),
       );
@@ -436,6 +440,8 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
 
     final online = ref.watch(onlineStatusProvider);
     final kycState = ref.watch(kycProvider);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return PopScope(
       canPop: false,
@@ -468,7 +474,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: AppConstants.textPrimary
+                                color: theme.colorScheme.onSurface
                                     .withValues(alpha: 0.92),
                                 height: 1.35,
                               ),
@@ -495,7 +501,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
-                                color: AppConstants.textPrimary
+                                color: theme.colorScheme.onSurface
                                     .withValues(alpha: 0.9),
                               ),
                             ),
@@ -521,14 +527,16 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: AppConstants.kycWizardSurface,
+                      color: isDark
+                          ? DesignTokens.darkSurface
+                          : AppConstants.kycWizardSurface,
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(28),
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color:
-                              const Color(0xFF0B1220).withValues(alpha: 0.08),
+                          color: (isDark ? Colors.black : const Color(0xFF0B1220))
+                              .withValues(alpha: isDark ? 0.35 : 0.08),
                           blurRadius: 28,
                           offset: const Offset(0, -12),
                         ),
@@ -544,18 +552,23 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                               width: double.infinity,
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    AppConstants.kycWizardInsightTop,
-                                    AppConstants.kycWizardInsightBottom,
-                                  ],
+                                gradient: LinearGradient(
+                                  colors: isDark
+                                      ? const [
+                                          DesignTokens.kycInsightTopDark,
+                                          DesignTokens.kycInsightBottomDark,
+                                        ]
+                                      : const [
+                                          AppConstants.kycWizardInsightTop,
+                                          AppConstants.kycWizardInsightBottom,
+                                        ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: AppConstants.primary.withValues(
-                                    alpha: 0.14,
+                                    alpha: isDark ? 0.22 : 0.14,
                                   ),
                                 ),
                               ),
@@ -584,11 +597,11 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                                   Expanded(
                                     child: Text(
                                       descriptor.outcome,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
                                         height: 1.45,
-                                        color: AppConstants.textPrimary,
+                                        color: theme.colorScheme.onSurface,
                                       ),
                                     ),
                                   ),

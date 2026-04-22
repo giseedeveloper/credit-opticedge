@@ -1187,6 +1187,47 @@ class KycApiController extends Controller
         ], 'Customer detail retrieved.');
     }
 
+    /**
+     * Upload or replace the signed handover checklist after the application was submitted
+     * (fixes FO flows that reached approval without a checklist file on record).
+     */
+    public function uploadHandoverChecklist(Request $request, string $customerId): JsonResponse
+    {
+        $customer = $this->findAgentCustomerOrFail($customerId, ['inventoryUnit', 'assetReleasedBy']);
+
+        if ($customer->isAssetReleased()) {
+            return $this->errorResponse('This asset was already released; the handover file cannot be changed.', 422);
+        }
+
+        $request->validate([
+            'asset_handover_list' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'asset_handover_notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $path = $this->storeFile($request, 'asset_handover_list', 'handover');
+
+        if (! filled($path)) {
+            return $this->errorResponse('Could not store the handover checklist file.', 422);
+        }
+
+        $customer->update([
+            'asset_handover_list_path' => $path,
+            'asset_handover_notes' => $request->filled('asset_handover_notes')
+                ? (string) $request->input('asset_handover_notes')
+                : $customer->asset_handover_notes,
+        ]);
+
+        activity('kyc')
+            ->performedOn($customer)
+            ->causedBy(auth()->user())
+            ->withProperties(['path' => $path])
+            ->log('Handover checklist uploaded via FO app');
+
+        return $this->successResponse([
+            'release' => $this->serializeReleaseSummary($customer->fresh(['inventoryUnit', 'assetReleasedBy'])),
+        ], 'Handover checklist uploaded.');
+    }
+
     public function releaseAsset(string $customerId, CustomerLoanProvisioningService $loanProvisioning): JsonResponse
     {
         $customer = $this->findAgentCustomerOrFail($customerId, ['inventoryUnit', 'assetReleasedBy', 'agreementDocument']);

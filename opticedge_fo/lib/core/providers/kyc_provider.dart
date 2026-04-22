@@ -1239,9 +1239,21 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       pendingRetryStep: null,
     );
 
+    final hasHandover = state.assetHandoverList != null ||
+        (state.agreementContext?.handoverListUrl?.isNotEmpty ?? false);
+    if (!hasHandover) {
+      state = state.copyWith(
+        isSubmitting: false,
+        error:
+            'Attach the signed handover checklist (photo or scan) before submitting.',
+      );
+      return null;
+    }
+
     final uploadErr = KycUploadLimits.validateMany([
       (state.etrReceiptPhoto, 'ETR receipt photo'),
-      (state.assetHandoverList, 'Asset handover document'),
+      if (state.assetHandoverList != null)
+        (state.assetHandoverList, 'Asset handover document'),
     ]);
     if (uploadErr != null) {
       state = state.copyWith(isSubmitting: false, error: uploadErr);

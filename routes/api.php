@@ -83,6 +83,7 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:loans.create')
             ->group(function () {
                 Route::post('/{id}/release-asset', [KycApiController::class, 'releaseAsset']);
+                Route::post('/{id}/handover-checklist', [KycApiController::class, 'uploadHandoverChecklist']);
             });
 
         // KYC — Agent Registration Steps (requires loans.create permission)

@@ -268,6 +268,20 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
       return;
     }
 
+    final hasHandover = state.assetHandoverList != null ||
+        (state.agreementContext?.handoverListUrl?.isNotEmpty ?? false);
+    if (!hasHandover) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Attach the signed handover checklist (photo of the signed form).',
+          ),
+          backgroundColor: AppConstants.error,
+        ),
+      );
+      return;
+    }
+
     if (!await _prepareSignatures()) {
       return;
     }
@@ -491,7 +505,10 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
             agreementReady:
                 agreementContext?.activeDocument != null && paymentReady,
             signatureReady: signatureReady,
-            handoverReady: state.etrReceiptPhoto != null,
+            handoverReady: state.etrReceiptPhoto != null &&
+                (state.assetHandoverList != null ||
+                    (state.agreementContext?.handoverListUrl?.isNotEmpty ??
+                        false)),
           ).animate().fadeIn(duration: 260.ms).slideY(begin: 0.08, end: 0),
           const SizedBox(height: 16),
           _card(
@@ -637,17 +654,36 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                   ],
                 ),
                 const SizedBox(height: 14),
-                SizedBox(
-                  width: 160,
-                  height: 130,
-                  child: PhotoPickerTile(
-                    label: 'ETR Receipt',
-                    required: true,
-                    file: state.etrReceiptPhoto,
-                    onPicked: (file) => ref
-                        .read(kycProvider.notifier)
-                        .setPhoto('etr_receipt', file),
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 160,
+                      height: 130,
+                      child: PhotoPickerTile(
+                        label: 'ETR Receipt',
+                        required: true,
+                        file: state.etrReceiptPhoto,
+                        onPicked: (file) => ref
+                            .read(kycProvider.notifier)
+                            .setPhoto('etr_receipt', file),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 130,
+                        child: PhotoPickerTile(
+                          label: 'Handover checklist (signed)',
+                          required: true,
+                          file: state.assetHandoverList,
+                          onPicked: (file) => ref
+                              .read(kycProvider.notifier)
+                              .setPhoto('handover', file),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -723,7 +759,10 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                               false),
                   hasFoSignature: state.foSignatureData.isNotEmpty ||
                       (agreementContext?.foSignatureUrl?.isNotEmpty ?? false),
-                  hasChecklist: state.etrReceiptPhoto != null,
+                  hasChecklist: state.etrReceiptPhoto != null &&
+                      (state.assetHandoverList != null ||
+                          (agreementContext?.handoverListUrl?.isNotEmpty ??
+                              false)),
                 ),
                 const SizedBox(height: 14),
                 _signatureCard(
@@ -1550,7 +1589,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
         done: hasFoSignature,
       ),
       (
-        label: 'ETR receipt attached',
+        label: 'ETR & handover',
         icon: Icons.receipt_long_outlined,
         done: hasChecklist,
       ),
@@ -1636,8 +1675,10 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
             (agreementContext?.foSignatureUrl?.isNotEmpty ?? false),
       ),
       (
-        label: 'ETR receipt attached',
-        done: state.etrReceiptPhoto != null,
+        label: 'ETR & handover checklist',
+        done: state.etrReceiptPhoto != null &&
+            (state.assetHandoverList != null ||
+                (agreementContext?.handoverListUrl?.isNotEmpty ?? false)),
       ),
       (
         label: 'Asset release will unlock after approval',

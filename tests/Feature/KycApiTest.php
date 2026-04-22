@@ -794,6 +794,28 @@ it('customer detail exposes resume metadata and vendor context for draft editing
         ->assertJsonPath('data.vendor.name', 'Sinza Dealer');
 });
 
+it('allows fo to upload handover checklist when the customer record is missing the file', function () {
+    $customer = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'branch_id' => $this->branch->id,
+        'inventory_unit_id' => $this->inventoryUnit->id,
+        'kyc_status' => 'approved',
+        'asset_release_status' => 'pending',
+        'asset_handover_list_path' => null,
+    ]);
+
+    $file = UploadedFile::fake()->create('handover.pdf', 200, 'application/pdf');
+
+    $this->post("/api/v1/kyc/customers/{$customer->id}/handover-checklist", [
+        'asset_handover_list' => $file,
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.release.status', 'pending');
+
+    expect($customer->fresh()->asset_handover_list_path)->not->toBeNull()
+        ->and(str_contains((string) $customer->fresh()->asset_handover_list_path, 'kyc/handover'))->toBeTrue();
+});
+
 it('release asset marks the stock unit as assigned', function () {
     $agreement = SystemDocument::factory()->create([
         'key' => 'kyc_customer_agreement',

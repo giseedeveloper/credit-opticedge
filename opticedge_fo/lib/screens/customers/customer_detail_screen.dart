@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../config/constants.dart';
 import '../../config/design_tokens.dart';
@@ -95,6 +97,7 @@ class _DetailViewState extends ConsumerState<_DetailView>
   };
 
   bool _releasing = false;
+  bool _uploadingHandover = false;
   Timer? _detailPollTimer;
 
   CustomerDetail get customer => widget.customer;
@@ -225,6 +228,66 @@ class _DetailViewState extends ConsumerState<_DetailView>
         ),
       ),
     );
+  }
+
+  bool _needsHandoverChecklistUpload(CustomerDetail c) {
+    if (c.release?.status == 'released') {
+      return false;
+    }
+    final blockers = c.release?.eligibilityBlockers ?? const <String>[];
+    return blockers.any(
+      (b) => b.toLowerCase().contains('handover'),
+    );
+  }
+
+  Future<void> _uploadHandoverChecklist() async {
+    final picker = ImagePicker();
+    final xfile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 82,
+      maxWidth: 2000,
+    );
+    if (xfile == null || !mounted) {
+      return;
+    }
+
+    setState(() => _uploadingHandover = true);
+    try {
+      final form = FormData.fromMap({
+        'asset_handover_list': await MultipartFile.fromFile(
+          xfile.path,
+          filename: xfile.name,
+        ),
+      });
+      await ApiClient.instance.postForm(
+        '/kyc/customers/${widget.customerId}/handover-checklist',
+        form,
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Handover checklist uploaded.'),
+          backgroundColor: AppConstants.success,
+        ),
+      );
+      ref.invalidate(customerDetailProvider(widget.customerId));
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ApiClient.instance.parseError(e)),
+          backgroundColor: AppConstants.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _uploadingHandover = false);
+      }
+    }
   }
 
   Future<void> _releaseAsset() async {
@@ -964,6 +1027,26 @@ class _DetailViewState extends ConsumerState<_DetailView>
                 ),
               ],
             ),
+          ),
+        ],
+        if (_needsHandoverChecklistUpload(customer)) ...[
+          const SizedBox(height: 12),
+          Text(
+            'Checklist ni fomu iliyosainiwa inayoonyesha kifaa kilichopewa mteja (picha ya PDF/print).',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.4,
+              color: Theme.of(context).textTheme.bodyMedium?.color,
+            ),
+          ),
+          const SizedBox(height: 10),
+          AppButton(
+            label: 'Pakua checklist ya handover',
+            icon: Icons.upload_file_outlined,
+            isLoading: _uploadingHandover,
+            outlined: true,
+            width: double.infinity,
+            onPressed: _uploadingHandover ? null : _uploadHandoverChecklist,
           ),
         ],
         const SizedBox(height: 12),

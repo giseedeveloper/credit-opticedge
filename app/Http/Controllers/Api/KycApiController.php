@@ -991,7 +991,8 @@ class KycApiController extends Controller
             'per_page' => ['nullable', 'integer', 'min:5', 'max:100'],
         ]);
 
-        $query = Customer::with(['latestVerification', 'branch'])
+        $query = Customer::with(['latestKycVerification', 'latestVerification', 'branch'])
+            ->withCount('verifications')
             ->where('registered_by', auth()->id())
             ->whereNot('first_name', '_draft_');
 
@@ -1024,8 +1025,11 @@ class KycApiController extends Controller
             'full_name' => $c->full_name,
             'phone' => $c->phone,
             'gender' => $c->gender,
-            'kyc_status' => $c->latestVerification?->status ?? 'draft',
-            'auto_check' => $c->latestVerification?->auto_check_status,
+            'kyc_status' => $c->verifications_count === 0
+                ? 'draft'
+                : ($c->kyc_status ?: ($c->latestKycVerification?->status ?? 'draft')),
+            'auto_check' => $c->latestKycVerification?->auto_check_status
+                ?? $c->latestVerification?->auto_check_status,
             'branch' => $c->branch?->name,
             'headshot_url' => $this->photoUrl($c->headshot_photo_path),
             'registered_at' => $c->created_at->toDateTimeString(),
@@ -1046,6 +1050,8 @@ class KycApiController extends Controller
     public function customerDetail(string $customerId, KycStageFlowService $stageFlow): JsonResponse
     {
         $customer = Customer::with([
+            'latestKycVerification.fo',
+            'latestKycVerification.reviewedBy',
             'latestVerification.fo',
             'latestVerification.reviewedBy',
             'verifications',
@@ -1058,7 +1064,9 @@ class KycApiController extends Controller
         ])->where('registered_by', auth()->id())
             ->findOrFail($customerId);
 
-        $v = $customer->latestVerification;
+        $this->syncCustomerKycStatusFromVerification($customer);
+
+        $v = $customer->latestKycVerification;
         $activeAgreement = $this->activeAgreementDocument();
         $latestPayment = $this->latestDraftPaymentFor($customer);
         $isDraftApplication = $customer->verifications->isEmpty();
@@ -1154,7 +1162,7 @@ class KycApiController extends Controller
             ],
             'fo_notes' => $customer->fo_notes,
             'application_source' => $customer->application_source,
-            'kyc_status' => $v?->status ?? 'draft',
+            'kyc_status' => $this->displayKycStatusForFo($customer, $v),
             'registered_at' => $customer->created_at->toDateTimeString(),
             'can_release_asset' => $customer->isReadyForAssetRelease(),
             'can_resume_draft' => $isDraftApplication,
@@ -1515,6 +1523,46 @@ class KycApiController extends Controller
             'handover_list_url' => $this->photoUrl($customer->asset_handover_list_path),
             'handover_notes' => $customer->asset_handover_notes,
         ];
+    }
+
+    /**
+     * FO list/detail badge: use real `customers.kyc_status` once a verification exists;
+     * before submission the mobile UI historically expected `draft`.
+     */
+    private function displayKycStatusForFo(Customer $customer, ?Verification $kycVerification): string
+    {
+        if ($customer->verifications->isEmpty()) {
+            return 'draft';
+        }
+
+        $fromCustomer = (string) ($customer->kyc_status ?? '');
+        if ($fromCustomer !== '') {
+            return $fromCustomer;
+        }
+
+        return $kycVerification?->status ?? 'draft';
+    }
+
+    /**
+     * Align `customers.kyc_status` with the latest type=kyc verification row when the
+     * verification is already approved — fixes FO badges vs release eligibility drift.
+     */
+    private function syncCustomerKycStatusFromVerification(Customer $customer): void
+    {
+        $customer->loadMissing('latestKycVerification');
+        $verification = $customer->latestKycVerification;
+
+        if (! $verification) {
+            return;
+        }
+
+        $vStatus = (string) $verification->status;
+
+        if (in_array($vStatus, ['approved', 'verified'], true) && ! $customer->hasApprovedKyc()) {
+            $customer->forceFill([
+                'kyc_status' => $vStatus === 'verified' ? 'verified' : 'approved',
+            ])->saveQuietly();
+        }
     }
 
     /**

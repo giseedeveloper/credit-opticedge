@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'constants.dart';
 import '../core/providers/auth_provider.dart';
+import '../widgets/common/floating_glass_nav.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/device/device_screen.dart';
 import '../screens/home/home_screen.dart';
@@ -78,79 +78,40 @@ class MainShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentIndex = _indexOf(context);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    const navReserve = 76.0;
+
+    const icons = [
+      Icons.home_rounded,
+      Icons.calendar_month_rounded,
+      Icons.payments_rounded,
+      Icons.phone_android_rounded,
+      Icons.person_rounded,
+    ];
+    const labels = ['Home', 'Ratiba', 'Lipa', 'Kifaa', 'Profaili'];
+
     return Scaffold(
-      body: child,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppConstants.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(5, (i) {
-                final isSelected = i == currentIndex;
-                final icons = [
-                  Icons.home_rounded,
-                  Icons.calendar_month_rounded,
-                  Icons.payments_rounded,
-                  Icons.phone_android_rounded,
-                  Icons.person_rounded,
-                ];
-                final labels = ['Home', 'Ratiba', 'Lipa', 'Kifaa', 'Profaili'];
-                return GestureDetector(
-                  onTap: () => context.go(_tabs[i]),
-                  behavior: HitTestBehavior.opaque,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeInOut,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSelected ? 16 : 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppConstants.primarySurface
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          icons[i],
-                          size: 22,
-                          color: isSelected
-                              ? AppConstants.primary
-                              : AppConstants.textHint,
-                        ),
-                        if (isSelected) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            labels[i],
-                            style: const TextStyle(
-                              color: AppConstants.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                );
-              }),
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(bottom: navReserve + bottomInset),
+            child: child,
+          ),
+          Positioned(
+            left: 18,
+            right: 18,
+            bottom: 10 + bottomInset,
+            child: FloatingGlassNavBar(
+              currentIndex: currentIndex,
+              onTap: (i) => context.go(_tabs[i]),
+              icons: icons,
+              labels: labels,
             ),
           ),
-        ),
+        ],
       ),
     );
   }

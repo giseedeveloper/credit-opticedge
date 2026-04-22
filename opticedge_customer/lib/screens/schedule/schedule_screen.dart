@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
 import '../../core/providers/loan_provider.dart';
+import '../../widgets/common/glass_card.dart';
+import '../../widgets/common/premium_glass_background.dart';
 
 final _currencyFmt = NumberFormat('#,##0', 'en');
 
@@ -25,31 +27,34 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     final state = ref.watch(scheduleProvider);
 
     return Scaffold(
-      backgroundColor: AppConstants.background,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text(
           'Ratiba ya Malipo',
           style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.4),
         ),
-        backgroundColor: AppConstants.surface,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
       ),
-      body: state.isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppConstants.primary),
-            )
-          : state.error != null
-          ? _buildError(state.error!)
-          : state.portalState == 'released_pending_disbursement'
-          ? _buildPendingDisbursement(state)
-          : state.schedule == null
-          ? _buildEmpty(state.statusMessage)
-          : RefreshIndicator(
-              color: AppConstants.primary,
-              onRefresh: () => ref.read(scheduleProvider.notifier).load(),
-              child: _buildList(context, state),
-            ),
+      body: PremiumGlassBackground(
+        child: state.isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: AppConstants.primary),
+              )
+            : state.error != null
+                ? _buildError(state.error!)
+                : state.portalState == 'released_pending_disbursement'
+                    ? _buildPendingDisbursement(context, state)
+                    : state.schedule == null
+                        ? _buildEmpty(state.statusMessage)
+                        : RefreshIndicator(
+                            color: AppConstants.primary,
+                            onRefresh: () =>
+                                ref.read(scheduleProvider.notifier).load(),
+                            child: _buildList(context, state),
+                          ),
+      ),
     );
   }
 
@@ -155,7 +160,10 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     );
   }
 
-  Widget _buildPendingDisbursement(ScheduleState state) {
+  Widget _buildPendingDisbursement(
+    BuildContext context,
+    ScheduleState state,
+  ) {
     final release = state.releaseContext;
     final repaymentLabel = switch (release?.preferredRepayment) {
       'weekly' => 'Kila wiki',
@@ -171,15 +179,11 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         children: [
-          Container(
+          GlassCard.tinted(
+            surfaceTint: AppConstants.warningSurface,
+            accent: AppConstants.warning,
+            borderRadius: BorderRadius.circular(26),
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppConstants.warningSurface,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: AppConstants.warning.withValues(alpha: 0.16),
-              ),
-            ),
             child: Column(
               children: [
                 Container(
@@ -248,13 +252,10 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Container(
+          GlassCard.surface(
+            context,
+            borderRadius: BorderRadius.circular(22),
             padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: AppConstants.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppConstants.border),
-            ),
             child: const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -360,15 +361,13 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
         final statusColor = AppConstants.loanStatusColor(item.status);
         final statusBg = AppConstants.loanStatusBg(item.status);
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppConstants.surface,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppConstants.border),
-          ),
-          child: Row(
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: GlassCard.surface(
+            context,
+            borderRadius: BorderRadius.circular(20),
+            padding: const EdgeInsets.all(16),
+            child: Row(
             children: [
               Container(
                 width: 44,
@@ -461,6 +460,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                 ],
               ),
             ],
+          ),
           ),
         );
       },

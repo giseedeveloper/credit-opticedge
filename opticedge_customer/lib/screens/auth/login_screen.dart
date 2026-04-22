@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/constants.dart';
+import '../../config/design_tokens.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../widgets/common/app_brand_logo.dart';
 import '../../widgets/common/app_button.dart';
+import '../../widgets/common/glass_card.dart';
+import '../../widgets/common/premium_glass_background.dart';
 
 /// Two-step login: (1) Enter phone → (2) Enter or Set PIN.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -135,80 +139,89 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       }
     });
 
-    return Scaffold(
-      body: SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-        child: Stack(
-          children: [
-            // Orange gradient header
-            Container(
-              width: double.infinity,
-              height: size.height * 0.42,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFEA580C), Color(0xFFC2410C)],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Stack(
+            children: [
+              const PremiumGlassBackground(child: SizedBox.shrink()),
+              Container(
+                width: double.infinity,
+                height: size.height * 0.42,
+                decoration: BoxDecoration(
+                  gradient: DesignTokens.heroGradientWithPrimaryHint,
                 ),
               ),
-            ),
-
-            // Wave at bottom of gradient
-            Positioned(
-              top: size.height * 0.38,
-              left: 0,
-              right: 0,
-              child: Container(
-                height: 50,
-                decoration: BoxDecoration(
-                  color: theme.scaffoldBackgroundColor,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(32),
+              Positioned(
+                top: -40,
+                right: -30,
+                child: Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppConstants.primaryLight.withValues(alpha: 0.12),
                   ),
                 ),
               ),
-            ),
-
-            // Scrollable content
-            SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 32),
-
-                    // Header
-                    AnimatedBuilder(
-                      animation: _headerOpacity,
-                      builder: (_, _) => Opacity(
-                        opacity: _headerOpacity.value,
-                        child: _buildHeader(),
-                      ),
+              Positioned(
+                top: size.height * 0.36,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(36),
                     ),
-
-                    const SizedBox(height: 40),
-
-                    // Login card
-                    AnimatedBuilder(
-                      animation: _animController,
-                      builder: (_, _) => Opacity(
-                        opacity: _cardOpacity.value,
-                        child: Transform.translate(
-                          offset: Offset(0, _cardSlide.value),
-                          child: _isPhoneStep
-                              ? _buildPhoneCard(auth)
-                              : _buildPinCard(auth),
-                        ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 24,
+                        offset: const Offset(0, -6),
                       ),
-                    ),
-
-                    const SizedBox(height: 32),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+              SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 28),
+                      AnimatedBuilder(
+                        animation: _headerOpacity,
+                        builder: (_, _) => Opacity(
+                          opacity: _headerOpacity.value,
+                          child: _buildHeader(),
+                        ),
+                      ),
+                      const SizedBox(height: 36),
+                      AnimatedBuilder(
+                        animation: _animController,
+                        builder: (_, _) => Opacity(
+                          opacity: _cardOpacity.value,
+                          child: Transform.translate(
+                            offset: Offset(0, _cardSlide.value),
+                            child: _isPhoneStep
+                                ? _buildPhoneCard(auth, theme)
+                                : _buildPinCard(auth, theme),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -217,32 +230,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   Widget _buildHeader() {
     return Column(
       children: [
-        Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 20,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: const Center(
-            child: Text(
-              'OC',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                color: AppConstants.primary,
-                letterSpacing: -1,
-              ),
-            ),
-          ),
-        ),
+        const AppBrandLogo(size: 88),
         const SizedBox(height: 16),
         const Text(
           AppConstants.appName,
@@ -266,23 +254,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
-  Widget _buildPhoneCard(AuthState auth) {
-    final theme = Theme.of(context);
-    final fillColor = AppConstants.borderLight;
+  Widget _buildPhoneCard(AuthState auth, ThemeData theme) {
+    final fillColor = AppConstants.surfaceMuted;
 
-    return Container(
+    return GlassCard.surface(
+      context,
+      borderRadius: BorderRadius.circular(26),
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color ?? AppConstants.surface,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+      blurSigma: 24,
       child: Form(
         key: _phoneKey,
         child: Column(
@@ -340,24 +319,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
-  Widget _buildPinCard(AuthState auth) {
-    final theme = Theme.of(context);
-    final fillColor = AppConstants.borderLight;
+  Widget _buildPinCard(AuthState auth, ThemeData theme) {
+    final fillColor = AppConstants.surfaceMuted;
     final isNewPin = _hasPin != true;
 
-    return Container(
+    return GlassCard.surface(
+      context,
+      borderRadius: BorderRadius.circular(26),
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color ?? AppConstants.surface,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+      blurSigma: 24,
       child: Form(
         key: _pinKey,
         child: Column(
@@ -371,8 +341,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppConstants.borderLight,
-                      borderRadius: BorderRadius.circular(10),
+                      color: AppConstants.primarySurface.withValues(alpha: 0.8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppConstants.border.withValues(alpha: 0.6),
+                      ),
                     ),
                     child: const Icon(Icons.arrow_back_rounded, size: 18),
                   ),
@@ -500,8 +473,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppConstants.borderLight,
-        borderRadius: BorderRadius.circular(10),
+        color: AppConstants.surfaceMuted.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppConstants.border.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [

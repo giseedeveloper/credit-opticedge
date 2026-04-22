@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../../config/constants.dart';
 import '../../core/providers/loan_provider.dart';
 import '../../core/providers/payment_provider.dart';
+import '../../widgets/common/glass_card.dart';
+import '../../widgets/common/premium_glass_background.dart';
 
 final _currencyFmt = NumberFormat('#,##0', 'en');
 
@@ -77,19 +79,20 @@ class _PayScreenState extends ConsumerState<PayScreen> {
         !payment.isRequesting && !isPendingDisbursement && loan.loan != null;
 
     return Scaffold(
-      backgroundColor: AppConstants.background,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text(
           'Lipa Mkopo',
           style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.4),
         ),
-        backgroundColor: AppConstants.surface,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        child: Column(
+      body: PremiumGlassBackground(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (loan.isLoading)
@@ -106,16 +109,11 @@ class _PayScreenState extends ConsumerState<PayScreen> {
             else if (loan.loan == null)
               _buildUnavailableState(loan.statusMessage)
             else ...[
-              // Quick summary
-              Container(
+              GlassCard.tinted(
+                surfaceTint: AppConstants.primarySurface,
+                accent: AppConstants.primary,
+                borderRadius: BorderRadius.circular(26),
                 padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppConstants.primarySurface,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(
-                    color: AppConstants.primary.withValues(alpha: 0.14),
-                  ),
-                ),
                 child: Column(
                   children: [
                     Container(
@@ -176,7 +174,6 @@ class _PayScreenState extends ConsumerState<PayScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Amount
               const Text(
                 'Kiasi cha Kulipa (TZS)',
                 style: TextStyle(
@@ -349,18 +346,17 @@ class _PayScreenState extends ConsumerState<PayScreen> {
             ],
           ],
         ),
+        ),
       ),
     );
   }
 
   Widget _buildPortalError(String message) {
-    return Container(
+    return GlassCard.tinted(
+      surfaceTint: AppConstants.errorSurface,
+      accent: AppConstants.error,
+      borderRadius: BorderRadius.circular(22),
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppConstants.errorSurface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppConstants.error.withValues(alpha: 0.18)),
-      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -383,13 +379,11 @@ class _PayScreenState extends ConsumerState<PayScreen> {
   }
 
   Widget _buildUnavailableState(String? message) {
-    return Container(
+    return GlassCard.tinted(
+      surfaceTint: AppConstants.primarySurface,
+      accent: AppConstants.primary,
+      borderRadius: BorderRadius.circular(26),
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppConstants.primarySurface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppConstants.primary.withValues(alpha: 0.15)),
-      ),
       child: Column(
         children: [
           Container(
@@ -443,15 +437,11 @@ class _PayScreenState extends ConsumerState<PayScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
+        GlassCard.tinted(
+          surfaceTint: AppConstants.warningSurface,
+          accent: AppConstants.warning,
+          borderRadius: BorderRadius.circular(26),
           padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: AppConstants.warningSurface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: AppConstants.warning.withValues(alpha: 0.16),
-            ),
-          ),
           child: Column(
             children: [
               Container(
@@ -520,13 +510,10 @@ class _PayScreenState extends ConsumerState<PayScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        Container(
+        GlassCard.surface(
+          context,
+          borderRadius: BorderRadius.circular(22),
           padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: AppConstants.surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppConstants.border),
-          ),
           child: const Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

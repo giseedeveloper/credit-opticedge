@@ -5,6 +5,7 @@ class AppConstants {
 
   static const String appName = 'Opticedge Customer';
   static const String tagline = 'Lipa. Fuatilia. Fanya Zaidi.';
+  static const String appLogoAsset = 'assets/images/app_logo.png';
 
   // API
   static const String _productionBaseUrl =

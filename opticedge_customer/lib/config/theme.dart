@@ -76,7 +76,7 @@ class AppTheme {
         error: AppConstants.error,
         onError: Colors.white,
       ),
-      scaffoldBackgroundColor: AppConstants.background,
+      scaffoldBackgroundColor: Colors.transparent,
       textTheme: textTheme,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,

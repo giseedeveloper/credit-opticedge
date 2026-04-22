@@ -6,6 +6,8 @@ import 'package:percent_indicator/circular_percent_indicator.dart';
 import '../../config/constants.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/loan_provider.dart';
+import '../../widgets/common/glass_card.dart';
+import '../../widgets/common/premium_glass_background.dart';
 
 final _currencyFmt = NumberFormat('#,##0', 'en');
 
@@ -53,8 +55,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final name = auth.customer?.firstName ?? '';
 
     return Scaffold(
-      backgroundColor: AppConstants.background,
-      body: RefreshIndicator(
+      backgroundColor: Colors.transparent,
+      body: PremiumGlassBackground(
+        child: RefreshIndicator(
         color: AppConstants.primary,
         onRefresh: () => ref.read(loanProvider.notifier).load(),
         child: CustomScrollView(
@@ -94,6 +97,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -359,13 +363,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Column(
       children: List.generate(
         2,
-        (_) => Container(
-          margin: const EdgeInsets.only(bottom: 14),
-          height: 120,
-          decoration: BoxDecoration(
-            color: AppConstants.surface,
+        (_) => Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: GlassCard.surface(
+            context,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppConstants.border),
+            padding: EdgeInsets.zero,
+            child: const SizedBox(height: 120, width: double.infinity),
           ),
         ),
       ),
@@ -373,13 +377,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildNoLoanState() {
-    return Container(
+    return GlassCard.tinted(
+      surfaceTint: AppConstants.primarySurface,
+      accent: AppConstants.primary,
+      borderRadius: BorderRadius.circular(26),
       padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: AppConstants.primarySurface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppConstants.primary.withValues(alpha: 0.15)),
-      ),
       child: Column(
         children: [
           Container(
@@ -428,13 +430,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       _ => 'Imethibitishwa',
     };
 
-    return Container(
+    return GlassCard.tinted(
+      surfaceTint: AppConstants.warningSurface,
+      accent: AppConstants.warning,
+      borderRadius: BorderRadius.circular(26),
       padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppConstants.warning.withValues(alpha: 0.18)),
-      ),
       child: Column(
         children: [
           Container(
@@ -591,20 +591,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget _buildActionCard(_ActionData action) {
     return GestureDetector(
       onTap: action.onTap,
-      child: Container(
+      child: GlassCard.tinted(
+        surfaceTint: action.surface,
+        accent: action.color,
+        borderRadius: BorderRadius.circular(24),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: action.surface,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: action.color.withValues(alpha: 0.14)),
-          boxShadow: [
-            BoxShadow(
-              color: action.color.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -675,20 +666,10 @@ class _LoanProgressCard extends StatelessWidget {
         opacity: anim.value.clamp(0.0, 1.0),
         child: Transform.translate(
           offset: Offset(0, 20 * (1 - anim.value)),
-          child: Container(
+          child: GlassCard.surface(
+            context,
+            borderRadius: BorderRadius.circular(26),
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppConstants.surface,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppConstants.border),
-              boxShadow: [
-                BoxShadow(
-                  color: AppConstants.primary.withValues(alpha: 0.06),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
             child: Column(
               children: [
                 CircularPercentIndicator(
@@ -817,15 +798,11 @@ class _NextPaymentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final next = loan.loan?.nextInstallment;
     if (next == null) {
-      return Container(
+      return GlassCard.tinted(
+        surfaceTint: AppConstants.successSurface,
+        accent: AppConstants.success,
+        borderRadius: BorderRadius.circular(24),
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppConstants.successSurface,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: AppConstants.success.withValues(alpha: 0.2),
-          ),
-        ),
         child: Row(
           children: [
             Container(
@@ -863,20 +840,11 @@ class _NextPaymentCard extends StatelessWidget {
         ? AppConstants.errorSurface
         : AppConstants.primarySurface;
 
-    return Container(
+    return GlassCard.tinted(
+      surfaceTint: bg,
+      accent: accent,
+      borderRadius: BorderRadius.circular(24),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: accent.withValues(alpha: 0.18)),
-        boxShadow: [
-          BoxShadow(
-            color: accent.withValues(alpha: 0.06),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1002,13 +970,10 @@ class _LoanDetailsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = loan.loan!;
-    return Container(
+    return GlassCard.surface(
+      context,
+      borderRadius: BorderRadius.circular(26),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppConstants.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppConstants.border),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1086,13 +1051,11 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppConstants.errorSurface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppConstants.error.withValues(alpha: 0.2)),
-      ),
+    return GlassCard.tinted(
+      surfaceTint: AppConstants.errorSurface,
+      accent: AppConstants.error,
+      borderRadius: BorderRadius.circular(24),
+      padding: const EdgeInsets.all(22),
       child: Column(
         children: [
           Container(

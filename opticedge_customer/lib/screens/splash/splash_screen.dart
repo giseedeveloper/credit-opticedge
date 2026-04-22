@@ -1,8 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/constants.dart';
+import '../../config/design_tokens.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../widgets/common/app_brand_logo.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -95,19 +98,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFEA580C), Color(0xFFC2410C), Color(0xFF9A3412)],
-            stops: [0.0, 0.55, 1.0],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            gradient: DesignTokens.heroGradientWithPrimaryHint,
           ),
-        ),
-        child: Stack(
+          child: Stack(
           children: [
             // Floating particles
             AnimatedBuilder(
@@ -138,8 +139,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         gradient: LinearGradient(
                           colors: [
                             Colors.transparent,
-                            Colors.white.withValues(alpha: 0.8),
-                            Colors.white.withValues(alpha: 0.8),
+                            AppConstants.primaryLight.withValues(alpha: 0.45),
+                            Colors.white.withValues(alpha: 0.85),
                             Colors.transparent,
                           ],
                         ),
@@ -162,7 +163,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       opacity: _logoOpacity.value,
                       child: Transform.scale(
                         scale: _logoScale.value,
-                        child: _buildLogo(),
+                        child: const AppBrandLogo(size: 120),
                       ),
                     ),
                   ),
@@ -259,7 +260,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               left: 0,
               right: 0,
               child: Text(
-                'Opticedge Africa © 2025',
+                'Opticedge Africa © 2026',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 11,
@@ -270,43 +271,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildLogo() {
-    return Container(
-      width: 100,
-      height: 100,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 40,
-            offset: const Offset(0, 12),
-          ),
-          BoxShadow(
-            color: Colors.white.withValues(alpha: 0.15),
-            blurRadius: 0,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: const Center(
-        child: Text(
-          'OC',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.w900,
-            color: AppConstants.primary,
-            letterSpacing: -1,
-          ),
         ),
       ),
     );
   }
+
 }
 
 class _ParticlePainter extends CustomPainter {

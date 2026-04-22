@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/constants.dart';
+import '../../config/design_tokens.dart';
 import '../../core/api/api_client.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../widgets/common/glass_card.dart';
+import '../../widgets/common/premium_glass_background.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -13,38 +16,40 @@ class ProfileScreen extends ConsumerWidget {
     final c = auth.customer;
 
     return Scaffold(
-      backgroundColor: AppConstants.background,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text(
           'Profaili Yangu',
           style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.4),
         ),
-        backgroundColor: AppConstants.surface,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
       ),
-      body: c == null
-          ? const Center(
-              child: CircularProgressIndicator(color: AppConstants.primary),
-            )
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-              children: [
-                // Avatar card
+      body: PremiumGlassBackground(
+        child: c == null
+            ? const Center(
+                child: CircularProgressIndicator(color: AppConstants.primary),
+              )
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                children: [
                 Container(
                   padding: const EdgeInsets.all(28),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppConstants.heroStart,
-                        AppConstants.heroEnd,
-                        Color(0xFF10263F),
-                      ],
-                      stops: [0.0, 0.62, 1.0],
+                    gradient: DesignTokens.heroGradient,
+                    borderRadius: BorderRadius.circular(26),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.22),
+                      width: 1,
                     ),
-                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppConstants.heroStart.withValues(alpha: 0.25),
+                        blurRadius: 28,
+                        offset: const Offset(0, 14),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: [
@@ -104,7 +109,6 @@ class ProfileScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 18),
 
-                // Personal Info
                 _SectionCard(
                   title: 'Taarifa Binafsi',
                   icon: Icons.person_rounded,
@@ -162,6 +166,7 @@ class ProfileScreen extends ConsumerWidget {
 
                 // Change PIN
                 _buildActionTile(
+                  context,
                   icon: Icons.lock_rounded,
                   iconColor: const Color(0xFF8B5CF6),
                   iconBg: const Color(0xFFF7F3FF),
@@ -172,6 +177,7 @@ class ProfileScreen extends ConsumerWidget {
 
                 // Logout
                 _buildActionTile(
+                  context,
                   icon: Icons.logout_rounded,
                   iconColor: AppConstants.error,
                   iconBg: AppConstants.errorSurface,
@@ -192,10 +198,12 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ],
             ),
+      ),
     );
   }
 
-  Widget _buildActionTile({
+  Widget _buildActionTile(
+    BuildContext context, {
     required IconData icon,
     required Color iconColor,
     required Color iconBg,
@@ -205,13 +213,10 @@ class ProfileScreen extends ConsumerWidget {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: GlassCard.surface(
+        context,
+        borderRadius: BorderRadius.circular(20),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppConstants.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppConstants.border),
-        ),
         child: Row(
           children: [
             Container(
@@ -404,13 +409,10 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GlassCard.surface(
+      context,
+      borderRadius: BorderRadius.circular(24),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppConstants.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppConstants.border),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

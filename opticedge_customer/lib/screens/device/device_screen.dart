@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/constants.dart';
 import '../../core/api/api_client.dart';
+import '../../widgets/common/glass_card.dart';
+import '../../widgets/common/premium_glass_background.dart';
 
 class _DeviceState {
   final Map<String, dynamic>? data;
@@ -49,17 +51,18 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
     final state = ref.watch(_deviceProvider);
 
     return Scaffold(
-      backgroundColor: AppConstants.background,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text(
           'Kifaa Changu',
           style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.4),
         ),
-        backgroundColor: AppConstants.surface,
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
       ),
-      body: state.isLoading
+      body: PremiumGlassBackground(
+        child: state.isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppConstants.primary),
             )
@@ -146,6 +149,7 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
               onRefresh: () => ref.read(_deviceProvider.notifier).load(),
               child: _buildContent(context, state.data!),
             ),
+      ),
     );
   }
 
@@ -156,16 +160,11 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [
-        // Device header
-        Container(
+        GlassCard.tinted(
+          surfaceTint: const Color(0xFFF7F3FF),
+          accent: const Color(0xFF8B5CF6),
+          borderRadius: BorderRadius.circular(26),
           padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF7F3FF),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: const Color(0xFF8B5CF6).withValues(alpha: 0.14),
-            ),
-          ),
           child: Column(
             children: [
               Container(
@@ -210,14 +209,10 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
         ),
         const SizedBox(height: 18),
 
-        // Device details
-        Container(
+        GlassCard.surface(
+          context,
+          borderRadius: BorderRadius.circular(24),
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppConstants.surface,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AppConstants.border),
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -280,14 +275,11 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
         ),
         const SizedBox(height: 18),
 
-        // Agreement
         if (d['agreement'] != null)
-          Container(
-            decoration: BoxDecoration(
-              color: AppConstants.surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppConstants.border),
-            ),
+          GlassCard.surface(
+            context,
+            borderRadius: BorderRadius.circular(20),
+            padding: EdgeInsets.zero,
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,

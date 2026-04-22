@@ -138,22 +138,16 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionHeader(
-              'Contact & Location',
-              'Hakikisha tunabaki na namba sahihi, branch sahihi, na maelezo ya eneo yanayomfanya customer afuatiliwe kwa urahisi.',
-            ),
+            _sectionHeader('Mawasiliano', ''),
             const SizedBox(height: 18),
             _contactHero(completionCount: completionCount)
                 .animate()
                 .fadeIn(duration: 260.ms)
                 .slideY(begin: 0.08, end: 0),
             const SizedBox(height: 16),
-            _scriptCard(),
-            const SizedBox(height: 16),
             _card(
-              title: '1. Best phone numbers to reach the customer',
-              subtitle:
-                  'Primary number hutumika kwa reminders, payment prompt, na follow-up za baadae.',
+              title: '1. Simu',
+              subtitle: '',
               child: countriesAsync.when(
                 loading: () =>
                     const LinearProgressIndicator(color: AppConstants.primary),
@@ -169,8 +163,6 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
                       controller: _phone,
                       countries: countries,
                       selectedCountry: _phoneCountry,
-                      helperText:
-                          'This becomes the main number for reminders, payment prompts, and status updates.',
                       onCountryChanged: (value) {
                         if (value == null) {
                           return;
@@ -187,8 +179,6 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
                       controller: _altPhone,
                       countries: countries,
                       selectedCountry: _altPhoneCountry,
-                      helperText:
-                          'Use a trusted backup line if the main line is sometimes switched off.',
                       onCountryChanged: (value) {
                         if (value == null) {
                           return;
@@ -209,34 +199,14 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
                         prefixIcon: Icon(Icons.email_outlined, size: 18),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    const Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _MetaChip(
-                          icon: Icons.notifications_active_outlined,
-                          label: 'Payment reminders',
-                        ),
-                        _MetaChip(
-                          icon: Icons.call_outlined,
-                          label: 'Follow-up calls',
-                        ),
-                        _MetaChip(
-                          icon: Icons.sms_outlined,
-                          label: 'SMS updates',
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ),
             ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0),
             const SizedBox(height: 16),
             _card(
-              title: '2. Service branch and customer routing',
-              subtitle:
-                  'Branch unayochagua hapa ndiyo itabeba ownership ya file, collections, na visits za baadae.',
+              title: '2. Branch',
+              subtitle: '',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -291,74 +261,13 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
                         },
                       ),
                     ),
-                  const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          AppConstants.warningSurface,
-                          AppConstants.surfaceRaised
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: AppConstants.warning.withValues(alpha: 0.12),
-                      ),
-                    ),
-                    child: const Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.account_tree_outlined,
-                          color: AppConstants.warning,
-                          size: 18,
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Tip: chagua branch ambayo customer ataitumia kwa urahisi. Hii ndiyo branch itakayohusishwa na registration, review, na asset release ya baadae.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              height: 1.45,
-                              color: AppConstants.textSecondary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (signedInUser?.branch?.name != null) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppConstants.surfaceMuted,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppConstants.border),
-                      ),
-                      child: Text(
-                        'Signed-in branch default: ${signedInUser!.branch!.name}. If the handset came from vendor stock, the system will keep the linked store context automatically.',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          height: 1.45,
-                          color: AppConstants.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ).animate().fadeIn(delay: 120.ms).slideY(begin: 0.06, end: 0),
             const SizedBox(height: 16),
             _card(
-              title: '3. Location context',
-              subtitle:
-                  'Hapa tunakusanya maelezo ya mahali pa kumpata customer bila kumchosha kwa maswali mengi sana.',
+              title: '3. Eneo',
+              subtitle: '',
               child: Column(
                 children: [
                   DropdownButtonFormField<String>(
@@ -454,15 +363,17 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
             color: AppConstants.textPrimary,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            fontSize: 12,
-            height: 1.5,
-            color: AppConstants.textSecondary,
+        if (subtitle.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.5,
+              color: AppConstants.textSecondary,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -495,7 +406,7 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Contact routing health',
+                  'Maendeleo',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -507,61 +418,10 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            '$completionCount of 5 contact signals ready',
+            '$completionCount/5',
             style: TextStyle(
               fontSize: 12,
               color: Colors.white.withValues(alpha: 0.82),
-            ),
-          ),
-          const SizedBox(height: 14),
-          const Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _HeroTag(
-                icon: Icons.phone_android_outlined,
-                label: 'Primary line',
-              ),
-              _HeroTag(
-                icon: Icons.account_balance_outlined,
-                label: 'Branch ownership',
-              ),
-              _HeroTag(
-                icon: Icons.place_outlined,
-                label: 'Field location',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _scriptCard() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppConstants.primarySurface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppConstants.primary.withValues(alpha: 0.12)),
-      ),
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.record_voice_over_outlined,
-            color: AppConstants.primary,
-            size: 20,
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Helpful script: “Nisaidie namba unayotumia mara nyingi zaidi na branch utakayotembelea kwa urahisi. Hii itatusaidia kukutumia updates sahihi bila kukupigia namba zisizo sahihi.”',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.5,
-                color: AppConstants.textSecondary,
-              ),
             ),
           ),
         ],
@@ -587,15 +447,17 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
               color: AppConstants.textPrimary,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.45,
-              color: AppConstants.textSecondary,
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.45,
+                color: AppConstants.textSecondary,
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 16),
           child,
         ],
@@ -657,7 +519,7 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
                 const SizedBox(height: 4),
                 Text(
                   rows.isEmpty
-                      ? 'As you fill in branch and location details, a quick summary will appear here for FO confidence.'
+                      ? 'Jaza branch na anwani.'
                       : rows.join(' • '),
                   style: const TextStyle(
                     fontSize: 12,
@@ -666,80 +528,6 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroTag extends StatelessWidget {
-  const _HeroTag({
-    required this.icon,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetaChip extends StatelessWidget {
-  const _MetaChip({
-    required this.icon,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppConstants.surfaceMuted,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppConstants.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: AppConstants.primary),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppConstants.textSecondary,
             ),
           ),
         ],

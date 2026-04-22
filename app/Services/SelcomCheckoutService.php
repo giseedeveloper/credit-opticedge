@@ -110,6 +110,52 @@ class SelcomCheckoutService
         );
     }
 
+    /**
+     * Poll Selcom order-status while the wallet payment is still in-flight (PENDING / INPROGRESS).
+     * Aligns with Selcom guidance to query status after push USSD instead of trusting the initial HTTP ack.
+     *
+     * @see https://developers.selcommobile.com/#checkout-api (Get Order Status, INPROGRESS handling)
+     */
+    public function syncPaymentStatusWithShortPoll(
+        SelcomPaymentRequest $payment,
+        ?int $maxAttempts = null,
+        ?int $sleepMs = null
+    ): SelcomPaymentRequest {
+        $maxAttempts ??= max(1, (int) config('services.selcom.payment_status_poll_max_attempts', 8));
+        $sleepMs ??= max(0, (int) config('services.selcom.payment_status_poll_sleep_ms', 2000));
+
+        $payment = $this->syncPaymentStatus($payment);
+
+        for ($i = 1; $i < $maxAttempts && $this->shouldContinuePollingPayment($payment); $i++) {
+            if ($sleepMs > 0) {
+                usleep($sleepMs * 1000);
+            }
+            $payment = $this->syncPaymentStatus($payment->fresh());
+        }
+
+        return $payment;
+    }
+
+    protected function shouldContinuePollingPayment(SelcomPaymentRequest $payment): bool
+    {
+        if ($payment->isCompleted() || $payment->status === 'failed') {
+            return false;
+        }
+
+        $ps = strtoupper((string) $payment->payment_status);
+
+        if ($ps === 'AMBIGUOUS') {
+            return false;
+        }
+
+        if (in_array($ps, ['PENDING', 'INPROGRESS'], true)) {
+            return true;
+        }
+
+        return $ps === ''
+            && in_array($payment->status, ['pending', 'order_created', 'initiated'], true);
+    }
+
     public function verifyWebhook(Request $request): bool
     {
         $this->ensureConfigured();
@@ -355,35 +401,74 @@ class SelcomCheckoutService
         string $fallbackStatus = 'pending',
         bool $receivedViaWebhook = false
     ): SelcomPaymentRequest {
-        $paymentStatus = strtoupper((string) ($payload['payment_status'] ?? data_get($payload, 'data.0.payment_status') ?? 'PENDING'));
-        $result = strtoupper((string) ($payload['result'] ?? data_get($payload, 'data.0.result') ?? 'PENDING'));
-        $resultCode = (string) ($payload['resultcode'] ?? data_get($payload, 'data.0.resultcode') ?? '111');
+        $paymentStatus = $this->extractPaymentStatus($payload);
+        $result = $this->extractResult($payload);
+        $resultCode = (string) ($payload['resultcode'] ?? data_get($payload, 'data.0.resultcode') ?? '');
+
+        if ($paymentStatus === '' && in_array($result, ['INPROGRESS', 'PENDING'], true)) {
+            $paymentStatus = $result === 'INPROGRESS' ? 'INPROGRESS' : 'PENDING';
+        }
+
+        if ($paymentStatus === '') {
+            $paymentStatus = 'PENDING';
+        }
+
+        // Selcom: wallet-payment / order-status may return result SUCCESS for "request accepted" while
+        // payment_status is still PENDING. Only COMPLETED (or webhook COMPLETED) means money cleared.
         $resolvedStatus = match (true) {
-            $paymentStatus === 'COMPLETED' || ($result === 'SUCCESS' && $resultCode === '000') => 'completed',
-            in_array($paymentStatus, ['FAILED', 'CANCELLED', 'DECLINED'], true) => 'failed',
-            in_array($result, ['FAILED', 'ERROR'], true) => 'failed',
+            $paymentStatus === 'COMPLETED' => 'completed',
+            in_array($paymentStatus, ['FAILED', 'CANCELLED', 'USERCANCELLED', 'REJECTED', 'DECLINED'], true) => 'failed',
+            in_array($result, ['FAIL', 'FAILED', 'ERROR'], true) => 'failed',
             default => $fallbackStatus,
         };
 
         $payment->forceFill([
             $source => $payload,
-            'phone' => $payload['phone'] ?? $payload['msisdn'] ?? $payment->phone,
+            'phone' => $payload['phone'] ?? $payload['msisdn'] ?? data_get($payload, 'data.0.msisdn') ?? $payment->phone,
             'channel' => $payload['channel'] ?? data_get($payload, 'data.0.channel') ?? $payment->channel,
             'status' => $resolvedStatus,
             'payment_status' => $paymentStatus,
-            'result' => $result,
-            'resultcode' => $resultCode,
+            'result' => $result !== '' ? $result : 'PENDING',
+            'resultcode' => $resultCode !== '' ? $resultCode : '111',
             'selcom_reference' => $payload['reference'] ?? data_get($payload, 'data.0.reference') ?? $payment->selcom_reference,
             'gateway_buyer_uuid' => data_get($payload, 'data.0.buyer_uuid') ?? $payment->gateway_buyer_uuid,
             'payment_token' => data_get($payload, 'data.0.payment_token') ?? $payment->payment_token,
             'payment_gateway_url' => data_get($payload, 'data.0.payment_gateway_url') ?? $payment->payment_gateway_url,
-            'paid_at' => $resolvedStatus === 'completed' ? ($payment->paid_at ?? now()) : $payment->paid_at,
+            'paid_at' => match ($resolvedStatus) {
+                'completed' => $payment->paid_at ?? now(),
+                'failed' => null,
+                default => $payment->paid_at,
+            },
             'webhook_received_at' => $receivedViaWebhook ? now() : $payment->webhook_received_at,
         ])->save();
 
         $this->syncCustomerPaymentSnapshot($payment->fresh());
 
         return $payment->fresh();
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function extractPaymentStatus(array $payload): string
+    {
+        $top = $payload['payment_status'] ?? null;
+        $nested = data_get($payload, 'data.0.payment_status');
+        $raw = $top ?? $nested ?? '';
+
+        return strtoupper(trim((string) $raw));
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function extractResult(array $payload): string
+    {
+        $top = $payload['result'] ?? null;
+        $nested = data_get($payload, 'data.0.result');
+        $raw = $top ?? $nested ?? '';
+
+        return strtoupper(trim((string) $raw));
     }
 
     protected function syncCustomerPaymentSnapshot(SelcomPaymentRequest $payment): void

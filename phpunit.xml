@@ -35,5 +35,7 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="SELCOM_PAYMENT_STATUS_POLL_MAX_ATTEMPTS" value="1"/>
+        <env name="SELCOM_PAYMENT_STATUS_POLL_SLEEP_MS" value="0"/>
     </php>
 </phpunit>

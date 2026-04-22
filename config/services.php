@@ -57,6 +57,8 @@ return [
         'vendor' => env('SELCOM_VENDOR'),
         'api_key' => env('SELCOM_API_KEY'),
         'api_secret' => env('SELCOM_API_SECRET'),
+        'payment_status_poll_max_attempts' => (int) env('SELCOM_PAYMENT_STATUS_POLL_MAX_ATTEMPTS', 8),
+        'payment_status_poll_sleep_ms' => (int) env('SELCOM_PAYMENT_STATUS_POLL_SLEEP_MS', 2000),
     ],
 
 ];

@@ -39,16 +39,14 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionHeader('Customer Consent',
-              'Read each item carefully to the customer and confirm their acceptance'),
+          _sectionHeader('Ridhaa', ''),
           const SizedBox(height: 24),
 
           // Consent items
           _consentItem(
             icon: Icons.gavel_rounded,
             title: 'Terms & Conditions',
-            description:
-                'The customer agrees to the loan terms, repayment schedule, and all applicable conditions as explained by the field officer.',
+            description: 'Makubaliano ya mkopo.',
             value: state.termsAccepted,
             onChanged: (v) => ref
                 .read(kycProvider.notifier)
@@ -59,8 +57,7 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
           _consentItem(
             icon: Icons.shield_outlined,
             title: 'Data Privacy Consent',
-            description:
-                'The customer consents to collection, storage and processing of their personal data for credit assessment, KYC verification, and related services.',
+            description: 'Matumizi ya data binafsi.',
             value: state.dataConsentAccepted,
             onChanged: (v) => ref
                 .read(kycProvider.notifier)
@@ -72,8 +69,7 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
           _consentItem(
             icon: Icons.phone_in_talk_outlined,
             title: 'Communication Consent',
-            description:
-                'The customer agrees to be contacted via phone calls and SMS for loan updates, reminders, and communication related to their application.',
+            description: 'Simu na SMS.',
             value: state.callConsentAccepted,
             onChanged: (v) => ref
                 .read(kycProvider.notifier)
@@ -112,8 +108,8 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
                 Expanded(
                   child: Text(
                     _allAccepted(state)
-                        ? 'All consent items accepted. Ready to proceed.'
-                        : 'Customer must accept all 3 consent items above.',
+                        ? 'Tayari.'
+                        : 'Chagua vitatu vyote.',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -190,15 +186,17 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
                           : AppConstants.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppConstants.textSecondary,
-                      height: 1.4,
+                  if (description.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppConstants.textSecondary,
+                        height: 1.4,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -226,10 +224,12 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: AppConstants.textPrimary)),
-          const SizedBox(height: 2),
-          Text(subtitle,
-              style: const TextStyle(
-                  fontSize: 12, color: AppConstants.textSecondary)),
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(subtitle,
+                style: const TextStyle(
+                    fontSize: 12, color: AppConstants.textSecondary)),
+          ],
         ],
       );
 }

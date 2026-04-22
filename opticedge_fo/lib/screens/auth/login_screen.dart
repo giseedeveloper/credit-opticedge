@@ -184,31 +184,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final s = S.of(ref);
     return Column(
       children: [
-        // Logo
-        Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.35),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.18),
-                blurRadius: 28,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Center(
+        // Logo — full asset (squircle); zoom slightly to drop outer white margin
+        Material(
+          elevation: 10,
+          shadowColor: Colors.black.withValues(alpha: 0.22),
+          borderRadius: BorderRadius.circular(26),
+          clipBehavior: Clip.antiAlias,
+          color: Colors.transparent,
+          child: SizedBox(
+            width: 96,
+            height: 96,
             child: Image.asset(
               'assets/images/app_logo.png',
-              width: 44,
-              height: 44,
-              fit: BoxFit.contain,
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.high,
+              gaplessPlayback: true,
+              errorBuilder: (_, __, ___) => Container(
+                color: AppConstants.primarySurface,
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.phone_android_rounded,
+                  color: AppConstants.primary,
+                  size: 40,
+                ),
+              ),
             ),
           ),
         ),

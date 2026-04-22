@@ -200,6 +200,7 @@ class KycPaymentContext {
   final String? paidAt;
   final String? updatedAt;
   final bool isCompleted;
+  final bool isFailed;
 
   const KycPaymentContext({
     this.status = 'not_started',
@@ -214,10 +215,14 @@ class KycPaymentContext {
     this.paidAt,
     this.updatedAt,
     this.isCompleted = false,
+    this.isFailed = false,
   });
 
   bool get needsAction =>
       status == 'pending' || status == 'initiated' || status == 'order_created';
+
+  bool get shouldPollPayment =>
+      !isCompleted && !isFailed && needsAction;
 
   factory KycPaymentContext.fromJson(Map<String, dynamic> json) =>
       KycPaymentContext(
@@ -233,6 +238,7 @@ class KycPaymentContext {
         paidAt: json['paid_at']?.toString(),
         updatedAt: json['updated_at']?.toString(),
         isCompleted: json['is_completed'] == true,
+        isFailed: json['is_failed'] == true,
       );
 }
 

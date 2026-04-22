@@ -56,47 +56,39 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
 
   static const _stepSummaries = [
     (
-      title: 'Match the right handset',
-      subtitle:
-          'Lock the exact device, confirm the deposit, and capture trusted evidence from the very first tap.',
-      outcome: 'Build confidence before the customer shares deeper details.',
+      title: 'Simu, picha 3, model, IMEI, bei',
+      subtitle: '',
+      outcome: '',
     ),
     (
-      title: 'Confirm identity cleanly',
-      subtitle:
-          'Collect names, DOB, ID type, and sharp supporting photos without making the moment feel bureaucratic.',
-      outcome: 'Reduce rework by capturing complete identity evidence once.',
+      title: 'Utambulisho na picha za ID',
+      subtitle: '',
+      outcome: 'Jaza taarifa muhimu na picha wazi.',
     ),
     (
-      title: 'Capture the best contact path',
-      subtitle:
-          'Record the number, branch, and location details that will keep reminders, payment prompts, and follow-up aligned.',
-      outcome: 'Make the rest of the journey easier for both FO and customer.',
+      title: 'Mawasiliano na eneo',
+      subtitle: '',
+      outcome: 'Namba, mkoa, anwani.',
     ),
     (
-      title: 'Understand repayment ability',
-      subtitle:
-          'Use simple language to document income and work context while the customer still feels in control.',
-      outcome:
-          'Support faster lending decisions with cleaner affordability data.',
+      title: 'Kazi na kipato',
+      subtitle: '',
+      outcome: 'Kipato, matumizi, picha ya biashara.',
     ),
     (
-      title: 'Secure reliable next-of-kin details',
-      subtitle:
-          'Guide the customer gently to the most trusted NOK contacts instead of rushing through the relationship fields.',
-      outcome: 'Strengthen recovery readiness without creating tension.',
+      title: 'Mtu wa karibu',
+      subtitle: '',
+      outcome: 'Jina, simu, uhusiano.',
     ),
     (
-      title: 'Record consent with clarity',
-      subtitle:
-          'Keep the legal step warm and understandable so the customer knows exactly what they are agreeing to.',
-      outcome: 'Clear consent lowers disputes later in the journey.',
+      title: 'Ridhaa (vitatu)',
+      subtitle: '',
+      outcome: 'Vigezo, faragha, mawasiliano.',
     ),
     (
-      title: 'Close the journey with assurance',
-      subtitle:
-          'Collect payment, present the agreement, capture signatures, and submit with a calm finish that feels premium.',
-      outcome: 'The customer leaves feeling onboarded, not processed.',
+      title: 'Malipo, mkataba, tuma',
+      subtitle: '',
+      outcome: 'ETR, saini, thibitisha.',
     ),
   ];
 
@@ -202,7 +194,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
   Future<bool> _showExitDialog() async {
     return await showDialog<bool>(
           context: context,
-          builder: (_) => AlertDialog(
+          builder: (dialogContext) => AlertDialog(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             title: const Text('Exit Registration?'),
@@ -211,11 +203,11 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false),
+                onPressed: () => Navigator.of(dialogContext).pop(false),
                 child: const Text('Stay here'),
               ),
               TextButton(
-                onPressed: () => Navigator.pop(context, true),
+                onPressed: () => Navigator.of(dialogContext).pop(true),
                 child: const Text(
                   'Exit',
                   style: TextStyle(color: AppConstants.error),
@@ -247,24 +239,49 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
     }
   }
 
-  Widget _buildStageHeader({
+  Widget _buildStageHeader(
+    BuildContext context, {
     required int stepIndex,
     required ({String title, String subtitle, String outcome}) descriptor,
-    required KycDraftState kycState,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor =
+        isDark ? AppConstants.kycWizardHeaderTitle : AppConstants.textPrimary;
+    final metaColor = isDark
+        ? AppConstants.kycWizardAccentLine.withValues(alpha: 0.95)
+        : AppConstants.primary;
+    final subtitleColor = isDark
+        ? Colors.white.withValues(alpha: 0.72)
+        : AppConstants.textSecondary;
+    final iconBg = isDark
+        ? Colors.white.withValues(alpha: 0.14)
+        : Colors.white.withValues(alpha: 0.92);
+    final iconBorder = isDark
+        ? Colors.white.withValues(alpha: 0.14)
+        : AppConstants.border.withValues(alpha: 0.55);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Colors.white.withValues(alpha: 0.08),
-            Colors.white.withValues(alpha: 0.02),
-          ],
+          colors: isDark
+              ? [
+                  Colors.white.withValues(alpha: 0.08),
+                  Colors.white.withValues(alpha: 0.02),
+                ]
+              : [
+                  Colors.white.withValues(alpha: 0.72),
+                  Colors.white.withValues(alpha: 0.35),
+                ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          bottom: BorderSide(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : AppConstants.border.withValues(alpha: 0.35),
+          ),
         ),
       ),
       child: Column(
@@ -277,10 +294,10 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.14),
+                  color: iconBg,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.14),
+                    color: iconBorder,
                   ),
                 ),
                 child: Center(
@@ -302,8 +319,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 2.2,
-                        color: AppConstants.kycWizardAccentLine
-                            .withValues(alpha: 0.95),
+                        color: metaColor,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -311,11 +327,11 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                       _stepLabels[stepIndex - 1],
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.45,
-                        color: AppConstants.kycWizardHeaderTitle,
+                        color: titleColor,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -327,7 +343,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         height: 1.28,
-                        color: Colors.white.withValues(alpha: 0.72),
+                        color: subtitleColor,
                       ),
                     ),
                   ],
@@ -336,7 +352,8 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
               const SizedBox(width: 8),
               TextButton(
                 style: TextButton.styleFrom(
-                  foregroundColor: AppConstants.kycWizardHeaderTitle,
+                  foregroundColor:
+                      isDark ? titleColor : AppConstants.primary,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   minimumSize: const Size(0, 38),
@@ -352,7 +369,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                   }
                   FocusManager.instance.primaryFocus?.unfocus();
                   final shouldExit = await _showExitDialog();
-                  if (!mounted) {
+                  if (!context.mounted) {
                     return;
                   }
                   if (shouldExit) {
@@ -376,7 +393,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
             labels: _stepLabels,
             iconAssets: _stepIcons,
             compact: true,
-            onDarkBackground: true,
+            onDarkBackground: isDark,
           ),
         ],
       ),
@@ -496,9 +513,9 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                     ),
                   ),
                 _buildStageHeader(
+                  context,
                   stepIndex: stepIndex,
                   descriptor: descriptor,
-                  kycState: kycState,
                 ),
                 Expanded(
                   child: Container(
@@ -519,7 +536,8 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                     ),
                     child: Column(
                       children: [
-                        if (showOutcomeBanner)
+                        if (showOutcomeBanner &&
+                            descriptor.outcome.trim().isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
                             child: Container(

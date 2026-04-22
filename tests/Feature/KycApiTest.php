@@ -491,9 +491,10 @@ it('payment request sends a selcom prompt for the application draft', function (
                 'payment_gateway_url' => 'https://selcom.test/pay/token-001',
             ]],
         ]),
+        // Real Selcom often returns SUCCESS/000 for "push accepted" while payment_status stays PENDING until USSD completes.
         'https://apigw.selcommobile.com/v1/checkout/wallet-payment' => Http::response([
-            'result' => 'PENDING',
-            'resultcode' => '111',
+            'result' => 'SUCCESS',
+            'resultcode' => '000',
             'payment_status' => 'PENDING',
             'reference' => 'SEL-REF-API-001',
             'channel' => 'MPESA',
@@ -787,6 +788,73 @@ it('release asset marks the stock unit as assigned', function () {
         ->and($loan?->repayment_frequency)->toBe('weekly')
         ->and($loan?->status)->toBe('active')
         ->and(RepaymentSchedule::query()->where('loan_id', $loan?->id)->count())->toBeGreaterThan(0);
+});
+
+it('save-draft marks fo timestamp and draft tab lists only explicit drafts', function () {
+    $withExplicit = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'first_name' => 'Explicit',
+        'last_name' => 'Draft',
+        'phone' => '0712000301',
+        'kyc_fo_saved_as_draft_at' => now()->subHour(),
+    ]);
+
+    $inProgressOnly = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'first_name' => 'In',
+        'last_name' => 'Progress',
+        'phone' => '0712000302',
+        'kyc_fo_saved_as_draft_at' => null,
+    ]);
+
+    $this->getJson('/api/v1/kyc/customers?status=draft')
+        ->assertOk()
+        ->assertJsonPath('data.total', 1);
+
+    $ids = collect($this->getJson('/api/v1/kyc/customers?status=draft')->json('data.data'))
+        ->pluck('id')
+        ->all();
+
+    expect($ids)->toContain($withExplicit->id)
+        ->not->toContain($inProgressOnly->id);
+
+    $this->postJson("/api/v1/kyc/application/{$inProgressOnly->id}/save-draft")
+        ->assertOk()
+        ->assertJsonPath('data.customer_id', $inProgressOnly->id);
+
+    expect($inProgressOnly->fresh()->kyc_fo_saved_as_draft_at)->not->toBeNull();
+
+    $this->getJson('/api/v1/kyc/dashboard')
+        ->assertOk()
+        ->assertJsonPath('data.drafts', 2);
+});
+
+it('save-draft rejects placeholder customers and submitted applications', function () {
+    $placeholder = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'first_name' => '_draft_',
+        'last_name' => '_draft_',
+        'phone' => '_draft_'.uniqid(),
+    ]);
+
+    $this->postJson("/api/v1/kyc/application/{$placeholder->id}/save-draft")
+        ->assertStatus(422);
+
+    $submitted = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'first_name' => 'Done',
+        'last_name' => 'Submit',
+        'phone' => '0712000401',
+    ]);
+
+    Verification::factory()->create([
+        'customer_id' => $submitted->id,
+        'type' => 'kyc',
+        'status' => 'pending',
+    ]);
+
+    $this->postJson("/api/v1/kyc/application/{$submitted->id}/save-draft")
+        ->assertStatus(422);
 });
 
 function apiKycSignatureDataUrl(): string

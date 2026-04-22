@@ -22,6 +22,11 @@ class S {
   String get register => _t('Register', 'Sajili');
   String get search => _t('Search', 'Tafuta');
   String get drafts => _t('Drafts', 'Rasimu');
+  String get saveAsDraft => _t('Save as draft', 'Hifadhi rasimu');
+  String get draftSavedMessage => _t(
+        'Draft saved. Open Drafts to continue later.',
+        'Rasimu imehifadhiwa. Fungua Rasimu kuendelea baadaye.',
+      );
   String get online => _t('Online', 'Mtandaoni');
 
   // ─── Greetings ──────────────────────────────────────

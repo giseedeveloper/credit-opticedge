@@ -718,19 +718,23 @@ class KycNotifier extends StateNotifier<KycDraftState> {
     }
   }
 
-  Future<bool> refreshPaymentStatus() async {
+  Future<bool> refreshPaymentStatus({bool showLoading = true}) async {
     if (!state.hasDraft) {
       return false;
     }
 
-    state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+    if (showLoading) {
+      state = state.copyWith(isSubmitting: true, error: null, stepSaved: false);
+    } else {
+      state = state.copyWith(error: null);
+    }
 
     try {
       final res = await ApiClient.instance
           .get('/kyc/application/${state.customerId}/payment/status');
       final data = res.data['data'] as Map<String, dynamic>;
       state = state.copyWith(
-        isSubmitting: false,
+        isSubmitting: showLoading ? false : state.isSubmitting,
         paymentContext:
             KycPaymentContext.fromJson(data['payment'] as Map<String, dynamic>),
         agreementContext: KycAgreementContext.fromJson(
@@ -741,7 +745,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       return true;
     } catch (error) {
       state = state.copyWith(
-        isSubmitting: false,
+        isSubmitting: showLoading ? false : state.isSubmitting,
         error: ApiClient.instance.parseError(error),
       );
       return false;
@@ -1304,6 +1308,23 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         pendingRetryStep: _isRecoverableNetworkError(error) ? 7 : null,
       );
       return null;
+    }
+  }
+
+  /// Persists server-side "listed draft" flag (Drafts tab + dashboard). Call from Step 7 only.
+  Future<bool> markSavedAsDraft() async {
+    final id = state.customerId;
+    if (id == null || id.isEmpty) {
+      return false;
+    }
+
+    try {
+      await ApiClient.instance.post('/kyc/application/$id/save-draft');
+      await _saveDraft();
+      return true;
+    } catch (error) {
+      state = state.copyWith(error: ApiClient.instance.parseError(error));
+      return false;
     }
   }
 

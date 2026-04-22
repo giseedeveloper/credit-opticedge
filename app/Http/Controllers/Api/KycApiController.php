@@ -730,7 +730,7 @@ class KycApiController extends Controller
         }
 
         try {
-            $payment = $selcom->syncPaymentStatus($payment);
+            $payment = $selcom->syncPaymentStatusWithShortPoll($payment);
             $payment = $selcom->attachToCustomer($payment, $customer->fresh());
         } catch (InvalidArgumentException $exception) {
             return $this->handleSelcomException($exception, $customer->id);
@@ -864,6 +864,7 @@ class KycApiController extends Controller
             'kyc_status' => 'pending',
             'kyc_stage' => 3,
             'metadata' => $metadata,
+            'kyc_fo_saved_as_draft_at' => null,
         ]);
 
         $verification = Verification::firstOrCreate(
@@ -925,6 +926,32 @@ class KycApiController extends Controller
     }
 
     // ──────────────────────────────────────────────────────────────
+    // FO explicit "save as draft" (Step 7 — lists under Drafts tab / dashboard)
+    // POST /api/v1/kyc/application/{customer_id}/save-draft
+    // ──────────────────────────────────────────────────────────────
+    public function markFoSavedAsDraft(string $customerId): JsonResponse
+    {
+        $customer = $this->findAgentCustomerOrFail($customerId);
+
+        if ($customer->verifications()->exists()) {
+            return $this->errorResponse('Application already submitted.', 422);
+        }
+
+        if ($customer->first_name === '_draft_' || str_starts_with((string) $customer->phone, '_draft_')) {
+            return $this->errorResponse('Complete identity steps before saving this draft.', 422);
+        }
+
+        $customer->forceFill([
+            'kyc_fo_saved_as_draft_at' => now(),
+        ])->save();
+
+        return $this->successResponse([
+            'customer_id' => $customer->id,
+            'fo_saved_as_draft_at' => $customer->kyc_fo_saved_as_draft_at?->toDateTimeString(),
+        ], 'Draft saved. You can resume from Customers.');
+    }
+
+    // ──────────────────────────────────────────────────────────────
     // FO DASHBOARD STATS
     // GET /api/v1/kyc/dashboard
     // ──────────────────────────────────────────────────────────────
@@ -938,7 +965,10 @@ class KycApiController extends Controller
         $pending = (clone $base)->whereHas('latestVerification', fn ($q) => $q->where('status', 'pending'))->count();
         $verified = (clone $base)->whereHas('latestVerification', fn ($q) => $q->where('status', 'approved'))->count();
         $declined = (clone $base)->whereHas('latestVerification', fn ($q) => $q->where('status', 'rejected'))->count();
-        $drafts = (clone $base)->whereDoesntHave('verifications')->count();
+        $drafts = (clone $base)
+            ->whereDoesntHave('verifications')
+            ->whereNotNull('kyc_fo_saved_as_draft_at')
+            ->count();
 
         return $this->successResponse([
             'total_registered' => $total,
@@ -978,7 +1008,8 @@ class KycApiController extends Controller
         if ($request->filled('status')) {
             $status = $request->status;
             if ($status === 'draft') {
-                $query->whereDoesntHave('verifications');
+                $query->whereDoesntHave('verifications')
+                    ->whereNotNull('kyc_fo_saved_as_draft_at');
             } elseif ($status === 'approved' || $status === 'verified') {
                 $query->kycApproved();
             } else {
@@ -1127,6 +1158,7 @@ class KycApiController extends Controller
             'registered_at' => $customer->created_at->toDateTimeString(),
             'can_release_asset' => $customer->isReadyForAssetRelease(),
             'can_resume_draft' => $isDraftApplication,
+            'fo_saved_as_draft_at' => $customer->kyc_fo_saved_as_draft_at?->toDateTimeString(),
             'resume_step' => $resumeStep,
             'resume_stage' => $stageFlow->determineResumeStage($customer),
             'verification' => $v ? [
@@ -1457,6 +1489,7 @@ class KycApiController extends Controller
             'paid_at' => $payment->paid_at?->toDateTimeString(),
             'updated_at' => $payment->updated_at?->toDateTimeString(),
             'is_completed' => $payment->isCompleted(),
+            'is_failed' => $payment->status === 'failed',
         ];
     }
 

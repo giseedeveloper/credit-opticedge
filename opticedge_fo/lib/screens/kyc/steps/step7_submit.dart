@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -5,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../config/constants.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/models/kyc_flow_model.dart';
+import '../../../core/providers/customer_provider.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
 import '../../../widgets/common/glass_card.dart';
@@ -33,6 +37,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
   bool _submitted = false;
   Map<String, dynamic>? _result;
   bool _loadedContext = false;
+  bool _savingDraft = false;
+  Timer? _paymentPollTimer;
 
   late final AnimationController _successAnim;
   late final Animation<double> _ringScale;
@@ -97,6 +103,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     _customerSignatureController.dispose();
     _foSignatureController.dispose();
     _successAnim.dispose();
+    _paymentPollTimer?.cancel();
     super.dispose();
   }
 
@@ -137,7 +144,38 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
             downpaymentAmount: _downpaymentCtrl.text.trim(),
           ),
         );
-    await ref.read(kycProvider.notifier).requestPaymentPrompt();
+    final ok = await ref.read(kycProvider.notifier).requestPaymentPrompt();
+    if (ok && mounted) {
+      _startPaymentStatusPolling();
+    }
+  }
+
+  /// Backend also short-polls Selcom; this keeps UI fresh while the customer completes USSD.
+  void _startPaymentStatusPolling() {
+    _paymentPollTimer?.cancel();
+    var ticks = 0;
+    _paymentPollTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
+      ticks++;
+      if (!mounted) {
+        _paymentPollTimer?.cancel();
+        return;
+      }
+
+      final ctx = ref.read(kycProvider).paymentContext;
+      if (ctx == null || ctx.isCompleted || ctx.isFailed || ticks > 40) {
+        _paymentPollTimer?.cancel();
+        return;
+      }
+
+      if (!ctx.shouldPollPayment) {
+        _paymentPollTimer?.cancel();
+        return;
+      }
+
+      await ref
+          .read(kycProvider.notifier)
+          .refreshPaymentStatus(showLoading: false);
+    });
   }
 
   Future<void> _refreshPayment() async {
@@ -243,6 +281,51 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
       _result = result;
     });
     _successAnim.forward();
+  }
+
+  Future<void> _onSaveAsDraft() async {
+    setState(() => _savingDraft = true);
+    ref.read(kycProvider.notifier).update(
+          (s) => s.copyWith(
+            error: null,
+            foNotes: _notesCtrl.text.trim(),
+            paymentPhone: _paymentPhoneCtrl.text.trim(),
+            assetHandoverNotes: _handoverNotesCtrl.text.trim(),
+            loanTermMonths: _loanTermMonthsCtrl.text.trim(),
+            downpaymentAmount: _downpaymentCtrl.text.trim(),
+          ),
+        );
+
+    final ok = await ref.read(kycProvider.notifier).markSavedAsDraft();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _savingDraft = false);
+
+    if (ok) {
+      await ref.read(customerListProvider.notifier).load(reset: true);
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(S.of(ref).draftSavedMessage),
+          backgroundColor: AppConstants.success,
+        ),
+      );
+      context.go('/customers?tab=draft');
+      return;
+    }
+
+    final message = ref.read(kycProvider).error ?? 'Could not save draft';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppConstants.error,
+      ),
+    );
   }
 
   Future<void> _showAgreementDialog(KycAgreementContext agreement) async {
@@ -398,12 +481,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionHeader(
-            'Payment, Agreement & Final Submit',
-            'Finish the customer journey in one smooth flow: collect the deposit, present the agreement, capture signatures, then submit.',
-          ),
-          const SizedBox(height: 16),
-          _foScriptCard(),
+          _sectionHeader('Malipo & tuma', ''),
           const SizedBox(height: 16),
           _summaryCard(state),
           const SizedBox(height: 16),
@@ -416,9 +494,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           ).animate().fadeIn(duration: 260.ms).slideY(begin: 0.08, end: 0),
           const SizedBox(height: 16),
           _card(
-            title: '1. Collect the starting deposit',
-            subtitle:
-                'Send the wallet push only after confirming the amount with the customer.',
+            title: '1. Malipo',
+            subtitle: '',
             child: Column(
               children: [
                 countriesAsync.when(
@@ -435,8 +512,6 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                     controller: _paymentPhoneCtrl,
                     countries: countries,
                     selectedCountry: state.paymentPhoneCountry,
-                    helperText:
-                        'Use the number that will receive the Selcom wallet prompt right now.',
                     onCountryChanged: (value) {
                       if (value == null) {
                         return;
@@ -522,9 +597,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           ),
           const SizedBox(height: 16),
           _card(
-            title: '2. ETR Receipt + Loan basics',
-            subtitle:
-                'Piga picha ya risiti ya ETR na jaza muda wa mkopo pamoja na downpayment iliyolipwa.',
+            title: '2. ETR & mkopo',
+            subtitle: '',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -579,9 +653,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           ),
           const SizedBox(height: 16),
           _card(
-            title: '3. Present the agreement clearly',
-            subtitle:
-                'Once payment succeeds, show the customer the agreement and record the decision honestly.',
+            title: '3. Mkataba',
+            subtitle: '',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -602,8 +675,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                 _decisionTile(
                   selected: state.agreementDecision == 'yes',
                   title: 'Customer accepted the agreement',
-                  subtitle:
-                      'Use this after the customer has read or been clearly guided through the terms.',
+                  subtitle: '',
                   icon: Icons.check_circle_outline,
                   color: AppConstants.success,
                   onTap: paymentReady
@@ -620,8 +692,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                 _decisionTile(
                   selected: state.agreementDecision == 'no',
                   title: 'Customer did not accept',
-                  subtitle:
-                      'Use this only if the customer declines after the explanation.',
+                  subtitle: '',
                   icon: Icons.cancel_outlined,
                   color: AppConstants.error,
                   onTap: paymentReady
@@ -639,9 +710,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           ),
           const SizedBox(height: 16),
           _card(
-            title: '4. Capture signatures (Customer + FO)',
-            subtitle:
-                'Mteja anasaini kwanza, kisha FO anasaini kuhakiki mchakato.',
+            title: '4. Saini',
+            subtitle: '',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -657,8 +727,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                 const SizedBox(height: 14),
                 _signatureCard(
                   title: 'Customer Signature',
-                  subtitle:
-                      'Ask the customer to sign after confirming they understand the agreement.',
+                  subtitle: '',
                   controller: _customerSignatureController,
                   onClear: () {
                     _customerSignatureController.clear();
@@ -668,8 +737,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                 const SizedBox(height: 14),
                 _signatureCard(
                   title: 'FO Signature',
-                  subtitle:
-                      'The field officer signs to confirm the explanation and document handover were completed.',
+                  subtitle: '',
                   controller: _foSignatureController,
                   onClear: () {
                     _foSignatureController.clear();
@@ -681,9 +749,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           ),
           const SizedBox(height: 16),
           _card(
-            title: '5. Final application review',
-            subtitle:
-                'These notes help reviewers understand the customer context without repeating the interview.',
+            title: '5. Taarifa za mwisho',
+            subtitle: '',
             child: Column(
               children: [
                 GridView.count(
@@ -765,8 +832,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                   },
                   decoration: const InputDecoration(
                     labelText: 'FO Notes',
-                    hintText:
-                        'Mention any useful observation, customer concern, or clarification given during the visit.',
+                    hintText: 'Maelezo mafupi (si lazima).',
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -789,47 +855,14 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           ),
           const SizedBox(height: 12),
           AppButton(
-            label: 'Save and Review Later',
+            label: S.of(ref).saveAsDraft,
             width: double.infinity,
             outlined: true,
             icon: Icons.save_outlined,
-            onPressed: () => context.go('/customers'),
+            isLoading: _savingDraft,
+            onPressed: _savingDraft ? null : () => _onSaveAsDraft(),
           ),
           const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  Widget _foScriptCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFFBEB), Color(0xFFFFF7ED)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: AppConstants.primary.withValues(alpha: 0.12),
-        ),
-      ),
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.forum_outlined, color: AppConstants.primary, size: 20),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Helpful script: “Kabla sijatuma maombi, nitakutumia ombi la malipo ya kuanzia, kisha nitakuonesha makubaliano ya simu hii, tukisaini wote nitawasilisha taarifa zako kwa ukamilifu.”',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.55,
-                color: AppConstants.textSecondary,
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -854,7 +887,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Quick Application Snapshot',
+            'Muhtasari',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w800,
@@ -901,7 +934,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Final Mile Flow',
+            'Maendeleo',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w800,
@@ -910,7 +943,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           ),
           const SizedBox(height: 6),
           Text(
-            'Deposit, agreement, signatures, na handover proof vikikaa sawa hapa, submit ya mwisho inakuwa safi na ya kuaminika.',
+            'Malipo · mkataba · saini · ETR',
             style: TextStyle(
               fontSize: 12,
               height: 1.45,
@@ -1004,15 +1037,17 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
               color: AppConstants.textPrimary,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.45,
-              color: AppConstants.textSecondary,
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.45,
+                color: AppConstants.textSecondary,
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 16),
           child,
         ],
@@ -1071,8 +1106,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                     const SizedBox(height: 4),
                     Text(
                       paymentReady
-                          ? 'Payment is successful. You can now show the agreement, guide the customer, and record the decision.'
-                          : 'Finish the payment first. Agreement presentation unlocks immediately after successful payment.',
+                          ? 'Malipo tayari. Onyesha mkataba.'
+                          : 'Malipo kwanza.',
                       style: const TextStyle(
                         fontSize: 12,
                         height: 1.45,
@@ -1195,34 +1230,9 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 const Text(
-                  'Preview focus',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppConstants.textHint,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '• Device and deposit confirmation',
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.45,
-                    color: AppConstants.textSecondary,
-                  ),
-                ),
-                const Text(
-                  '• Customer obligations and payment expectations',
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.45,
-                    color: AppConstants.textSecondary,
-                  ),
-                ),
-                const Text(
-                  '• Signature and handover acknowledgement',
+                  'Simu, malipo, saini.',
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.45,
@@ -1252,25 +1262,34 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     String depositAmount,
   ) {
     final isComplete = paymentContext?.isCompleted == true;
+    final isFailed = paymentContext?.isFailed == true;
     final hasPrompt = paymentContext != null;
     final color = isComplete
         ? AppConstants.success
-        : hasPrompt
-            ? AppConstants.warning
-            : AppConstants.info;
+        : isFailed
+            ? AppConstants.error
+            : hasPrompt
+                ? AppConstants.warning
+                : AppConstants.info;
     final background = isComplete
         ? const Color(0xFFF0FDF4)
-        : hasPrompt
-            ? const Color(0xFFFFFBEB)
-            : const Color(0xFFEFF6FF);
+        : isFailed
+            ? AppConstants.errorSurface
+            : hasPrompt
+                ? const Color(0xFFFFFBEB)
+                : const Color(0xFFEFF6FF);
     final label = isComplete
         ? 'Payment successful'
+        : isFailed
+            ? 'Payment not completed'
+            : hasPrompt
+                ? 'Waiting for customer payment'
+                : 'Payment prompt not started';
+    final pendingSummary = isFailed
+        ? 'Cancelled, rejected, or timed out (Selcom: ${paymentContext?.paymentStatus ?? '—'}). Send a new push if the customer should try again.'
         : hasPrompt
-            ? 'Waiting for customer payment'
-            : 'Payment prompt not started';
-    final pendingSummary = hasPrompt
-        ? 'Prompt sent to ${paymentContext.phone ?? '-'}${paymentContext.reference != null ? ' • Ref ${paymentContext.reference}' : ''}.'
-        : 'Deposit required before final submission.';
+            ? 'Prompt sent to ${paymentContext.phone ?? '-'}${paymentContext.reference != null ? ' • Ref ${paymentContext.reference}' : ''}. Status updates from Selcom automatically.'
+            : 'Deposit required before final submission.';
     final confirmedAmount = paymentContext?.amount ?? depositAmount;
 
     return Container(
@@ -1296,9 +1315,11 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                 child: Icon(
                   isComplete
                       ? Icons.check_circle_outline
-                      : hasPrompt
-                          ? Icons.hourglass_top_rounded
-                          : Icons.phone_iphone_outlined,
+                      : isFailed
+                          ? Icons.cancel_outlined
+                          : hasPrompt
+                              ? Icons.hourglass_top_rounded
+                              : Icons.phone_iphone_outlined,
                   color: color,
                   size: 20,
                 ),
@@ -1432,15 +1453,17 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                       color: AppConstants.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      height: 1.45,
-                      color: AppConstants.textSecondary,
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        height: 1.45,
+                        color: AppConstants.textSecondary,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -1467,15 +1490,17 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
             color: AppConstants.textPrimary,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            fontSize: 12,
-            height: 1.45,
-            color: AppConstants.textSecondary,
+        if (subtitle.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: AppConstants.textSecondary,
+            ),
           ),
-        ),
+        ],
         const SizedBox(height: 10),
         SignaturePad(controller: controller),
         const SizedBox(height: 10),
@@ -1698,7 +1723,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
             ),
             const SizedBox(height: 10),
             const Text(
-              'The customer file has moved to review with payment and agreement details attached cleanly.',
+              'Ombi limetumwa.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
@@ -1740,15 +1765,17 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
             color: AppConstants.textPrimary,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            fontSize: 12,
-            height: 1.5,
-            color: AppConstants.textSecondary,
+        if (subtitle.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.5,
+              color: AppConstants.textSecondary,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

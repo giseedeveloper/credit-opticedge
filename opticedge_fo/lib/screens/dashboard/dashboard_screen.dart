@@ -11,6 +11,7 @@ import '../../core/providers/customer_provider.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../widgets/common/app_color_icon.dart';
 import '../../widgets/common/glass_card.dart';
+import '../../widgets/common/premium_glass_background.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -53,69 +54,71 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final s = S.of(ref);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: RefreshIndicator(
-        color: AppConstants.primary,
-        onRefresh: () async {
-          ref.read(dashboardProvider.notifier).load();
-        },
-        child: CustomScrollView(
-          slivers: [
-            _buildAppBar(user, dashAsync.valueOrNull, onlineAsync),
-            SliverPadding(
-              padding: const EdgeInsets.all(20),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  // Stats
-                  dashAsync.when(
-                    loading: () => _buildStatsShimmer(),
-                    error: (e, _) => _buildErrorBanner(e.toString()),
-                    data: (stats) => _buildStatsGrid(stats),
-                  ),
+      backgroundColor: Colors.transparent,
+      body: PremiumGlassBackground(
+        child: RefreshIndicator(
+          color: AppConstants.primary,
+          onRefresh: () async {
+            ref.read(dashboardProvider.notifier).load();
+          },
+          child: CustomScrollView(
+            slivers: [
+              _buildAppBar(user, dashAsync.valueOrNull, onlineAsync),
+              SliverPadding(
+                padding: const EdgeInsets.all(20),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    // Stats
+                    dashAsync.when(
+                      loading: () => _buildStatsShimmer(),
+                      error: (e, _) => _buildErrorBanner(e.toString()),
+                      data: (stats) => _buildStatsGrid(stats),
+                    ),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                  // Quick Actions
-                  _buildSectionTitle(s.quickActions),
-                  const SizedBox(height: 12),
-                  _buildQuickActions(user, s),
+                    // Quick Actions
+                    _buildSectionTitle(s.quickActions),
+                    const SizedBox(height: 12),
+                    _buildQuickActions(user, s),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-                  // Recent customers header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildSectionTitle(s.recentCustomers),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Latest registrations and status changes',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.55),
+                    // Recent customers header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionTitle(s.recentCustomers),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Latest registrations and status changes',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.55),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      TextButton(
-                        onPressed: () => context.go('/customers'),
-                        child: Text(s.seeAll,
-                            style: const TextStyle(
-                                fontSize: 13, color: AppConstants.primary)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildRecentCustomers(),
-                ]),
+                          ],
+                        ),
+                        TextButton(
+                          onPressed: () => context.go('/customers'),
+                          child: Text(s.seeAll,
+                              style: const TextStyle(
+                                  fontSize: 13, color: AppConstants.primary)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildRecentCustomers(),
+                  ]),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -651,8 +654,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       child: GlassCard(
         tint: action.surface,
         borderRadius: BorderRadius.circular(22),
-        borderColor: action.color.withValues(alpha: 0.22),
+        borderColor: action.color.withValues(alpha: 0.28),
+        blurSigma: 22,
         padding: const EdgeInsets.all(16),
+        boxShadow: [
+          BoxShadow(
+            color: action.color.withValues(alpha: 0.12),
+            blurRadius: 26,
+            offset: const Offset(0, 14),
+          ),
+        ],
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -911,8 +922,16 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> {
           child: GlassCard(
             tint: widget.data.background,
             borderRadius: BorderRadius.circular(24),
-            borderColor: widget.data.color.withValues(alpha: 0.18),
+            borderColor: widget.data.color.withValues(alpha: 0.24),
+            blurSigma: 22,
             padding: const EdgeInsets.all(16),
+            boxShadow: [
+              BoxShadow(
+                color: widget.data.color.withValues(alpha: 0.10),
+                blurRadius: 28,
+                offset: const Offset(0, 14),
+              ),
+            ],
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1018,11 +1037,12 @@ class _CustomerTile extends StatelessWidget {
         tint: Colors.white,
         borderColor: borderColor,
         borderRadius: BorderRadius.circular(20),
+        blurSigma: 20,
         padding: const EdgeInsets.all(14),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x120B1220),
-            blurRadius: 18,
+            color: Color(0x180B1220),
+            blurRadius: 22,
             offset: Offset(0, 12),
           ),
         ],

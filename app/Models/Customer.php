@@ -49,7 +49,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
     'deposit_payment_status', 'deposit_payment_amount', 'deposit_payment_reference', 'deposit_paid_at',
     'asset_release_status', 'asset_released_at', 'asset_released_by',
     // Step 7 – Submit metadata
-    'fo_notes', 'application_source',
+    'fo_notes', 'application_source', 'kyc_fo_saved_as_draft_at',
     // Customer portal auth
     'pin',
 ])]
@@ -105,6 +105,7 @@ class Customer extends Model implements Authenticatable, HasMedia
             'deposit_payment_amount' => 'decimal:2',
             'deposit_paid_at' => 'datetime',
             'asset_released_at' => 'datetime',
+            'kyc_fo_saved_as_draft_at' => 'datetime',
             'location_metadata' => 'array',
             'metadata' => 'array',
             'phone_metadata' => 'array',

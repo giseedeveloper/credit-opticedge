@@ -216,13 +216,6 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionHeader(
-              'Hatua ya 1: Device (Kifaa)',
-              'Piga picha 3 za uthibitisho, chagua model, chagua repayment cycle, weka extras, kisha jaza IMEI/cash/deposit.',
-            ),
-            const SizedBox(height: 18),
-            _introCard(),
-            const SizedBox(height: 18),
             _scanOverviewCard(
               identifierCount: identifierCount,
               attachedPhotos: attachedPhotos,
@@ -234,20 +227,11 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Picha (Scan) — required',
+                    'Picha (Scan)',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                       color: AppConstants.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Piga picha za IMEI sticker, boksi la simu, na muonekano wa simu (device body).',
-                    style: TextStyle(
-                      fontSize: 12,
-                      height: 1.45,
-                      color: AppConstants.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -583,34 +567,6 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
     );
   }
 
-  Widget _introCard() {
-    return const GlassCard(
-      tint: AppConstants.primarySurface,
-      borderColor: AppConstants.primary,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppColorIcon(
-            assetName: AppIconAssets.register,
-            size: 20,
-            semanticsLabel: 'Helpful script',
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Script: “Tupige picha za IMEI sticker, boksi na simu, kisha tuchague model na mzunguko wa marejesho. Ukishaweka cash price na deposit, maombi yataenda haraka bila kurudiwa.”',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.55,
-                color: AppConstants.textSecondary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _scanOverviewCard({
     required int identifierCount,
     required int attachedPhotos,
@@ -660,7 +616,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Device Scan Experience',
+                      'Maendeleo',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
@@ -669,7 +625,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Scan lane: photos 3/3 + identifiers + cash/deposit.',
+                      'Picha 3/3 · identifiers · bei/deposit',
                       style: TextStyle(
                         fontSize: 12,
                         height: 1.45,
@@ -819,31 +775,6 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _sectionHeader(String title, String subtitle) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: AppConstants.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            fontSize: 12,
-            height: 1.5,
-            color: AppConstants.textSecondary,
-          ),
-        ),
-      ],
     );
   }
 

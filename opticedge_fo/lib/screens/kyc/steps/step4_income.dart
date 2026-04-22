@@ -84,9 +84,7 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionHeader(
-                'Hatua ya 4: Income (Kazi na Kipato)',
-                'Chagua aina ya kazi, mzunguko wa kipato, PEP, kisha jaza kipato na matumizi.'),
+            _sectionHeader('Kazi na kipato', ''),
             const SizedBox(height: 20),
             _label('Occupation Type', optional: true),
             const SizedBox(height: 8),
@@ -189,7 +187,7 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Washa kama mteja ni PEP au ana uhusiano wa karibu na PEP.',
+                          'Washa kama mteja ni PEP.',
                           style: TextStyle(
                             fontSize: 12,
                             height: 1.4,
@@ -212,7 +210,7 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
             _field(_duration, 'Duration at Work',
                 optional: true, hint: 'e.g. 2 years'),
             const SizedBox(height: 24),
-            _sectionHeader('Business Photo', 'Photo of workplace or business'),
+            _sectionHeader('Picha ya biashara', ''),
             const SizedBox(height: 12),
             SizedBox(
               width: 120,
@@ -248,10 +246,12 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: AppConstants.textPrimary)),
-          const SizedBox(height: 2),
-          Text(subtitle,
-              style: const TextStyle(
-                  fontSize: 12, color: AppConstants.textSecondary)),
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(subtitle,
+                style: const TextStyle(
+                    fontSize: 12, color: AppConstants.textSecondary)),
+          ],
         ],
       );
 

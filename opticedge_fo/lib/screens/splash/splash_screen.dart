@@ -270,35 +270,32 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Widget _buildLogo() {
-    return Container(
-      width: 100,
-      height: 100,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.4),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.28),
-            blurRadius: 44,
-            offset: const Offset(0, 14),
-          ),
-          BoxShadow(
-            color: AppConstants.primary.withValues(alpha: 0.18),
-            blurRadius: 32,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Center(
+    return Material(
+      elevation: 14,
+      shadowColor: Colors.black.withValues(alpha: 0.35),
+      borderRadius: BorderRadius.circular(32),
+      clipBehavior: Clip.antiAlias,
+      color: Colors.transparent,
+      child: SizedBox(
+        width: 120,
+        height: 120,
         child: Image.asset(
           'assets/images/app_logo.png',
-          width: 60,
-          height: 60,
-          fit: BoxFit.contain,
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.high,
+          gaplessPlayback: true,
+          errorBuilder: (_, __, ___) => Container(
+            color: Colors.white.withValues(alpha: 0.2),
+            alignment: Alignment.center,
+            child: const Text(
+              'OE',
+              style: TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -120,10 +120,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionHeader(
-              'Identity & Evidence',
-              'Jaza taarifa za utambulisho kwa mpangilio safi, kisha piga picha zinazofanya review ipite haraka bila kurudishwa.',
-            ),
+            _sectionHeader('Utambulisho', ''),
             const SizedBox(height: 18),
             _progressHero(
               completionPercent: completionPercent,
@@ -132,9 +129,8 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
             ).animate().fadeIn(duration: 260.ms).slideY(begin: 0.08, end: 0),
             const SizedBox(height: 16),
             _card(
-              title: '1. Personal details',
-              subtitle:
-                  'Majina na profile basics ziwe sawa kabisa na kitambulisho kinachotumika.',
+              title: '1. Taarifa binafsi',
+              subtitle: '',
               child: Column(
                 children: [
                   _field(
@@ -177,9 +173,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                           child: _optionTile(
                             selected: selected,
                             title: isMale ? 'Male' : 'Female',
-                            subtitle: isMale
-                                ? 'Matches official ID'
-                                : 'Matches official ID',
+                            subtitle: '',
                             icon: isMale
                                 ? Icons.male_rounded
                                 : Icons.female_rounded,
@@ -200,9 +194,8 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
             ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0),
             const SizedBox(height: 16),
             _card(
-              title: '2. ID details',
-              subtitle:
-                  'Select the document type used today, then enter the number exactly as shown.',
+              title: '2. Kitambulisho',
+              subtitle: '',
               child: Column(
                 children: [
                   GestureDetector(
@@ -265,9 +258,8 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
             ).animate().fadeIn(delay: 120.ms).slideY(begin: 0.06, end: 0),
             const SizedBox(height: 16),
             _card(
-              title: '3. Capture verification evidence',
-              subtitle:
-                  'Clear photos reduce back-and-forth. Keep the frame bright, full, and readable.',
+              title: '3. Mapicha',
+              subtitle: '',
               child: Column(
                 children: [
                   _evidenceBanner(capturedPhotos: capturedPhotos),
@@ -317,25 +309,6 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  const Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _HintChip(
-                        icon: Icons.wb_sunny_outlined,
-                        label: 'Use bright light',
-                      ),
-                      _HintChip(
-                        icon: Icons.crop_free_rounded,
-                        label: 'Keep edges visible',
-                      ),
-                      _HintChip(
-                        icon: Icons.visibility_outlined,
-                        label: 'Text must be readable',
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ).animate().fadeIn(delay: 180.ms).slideY(begin: 0.06, end: 0),
@@ -366,15 +339,17 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
             color: AppConstants.textPrimary,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            fontSize: 12,
-            height: 1.5,
-            color: AppConstants.textSecondary,
+        if (subtitle.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.5,
+              color: AppConstants.textSecondary,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -425,7 +400,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Identity Confidence',
+                      'Maendeleo',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
@@ -434,7 +409,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '$completionPercent% ready • $capturedPhotos/4 evidence items captured',
+                      '$completionPercent% · picha $capturedPhotos/4',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.white.withValues(alpha: 0.82),
@@ -459,15 +434,6 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
               valueColor: const AlwaysStoppedAnimation<Color>(
                 AppConstants.primaryLight,
               ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            'Guide the customer calmly, confirm names against the ID, then capture the photos before moving on.',
-            style: TextStyle(
-              fontSize: 12,
-              height: 1.5,
-              color: Colors.white,
             ),
           ),
         ],
@@ -522,15 +488,17 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
               color: AppConstants.textPrimary,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.45,
-              color: AppConstants.textSecondary,
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.45,
+                color: AppConstants.textSecondary,
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 16),
           child,
         ],
@@ -583,7 +551,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Front and back ID are required. Headshot and client + FO photo complete the verification story.',
+                  'Mbele, nyuma, sura, picha mteja + FO.',
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.45,
@@ -717,15 +685,17 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                       color: AppConstants.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      height: 1.4,
-                      color: AppConstants.textSecondary,
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        height: 1.4,
+                        color: AppConstants.textSecondary,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -766,42 +736,5 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
       default:
         return Icons.credit_card_outlined;
     }
-  }
-}
-
-class _HintChip extends StatelessWidget {
-  const _HintChip({
-    required this.icon,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppConstants.surfaceMuted,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppConstants.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: AppConstants.info),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppConstants.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

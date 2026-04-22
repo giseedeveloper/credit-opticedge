@@ -90,41 +90,8 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionHeader('Next of Kin',
-                'Capture people the customer trusts and can easily reach.'),
+            _sectionHeader('Mtu wa karibu', ''),
             const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppConstants.success.withValues(alpha: 0.15),
-                ),
-              ),
-              child: const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.support_agent_outlined,
-                    color: AppConstants.success,
-                    size: 20,
-                  ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Helpful script: “Tafadhali taja mtu wa karibu ambaye tunaweza kumfikia pale tutakapohitaji uthibitisho au mawasiliano ya haraka.”',
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.5,
-                        color: AppConstants.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
             countriesAsync.when(
               loading: () => const LinearProgressIndicator(
                 color: AppConstants.primary,
@@ -278,9 +245,7 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
             controller: phoneCtrl,
             countries: countries.cast(),
             selectedCountry: selectedCountry,
-            helperText: required
-                ? 'Choose a number that the next of kin answers quickly.'
-                : 'Add another trusted contact if available.',
+            helperText: null,
             onCountryChanged: onCountryChanged,
           ),
           const SizedBox(height: 12),
@@ -342,10 +307,12 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: AppConstants.textPrimary)),
-          const SizedBox(height: 2),
-          Text(subtitle,
-              style: const TextStyle(
-                  fontSize: 12, color: AppConstants.textSecondary)),
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(subtitle,
+                style: const TextStyle(
+                    fontSize: 12, color: AppConstants.textSecondary)),
+          ],
         ],
       );
 

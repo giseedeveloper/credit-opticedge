@@ -108,6 +108,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('/{customer_id}/payment/status', [KycApiController::class, 'paymentStatus']);
                 Route::post('/{customer_id}/stage3', [KycApiController::class, 'step7Submit']);
                 Route::post('/{customer_id}/step7', [KycApiController::class, 'step7Submit']);
+                Route::post('/{customer_id}/save-draft', [KycApiController::class, 'markFoSavedAsDraft']);
                 Route::get('/{customer_id}/status', [KycApiController::class, 'applicationStatus']);
             });
 

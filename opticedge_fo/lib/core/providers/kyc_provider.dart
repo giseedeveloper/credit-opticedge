@@ -121,6 +121,7 @@ class KycDraftState {
   final String monthlyExpenses;
   final String incomePaymentCycle;
   final String durationAtWork;
+  final bool isPep;
   final File? businessPhoto;
 
   // Step 5 — NOK
@@ -142,8 +143,11 @@ class KycDraftState {
   final String paymentPhone;
   final String paymentPhoneCountry;
   final String agreementDecision;
+  final String loanTermMonths;
+  final String downpaymentAmount;
   final String customerSignatureData;
   final String foSignatureData;
+  final File? etrReceiptPhoto;
   final File? assetHandoverList;
   final String assetHandoverNotes;
   final String foNotes;
@@ -209,6 +213,7 @@ class KycDraftState {
     this.monthlyExpenses = '',
     this.incomePaymentCycle = 'monthly',
     this.durationAtWork = '',
+    this.isPep = false,
     this.businessPhoto,
     this.nokName = '',
     this.nokPhone = '',
@@ -224,8 +229,11 @@ class KycDraftState {
     this.paymentPhone = '',
     this.paymentPhoneCountry = 'TZ',
     this.agreementDecision = '',
+    this.loanTermMonths = '',
+    this.downpaymentAmount = '',
     this.customerSignatureData = '',
     this.foSignatureData = '',
+    this.etrReceiptPhoto,
     this.assetHandoverList,
     this.assetHandoverNotes = '',
     this.foNotes = '',
@@ -294,6 +302,7 @@ class KycDraftState {
     String? monthlyExpenses,
     String? incomePaymentCycle,
     String? durationAtWork,
+    bool? isPep,
     Object? businessPhoto = _unset,
     String? nokName,
     String? nokPhone,
@@ -309,8 +318,11 @@ class KycDraftState {
     String? paymentPhone,
     String? paymentPhoneCountry,
     String? agreementDecision,
+    String? loanTermMonths,
+    String? downpaymentAmount,
     String? customerSignatureData,
     String? foSignatureData,
+    Object? etrReceiptPhoto = _unset,
     Object? assetHandoverList = _unset,
     String? assetHandoverNotes,
     String? foNotes,
@@ -394,6 +406,7 @@ class KycDraftState {
       monthlyExpenses: monthlyExpenses ?? this.monthlyExpenses,
       incomePaymentCycle: incomePaymentCycle ?? this.incomePaymentCycle,
       durationAtWork: durationAtWork ?? this.durationAtWork,
+      isPep: isPep ?? this.isPep,
       businessPhoto: identical(businessPhoto, _unset)
           ? this.businessPhoto
           : businessPhoto as File?,
@@ -411,9 +424,14 @@ class KycDraftState {
       paymentPhone: paymentPhone ?? this.paymentPhone,
       paymentPhoneCountry: paymentPhoneCountry ?? this.paymentPhoneCountry,
       agreementDecision: agreementDecision ?? this.agreementDecision,
+      loanTermMonths: loanTermMonths ?? this.loanTermMonths,
+      downpaymentAmount: downpaymentAmount ?? this.downpaymentAmount,
       customerSignatureData:
           customerSignatureData ?? this.customerSignatureData,
       foSignatureData: foSignatureData ?? this.foSignatureData,
+      etrReceiptPhoto: identical(etrReceiptPhoto, _unset)
+          ? this.etrReceiptPhoto
+          : etrReceiptPhoto as File?,
       assetHandoverList: identical(assetHandoverList, _unset)
           ? this.assetHandoverList
           : assetHandoverList as File?,
@@ -465,6 +483,9 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         break;
       case 'business':
         state = state.copyWith(businessPhoto: file);
+        break;
+      case 'etr_receipt':
+        state = state.copyWith(etrReceiptPhoto: file);
         break;
       case 'handover':
         state = state.copyWith(assetHandoverList: file);
@@ -966,6 +987,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         'income_payment_cycle': _incomeCycleValueForApi(
           state.incomePaymentCycle,
         ),
+        'is_pep': state.isPep ? '1' : '0',
         if (state.durationAtWork.isNotEmpty)
           'duration_at_work': state.durationAtWork,
         if (state.businessPhoto != null)
@@ -1213,9 +1235,10 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       pendingRetryStep: null,
     );
 
-    final uploadErr = KycUploadLimits.validateMany(
-      [(state.assetHandoverList, 'Asset handover document')],
-    );
+    final uploadErr = KycUploadLimits.validateMany([
+      (state.etrReceiptPhoto, 'ETR receipt photo'),
+      (state.assetHandoverList, 'Asset handover document'),
+    ]);
     if (uploadErr != null) {
       state = state.copyWith(isSubmitting: false, error: uploadErr);
       return null;
@@ -1227,12 +1250,25 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         if (state.foNotes.isNotEmpty) 'fo_notes': state.foNotes,
         'application_source': state.applicationSource,
         'agreement_decision': state.agreementDecision,
+        if (state.paymentPhone.isNotEmpty) 'payment_phone': state.paymentPhone,
+        if (state.loanTermMonths.isNotEmpty)
+          'loan_term_months': state.loanTermMonths,
+        if (state.downpaymentAmount.isNotEmpty)
+          'downpayment_amount': state.downpaymentAmount,
         'customer_signature': state.customerSignatureData,
         'fo_signature': state.foSignatureData,
-        'asset_handover_list': await MultipartFile.fromFile(
-          state.assetHandoverList!.path,
-          filename: 'handover.${state.assetHandoverList!.path.split('.').last}',
-        ),
+        if (state.etrReceiptPhoto != null)
+          'etr_receipt_photo': await MultipartFile.fromFile(
+            state.etrReceiptPhoto!.path,
+            filename:
+                'etr.${state.etrReceiptPhoto!.path.split('.').last}',
+          ),
+        if (state.assetHandoverList != null)
+          'asset_handover_list': await MultipartFile.fromFile(
+            state.assetHandoverList!.path,
+            filename:
+                'handover.${state.assetHandoverList!.path.split('.').last}',
+          ),
         if (state.assetHandoverNotes.isNotEmpty)
           'asset_handover_notes': state.assetHandoverNotes,
       });

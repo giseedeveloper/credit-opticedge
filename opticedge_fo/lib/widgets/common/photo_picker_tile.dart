@@ -134,12 +134,15 @@ class PhotoPickerTile extends StatelessWidget {
       onTap: () => _showOptions(context),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final isCompactTile =
-              constraints.maxWidth < 120 || constraints.maxHeight < 110;
+          final maxW = constraints.maxWidth;
+          final maxH = constraints.maxHeight;
+          final isCompactTile = maxW < 120 || maxH < 110;
+          final tileHeight = maxH.isFinite ? maxH : 100.0;
 
           return AnimatedContainer(
             duration: const Duration(milliseconds: 240),
-            height: 100,
+            height: tileHeight,
+            width: maxW.isFinite ? maxW : null,
             decoration: BoxDecoration(
               gradient: file != null
                   ? null
@@ -210,75 +213,89 @@ class PhotoPickerTile extends StatelessWidget {
                     ),
                   )
                 : Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 8,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isCompactTile ? 6 : 8,
+                      vertical: isCompactTile ? 4 : 8,
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: isCompactTile ? 36 : 44,
-                          height: isCompactTile ? 36 : 44,
-                          decoration: BoxDecoration(
-                            color: AppConstants.surface,
-                            borderRadius: BorderRadius.circular(
-                              isCompactTile ? 14 : 16,
-                            ),
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.center,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: maxW.isFinite
+                                ? (maxW - (isCompactTile ? 12 : 16))
+                                    .clamp(0, double.infinity)
+                                : 160,
                           ),
-                          child: Icon(
-                            Icons.document_scanner_outlined,
-                            color: AppConstants.primary,
-                            size: isCompactTile ? 20 : 24,
-                          ),
-                        ),
-                        SizedBox(height: isCompactTile ? 6 : 8),
-                        Text(
-                          label,
-                          maxLines: isCompactTile ? 2 : 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: isCompactTile ? 10 : 11,
-                            fontWeight: FontWeight.w700,
-                            color: AppConstants.textPrimary,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        if (!isCompactTile) ...[
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Tap to scan or attach',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: AppConstants.textSecondary,
-                            ),
-                          ),
-                        ],
-                        if (required && !isCompactTile)
-                          Container(
-                            margin: const EdgeInsets.only(top: 5),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppConstants.errorSurface,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: const Text(
-                              'Required',
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: AppConstants.error,
-                                fontWeight: FontWeight.w700,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: isCompactTile ? 32 : 44,
+                                height: isCompactTile ? 32 : 44,
+                                decoration: BoxDecoration(
+                                  color: AppConstants.surface,
+                                  borderRadius: BorderRadius.circular(
+                                    isCompactTile ? 12 : 16,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.document_scanner_outlined,
+                                  color: AppConstants.primary,
+                                  size: isCompactTile ? 18 : 24,
+                                ),
                               ),
-                            ),
+                              SizedBox(height: isCompactTile ? 4 : 8),
+                              Text(
+                                label,
+                                maxLines: isCompactTile ? 2 : 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: isCompactTile ? 9.5 : 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppConstants.textPrimary,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              if (!isCompactTile) ...[
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Tap to scan or attach',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppConstants.textSecondary,
+                                  ),
+                                ),
+                              ],
+                              if (required && !isCompactTile)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 5),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppConstants.errorSurface,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: const Text(
+                                    'Required',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: AppConstants.error,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                      ],
+                        ),
+                      ),
                     ),
                   ),
           );

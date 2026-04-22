@@ -6,6 +6,7 @@ import '../../../config/constants.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/common/glass_card.dart';
 import '../../../widgets/kyc/phone_number_field.dart';
 
 class Step3ContactScreen extends ConsumerStatefulWidget {
@@ -239,38 +240,57 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  branchesAsync.when(
-                    loading: () => const LinearProgressIndicator(
-                      color: AppConstants.primary,
-                    ),
-                    error: (_, __) => const Text(
-                      'Failed to load branches',
-                      style: TextStyle(color: AppConstants.error),
-                    ),
-                    data: (branches) => DropdownButtonFormField<String>(
-                      isExpanded: true,
-                      initialValue: _selectedBranch,
-                      decoration: const InputDecoration(
-                        labelText: 'Branch',
-                        hintText: 'Choose the branch serving this customer',
-                        prefixIcon:
-                            Icon(Icons.location_city_outlined, size: 18),
+                  if ((signedInUser?.branch?.id ?? '').isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppConstants.surfaceMuted,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppConstants.border),
                       ),
-                      items: branches
-                          .map(
-                            (branch) => DropdownMenuItem<String>(
-                              value: branch.id,
-                              child: Text(branch.name),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedBranch = value;
-                        });
-                      },
+                      child: Text(
+                        'Branch (auto): ${signedInUser!.branch!.name}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppConstants.textPrimary,
+                        ),
+                      ),
+                    )
+                  else
+                    branchesAsync.when(
+                      loading: () => const LinearProgressIndicator(
+                        color: AppConstants.primary,
+                      ),
+                      error: (_, __) => const Text(
+                        'Failed to load branches',
+                        style: TextStyle(color: AppConstants.error),
+                      ),
+                      data: (branches) => DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        initialValue: _selectedBranch,
+                        decoration: const InputDecoration(
+                          labelText: 'Branch',
+                          hintText: 'Choose the branch serving this customer',
+                          prefixIcon:
+                              Icon(Icons.location_city_outlined, size: 18),
+                        ),
+                        items: branches
+                            .map(
+                              (branch) => DropdownMenuItem<String>(
+                                value: branch.id,
+                                child: Text(branch.name),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedBranch = value;
+                          });
+                        },
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 12),
                   Container(
                     width: double.infinity,
@@ -554,20 +574,8 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
     required String subtitle,
     required Widget child,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppConstants.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppConstants.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+    return GlassCard(
+      tint: Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

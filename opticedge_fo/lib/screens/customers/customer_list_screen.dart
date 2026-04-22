@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
 import '../../core/providers/customer_provider.dart';
+import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/status_badge.dart';
 
 class CustomerListScreen extends ConsumerStatefulWidget {
@@ -95,43 +96,56 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen>
               Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: TextField(
-                  controller: _searchCtrl,
-                  onChanged: _onSearchChanged,
-                  decoration: InputDecoration(
-                    hintText: 'Search name, phone, NIDA...',
-                    hintStyle: const TextStyle(fontSize: 13),
-                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                    suffixIcon: _searchCtrl.text.isNotEmpty
-                        ? GestureDetector(
-                            onTap: () {
-                              _searchDebounce?.cancel();
-                              _searchCtrl.clear();
-                              ref
-                                  .read(customerListProvider.notifier)
-                                  .setSearch('');
-                            },
-                            child: const Icon(Icons.clear, size: 18),
-                          )
-                        : null,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    filled: true,
-                    fillColor: AppConstants.background,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                          color: AppConstants.border, width: 1),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                          color: AppConstants.border, width: 1),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                          color: AppConstants.primary, width: 1.5),
+                child: GlassCard(
+                  tint: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 2,
+                  ),
+                  child: TextField(
+                    controller: _searchCtrl,
+                    onChanged: _onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Search name, phone, NIDA...',
+                      hintStyle: const TextStyle(fontSize: 13),
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                      suffixIcon: _searchCtrl.text.isNotEmpty
+                          ? GestureDetector(
+                              onTap: () {
+                                _searchDebounce?.cancel();
+                                _searchCtrl.clear();
+                                ref
+                                    .read(customerListProvider.notifier)
+                                    .setSearch('');
+                              },
+                              child: const Icon(Icons.clear, size: 18),
+                            )
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.08),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: AppConstants.border,
+                          width: 1,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: AppConstants.primary,
+                          width: 1.5,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -248,20 +262,10 @@ class _CustomerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: GlassCard(
+        tint: Colors.white,
+        borderRadius: BorderRadius.circular(18),
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppConstants.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppConstants.border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
         child: Row(
           children: [
             _CustomerAvatar(

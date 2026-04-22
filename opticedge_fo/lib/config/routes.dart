@@ -142,9 +142,9 @@ class _MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final navBg = isDark ? const Color(0xFF1A1D27) : Colors.white;
+    final navBg = isDark ? DesignTokens.darkNavBarBg : Colors.white;
     final navBorder =
-        isDark ? const Color(0xFF2A2D3A) : const Color(0xFFE5E7EB);
+        isDark ? DesignTokens.darkNavBarBorder : const Color(0xFFE2E8F0);
     final s = S.of(ref);
 
     return Scaffold(
@@ -155,9 +155,11 @@ class _MainShell extends ConsumerWidget {
           border: Border(top: BorderSide(color: navBorder, width: 1)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, -2),
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.45)
+                  : DesignTokens.primary.withValues(alpha: 0.06),
+              blurRadius: isDark ? 20 : 16,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
@@ -191,17 +193,22 @@ class _MainShell extends ConsumerWidget {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: isDark
+                                ? DesignTokens.darkSurface
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: DesignTokens.primaryLight
-                                  .withValues(alpha: 0.45),
+                              color: isDark
+                                  ? DesignTokens.darkBorder
+                                  : DesignTokens.primaryLight
+                                      .withValues(alpha: 0.45),
                               width: 1.2,
                             ),
                             boxShadow: [
                               BoxShadow(
                                 color: DesignTokens.primary
-                                    .withValues(alpha: 0.35),
+                                    .withValues(
+                                        alpha: isDark ? 0.22 : 0.35),
                                 blurRadius: 14,
                                 offset: const Offset(0, 6),
                               ),

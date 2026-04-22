@@ -3,6 +3,160 @@ const collectDetectionValues = (items = []) =>
         .map((item) => item?.rawValue ?? item?.text ?? "")
         .filter((value) => typeof value === "string" && value.trim() !== "");
 
+const createObjectUrl = (file) => {
+    try {
+        return URL.createObjectURL(file);
+    } catch (_) {
+        return null;
+    }
+};
+
+const detectWithZxing = async (file) => {
+    const url = createObjectUrl(file);
+
+    if (!url) {
+        return [];
+    }
+
+    try {
+        const { BrowserMultiFormatReader } = await import("@zxing/browser");
+        const reader = new BrowserMultiFormatReader();
+
+        // decodeFromImageUrl throws if nothing found; we treat that as empty.
+        const result = await reader.decodeFromImageUrl(url);
+        const value = result?.getText?.() ?? "";
+        return value && typeof value === "string" ? [value] : [];
+    } catch (_) {
+        return [];
+    } finally {
+        URL.revokeObjectURL(url);
+    }
+};
+
+const detectWithTesseract = async (file) => {
+    try {
+        const Tesseract = await import("tesseract.js");
+        const { data } = await Tesseract.recognize(file, "eng", {
+            logger: () => {},
+        });
+        return typeof data?.text === "string" ? data.text : "";
+    } catch (_) {
+        return "";
+    }
+};
+
+const extractEmailFromText = (rawText) => {
+    if (typeof rawText !== "string" || rawText.trim() === "") {
+        return null;
+    }
+
+    const match = rawText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+    return match?.[0] ? match[0].toLowerCase() : null;
+};
+
+const extractLikelyModelLine = (rawText) => {
+    if (typeof rawText !== "string" || rawText.trim() === "") {
+        return null;
+    }
+
+    // Very lightweight heuristic: pick a line mentioning common handset keywords.
+    const lines = rawText
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .slice(0, 80);
+
+    const keywords = [
+        "GALAXY",
+        "SAMSUNG",
+        "INFINIX",
+        "TECNO",
+        "ITEL",
+        "IPHONE",
+        "XIAOMI",
+        "REDMI",
+        "OPPO",
+        "VIVO",
+        "REALME",
+        "NOKIA",
+        "HUAWEI",
+        "PIXEL",
+        "128GB",
+        "64GB",
+        "256GB",
+    ];
+
+    const scored = lines
+        .map((line) => {
+            const upper = line.toUpperCase();
+            const score = keywords.reduce(
+                (acc, key) => acc + (upper.includes(key) ? 1 : 0),
+                0
+            );
+            return { line, score };
+        })
+        .filter((row) => row.score > 0)
+        .sort((a, b) => b.score - a.score);
+
+    return scored[0]?.line ?? null;
+};
+
+const extractModelCode = (rawText) => {
+    if (typeof rawText !== "string" || rawText.trim() === "") {
+        return null;
+    }
+
+    // Example: SM-A065F/DS
+    const match = rawText.match(/\bSM-[A-Z0-9]{3,10}(?:\/[A-Z0-9]{1,6})?\b/i);
+    return match?.[0] ? match[0].toUpperCase() : null;
+};
+
+const extractRamStorage = (rawText) => {
+    if (typeof rawText !== "string" || rawText.trim() === "") {
+        return { ram: null, storage: null };
+    }
+
+    // Example: 4GB|64GB or 4GB | 64GB
+    const match = rawText.match(/(\d{1,2})\s*GB\s*\|\s*(\d{2,4})\s*GB/i);
+
+    if (!match) {
+        return { ram: null, storage: null };
+    }
+
+    return {
+        ram: `${match[1]}GB`,
+        storage: `${match[2]}GB`,
+    };
+};
+
+const extractColor = (rawText) => {
+    if (typeof rawText !== "string" || rawText.trim() === "") {
+        return null;
+    }
+
+    const candidates = [
+        "BLACK",
+        "WHITE",
+        "BLUE",
+        "GREEN",
+        "RED",
+        "SILVER",
+        "GOLD",
+        "PURPLE",
+        "GRAY",
+        "GREY",
+    ];
+
+    const upper = rawText.toUpperCase();
+    const found = candidates.find((c) => upper.includes(c));
+
+    if (!found) {
+        return null;
+    }
+
+    return found === "GREY" ? "GRAY" : found;
+};
+
 const detectDeviceIdentifiers = async (file) => {
     if (typeof createImageBitmap !== "function") {
         return { raw_text: "", barcode_values: [], detectors: [] };
@@ -41,6 +195,25 @@ const detectDeviceIdentifiers = async (file) => {
         }
     }
 
+    // Fallbacks for broader browser support:
+    // - ZXing for barcodes
+    // - Tesseract.js for OCR
+    if (barcodeValues.length === 0) {
+        const zxingValues = await detectWithZxing(file);
+        if (zxingValues.length > 0) {
+            barcodeValues.push(...zxingValues);
+            detectors.push("zxing");
+        }
+    }
+
+    if (textValues.length === 0) {
+        const ocrText = await detectWithTesseract(file);
+        if (ocrText && typeof ocrText === "string") {
+            textValues.push(ocrText);
+            detectors.push("tesseract");
+        }
+    }
+
     return {
         raw_text: textValues.join("\n"),
         barcode_values: [...new Set(barcodeValues)],
@@ -58,16 +231,18 @@ window.deviceIdentifierScanner = ($wire, sourceField) => ({
             return;
         }
 
-        if (!("BarcodeDetector" in window) && !("TextDetector" in window)) {
-            this.message = "Auto-scan is not supported in this browser. You can still enter IMEI and serial manually.";
-            return;
-        }
-
         this.message = "Scanning image for IMEI and serial number...";
 
         try {
             const payload = await detectDeviceIdentifiers(file);
             payload.source_field = sourceField;
+            payload.detected_email = extractEmailFromText(payload.raw_text);
+            payload.detected_model_text = extractLikelyModelLine(payload.raw_text);
+            payload.detected_model_code = extractModelCode(payload.raw_text);
+            const ramStorage = extractRamStorage(payload.raw_text);
+            payload.detected_ram = ramStorage.ram;
+            payload.detected_storage = ramStorage.storage;
+            payload.detected_color = extractColor(payload.raw_text);
             await $wire.applyDetectedIdentifiers(payload);
             this.message = "Scan finished. Any detected identifiers were pushed into the form.";
         } catch (error) {

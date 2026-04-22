@@ -8,6 +8,7 @@ import '../../../config/constants.dart';
 import '../../../core/models/kyc_flow_model.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/common/glass_card.dart';
 import '../../../widgets/common/photo_picker_tile.dart';
 import '../../../widgets/kyc/phone_number_field.dart';
 import '../../../widgets/kyc/signature_pad.dart';
@@ -23,6 +24,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     with SingleTickerProviderStateMixin {
   final _notesCtrl = TextEditingController();
   final _paymentPhoneCtrl = TextEditingController();
+  final _loanTermMonthsCtrl = TextEditingController();
+  final _downpaymentCtrl = TextEditingController();
   final _handoverNotesCtrl = TextEditingController();
   final _customerSignatureController = SignaturePadController();
   final _foSignatureController = SignaturePadController();
@@ -50,6 +53,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     _notesCtrl.text = state.foNotes;
     _paymentPhoneCtrl.text =
         state.paymentPhone.isNotEmpty ? state.paymentPhone : state.phone;
+    _loanTermMonthsCtrl.text = state.loanTermMonths;
+    _downpaymentCtrl.text = state.downpaymentAmount;
     _handoverNotesCtrl.text = state.assetHandoverNotes;
 
     _successAnim = AnimationController(
@@ -86,6 +91,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
   void dispose() {
     _notesCtrl.dispose();
     _paymentPhoneCtrl.dispose();
+    _loanTermMonthsCtrl.dispose();
+    _downpaymentCtrl.dispose();
     _handoverNotesCtrl.dispose();
     _customerSignatureController.dispose();
     _foSignatureController.dispose();
@@ -108,6 +115,16 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     if (_handoverNotesCtrl.text != state.assetHandoverNotes) {
       _handoverNotesCtrl.text = state.assetHandoverNotes;
     }
+
+    if (_loanTermMonthsCtrl.text != state.loanTermMonths &&
+        _loanTermMonthsCtrl.text.isEmpty) {
+      _loanTermMonthsCtrl.text = state.loanTermMonths;
+    }
+
+    if (_downpaymentCtrl.text != state.downpaymentAmount &&
+        _downpaymentCtrl.text.isEmpty) {
+      _downpaymentCtrl.text = state.downpaymentAmount;
+    }
   }
 
   Future<void> _requestPayment() async {
@@ -116,6 +133,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
             paymentPhone: _paymentPhoneCtrl.text.trim(),
             foNotes: _notesCtrl.text.trim(),
             assetHandoverNotes: _handoverNotesCtrl.text.trim(),
+            loanTermMonths: _loanTermMonthsCtrl.text.trim(),
+            downpaymentAmount: _downpaymentCtrl.text.trim(),
           ),
         );
     await ref.read(kycProvider.notifier).requestPaymentPrompt();
@@ -137,6 +156,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
             foNotes: _notesCtrl.text.trim(),
             paymentPhone: _paymentPhoneCtrl.text.trim(),
             assetHandoverNotes: _handoverNotesCtrl.text.trim(),
+            loanTermMonths: _loanTermMonthsCtrl.text.trim(),
+            downpaymentAmount: _downpaymentCtrl.text.trim(),
             customerSignatureData:
                 customerSignature ?? state.customerSignatureData,
             foSignatureData: foSignature ?? state.foSignatureData,
@@ -198,11 +219,10 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
       return;
     }
 
-    if (state.assetHandoverList == null &&
-        !(state.agreementContext?.handoverListUrl?.isNotEmpty ?? false)) {
+    if (state.etrReceiptPhoto == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Attach the asset handover checklist first.'),
+          content: Text('Attach ETR receipt photo first.'),
           backgroundColor: AppConstants.error,
         ),
       );
@@ -392,8 +412,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
             agreementReady:
                 agreementContext?.activeDocument != null && paymentReady,
             signatureReady: signatureReady,
-            handoverReady: state.assetHandoverList != null ||
-                (agreementContext?.handoverListUrl?.isNotEmpty ?? false),
+            handoverReady: state.etrReceiptPhoto != null,
           ).animate().fadeIn(duration: 260.ms).slideY(begin: 0.08, end: 0),
           const SizedBox(height: 16),
           _card(
@@ -503,7 +522,64 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           ),
           const SizedBox(height: 16),
           _card(
-            title: '2. Present the agreement clearly',
+            title: '2. ETR Receipt + Loan basics',
+            subtitle:
+                'Piga picha ya risiti ya ETR na jaza muda wa mkopo pamoja na downpayment iliyolipwa.',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _loanTermMonthsCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Loan Term (months)',
+                          prefixIcon: Icon(Icons.calendar_month_outlined, size: 18),
+                        ),
+                        onChanged: (v) => ref.read(kycProvider.notifier).update(
+                              (s) => s.copyWith(loanTermMonths: v.trim()),
+                            ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _downpaymentCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Downpayment (TZS)',
+                          prefixIcon: Icon(Icons.payments_outlined, size: 18),
+                        ),
+                        onChanged: (v) => ref.read(kycProvider.notifier).update(
+                              (s) => s.copyWith(downpaymentAmount: v.trim()),
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: 160,
+                  height: 130,
+                  child: PhotoPickerTile(
+                    label: 'ETR Receipt',
+                    required: true,
+                    file: state.etrReceiptPhoto,
+                    onPicked: (file) => ref
+                        .read(kycProvider.notifier)
+                        .setPhoto('etr_receipt', file),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _card(
+            title: '3. Present the agreement clearly',
             subtitle:
                 'Once payment succeeds, show the customer the agreement and record the decision honestly.',
             child: Column(
@@ -563,9 +639,9 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           ),
           const SizedBox(height: 16),
           _card(
-            title: '3. Capture signatures and handover proof',
+            title: '4. Capture signatures (Customer + FO)',
             subtitle:
-                'The customer signs first, then the field officer signs, then attach the handover checklist.',
+                'Mteja anasaini kwanza, kisha FO anasaini kuhakiki mchakato.',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -576,8 +652,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                               false),
                   hasFoSignature: state.foSignatureData.isNotEmpty ||
                       (agreementContext?.foSignatureUrl?.isNotEmpty ?? false),
-                  hasChecklist: state.assetHandoverList != null ||
-                      (agreementContext?.handoverListUrl?.isNotEmpty ?? false),
+                  hasChecklist: state.etrReceiptPhoto != null,
                 ),
                 const SizedBox(height: 14),
                 _signatureCard(
@@ -601,106 +676,12 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                     ref.read(kycProvider.notifier).clearSignature('fo');
                   },
                 ),
-                const SizedBox(height: 14),
-                const Text(
-                  'Asset handover checklist',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppConstants.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Current app build supports attaching the checklist as a clear photo from camera or gallery.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.45,
-                    color: AppConstants.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final useColumn = constraints.maxWidth < 380;
-
-                    if (useColumn) {
-                      return Column(
-                        children: [
-                          SizedBox(
-                            width: double.infinity,
-                            height: 124,
-                            child: PhotoPickerTile(
-                              label: 'Checklist',
-                              file: state.assetHandoverList,
-                              onPicked: (file) => ref
-                                  .read(kycProvider.notifier)
-                                  .setPhoto('handover', file),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _handoverNotesCtrl,
-                            maxLines: 4,
-                            onChanged: (value) {
-                              ref.read(kycProvider.notifier).update(
-                                    (current) => current.copyWith(
-                                      assetHandoverNotes: value.trim(),
-                                    ),
-                                  );
-                            },
-                            decoration: const InputDecoration(
-                              labelText: 'Handover Notes',
-                              hintText:
-                                  'List what was handed to the customer or note any special explanation given.',
-                            ),
-                          ),
-                        ],
-                      );
-                    }
-
-                    return Row(
-                      children: [
-                        SizedBox(
-                          width: 144,
-                          height: 124,
-                          child: PhotoPickerTile(
-                            label: 'Checklist',
-                            file: state.assetHandoverList,
-                            onPicked: (file) => ref
-                                .read(kycProvider.notifier)
-                                .setPhoto('handover', file),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _handoverNotesCtrl,
-                            maxLines: 4,
-                            onChanged: (value) {
-                              ref.read(kycProvider.notifier).update(
-                                    (current) => current.copyWith(
-                                      assetHandoverNotes: value.trim(),
-                                    ),
-                                  );
-                            },
-                            decoration: const InputDecoration(
-                              labelText: 'Handover Notes',
-                              hintText:
-                                  'List what was handed to the customer or note any special explanation given.',
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
               ],
             ),
           ),
           const SizedBox(height: 16),
           _card(
-            title: '4. Final application review',
+            title: '5. Final application review',
             subtitle:
                 'These notes help reviewers understand the customer context without repeating the interview.',
             child: Column(
@@ -957,9 +938,9 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                 icon: Icons.draw_outlined,
               ),
               _flowStageChip(
-                label: 'Handover',
+                label: 'ETR',
                 ready: handoverReady,
-                icon: Icons.inventory_2_outlined,
+                icon: Icons.receipt_long_outlined,
               ),
             ],
           ),
@@ -1009,20 +990,9 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     required String subtitle,
     required Widget child,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppConstants.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppConstants.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+    return GlassCard(
+      tint: Colors.white,
+      borderRadius: BorderRadius.circular(22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1538,8 +1508,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
         done: hasFoSignature,
       ),
       (
-        label: 'Checklist attached',
-        icon: Icons.inventory_outlined,
+        label: 'ETR receipt attached',
+        icon: Icons.receipt_long_outlined,
         done: hasChecklist,
       ),
     ];
@@ -1624,9 +1594,8 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
             (agreementContext?.foSignatureUrl?.isNotEmpty ?? false),
       ),
       (
-        label: 'Handover checklist attached',
-        done: state.assetHandoverList != null ||
-            (agreementContext?.handoverListUrl?.isNotEmpty ?? false),
+        label: 'ETR receipt attached',
+        done: state.etrReceiptPhoto != null,
       ),
       (
         label: 'Asset release will unlock after approval',

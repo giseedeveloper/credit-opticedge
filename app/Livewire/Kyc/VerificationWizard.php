@@ -3,9 +3,12 @@
 namespace App\Livewire\Kyc;
 
 use App\Models\Branch;
+use App\Models\Brand;
 use App\Models\Customer;
+use App\Models\PhoneModel;
 use App\Models\SelcomPaymentRequest;
 use App\Models\SystemDocument;
+use App\Models\Vendor;
 use App\Models\Verification;
 use App\Services\ApplicationAutoCheckService;
 use App\Services\CustomerLoanProvisioningService;
@@ -27,6 +30,16 @@ class VerificationWizard extends Component
 {
     use WithFileUploads;
 
+    /**
+     * 7-step wizard (FO capture flow):
+     * 1 = Device
+     * 2 = Identity
+     * 3 = Contact
+     * 4 = Income
+     * 5 = Next of Kin
+     * 6 = Consent
+     * 7 = Submit
+     */
     public int $step = 1;
 
     public bool $submitted = false;
@@ -37,6 +50,8 @@ class VerificationWizard extends Component
     public ?array $autoCheckResult = null;
 
     public string $draftReference = '';
+
+    public string $draftCode = '';
 
     // ── Step 1: Device ────────────────────────────────────────────
     public string $brandId = '';
@@ -71,6 +86,10 @@ class VerificationWizard extends Component
 
     /** @var array<int, array<string, mixed>> */
     public array $deviceAccessories = [];
+
+    public bool $includeScreenProtector = false;
+
+    public bool $includePhoneCover = false;
 
     public string $storeOfferNotes = '';
 
@@ -157,6 +176,8 @@ class VerificationWizard extends Component
 
     public string $durationAtWork = '';
 
+    public bool $isPep = false;
+
     /** @var TemporaryUploadedFile|null */
     public $businessPhoto = null;
 
@@ -196,6 +217,8 @@ class VerificationWizard extends Component
 
     public ?string $paymentRecordId = null;
 
+    public string $linkPaymentReference = '';
+
     public string $agreementDecision = '';
 
     public string $customerSignatureData = '';
@@ -204,6 +227,9 @@ class VerificationWizard extends Component
 
     /** @var TemporaryUploadedFile|null */
     public $assetHandoverList = null;
+
+    /** @var TemporaryUploadedFile|null */
+    public $etrReceiptPhoto = null;
 
     public string $assetHandoverNotes = '';
 
@@ -217,12 +243,11 @@ class VerificationWizard extends Component
         abort_unless(auth()->user()->canAccess('loans.create'), 403);
 
         $this->draftReference = (string) Str::uuid();
+        $this->draftCode = $this->generateDraftCode();
         $this->preferredRepayment = 'weekly';
         $this->seedLoanTermsFromDefaults(overwrite: true);
 
-        if (auth()->user()->branch_id) {
-            $this->branchId = (string) auth()->user()->branch_id;
-        }
+        $this->branchId = $this->resolveBranchIdForCapture() ?? '';
     }
 
     /** @return array<string,mixed> */
@@ -231,30 +256,16 @@ class VerificationWizard extends Component
         return [
             'brandId' => ['required', 'exists:brands,id'],
             'phoneModelId' => ['required', 'exists:phone_models,id'],
-            'inventoryUnitId' => ['nullable', 'exists:inventory_units,id'],
-            'deviceSpecs' => ['required', 'string', 'min:3', 'max:200'],
             'imeiNumber' => ['required', 'string', 'digits:15'],
             'imei2' => ['nullable', 'string', 'digits:15'],
             'serialNumber' => ['nullable', 'string', 'max:60'],
             'cashPrice' => ['required', 'numeric', 'min:1'],
             'depositAmount' => ['required', 'numeric', 'min:0'],
             'preferredRepayment' => ['required', 'in:weekly,biweekly,monthly'],
-            'loanInterestRate' => ['required', 'numeric', 'min:0'],
-            'loanInterestType' => ['required', 'in:flat,reducing_balance'],
-            'loanDurationWeeks' => ['required', 'integer', 'min:1', 'max:260'],
-            'loanGracePeriodDays' => ['required', 'integer', 'min:0', 'max:60'],
             'imeiPhoto' => ['nullable', 'image', 'max:5120'],
             'deviceBoxPhoto' => ['nullable', 'image', 'max:5120'],
             'devicePhoto' => ['nullable', 'image', 'max:5120'],
             'deviceScan' => ['nullable', 'array'],
-            'deviceAccessories' => ['nullable', 'array', 'max:8'],
-            'deviceAccessories.*.code' => ['nullable', 'string', 'max:60'],
-            'deviceAccessories.*.name' => ['nullable', 'string', 'max:60'],
-            'deviceAccessories.*.quantity' => ['nullable', 'integer', 'min:1', 'max:10'],
-            'deviceAccessories.*.offer_type' => ['nullable', 'in:free,charged,discounted'],
-            'deviceAccessories.*.unit_price' => ['nullable', 'numeric', 'min:0'],
-            'deviceAccessories.*.notes' => ['nullable', 'string', 'max:160'],
-            'storeOfferNotes' => ['nullable', 'string', 'max:500'],
         ];
     }
 
@@ -282,6 +293,11 @@ class VerificationWizard extends Component
             'phoneCountry' => ['required', 'string', 'size:2'],
             'altPhone' => ['nullable', 'string', 'min:7', 'max:20', 'different:phone'],
             'altPhoneCountry' => ['required', 'string', 'size:2'],
+            'email' => ['nullable', 'email', 'max:120'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'landmark' => ['nullable', 'string', 'max:255'],
+            'region' => ['required', 'string', 'max:80'],
+            'district' => ['required', 'string', 'max:80'],
             'branchId' => ['required', 'exists:branches,id'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
@@ -292,7 +308,14 @@ class VerificationWizard extends Component
     private function step4Rules(): array
     {
         return [
+            'occupation' => ['required', 'string', 'max:100'],
+            'incomePaymentCycle' => ['required', 'in:daily,weekly,biweekly,monthly,irregular'],
+            'isPep' => ['boolean'],
+            'employer' => ['nullable', 'string', 'max:100'],
+            'workLocation' => ['nullable', 'string', 'max:200'],
             'monthlyIncome' => ['required', 'numeric', 'min:0'],
+            'monthlyExpenses' => ['nullable', 'numeric', 'min:0'],
+            'durationAtWork' => ['nullable', 'string', 'max:60'],
             'businessPhoto' => ['nullable', 'image', 'max:5120'],
         ];
     }
@@ -304,7 +327,7 @@ class VerificationWizard extends Component
             'nokName' => ['required', 'string', 'min:2', 'max:100'],
             'nokPhone' => ['required', 'string', 'min:7', 'max:20'],
             'nokPhoneCountry' => ['required', 'string', 'size:2'],
-            'nokRelationship' => ['required', 'string', 'max:60'],
+            'nokRelationship' => ['required', 'in:spouse,parent,sibling,friend,relative,other'],
             'nok2Phone' => ['nullable', 'string', 'min:7', 'max:20', 'different:nokPhone'],
             'nok2PhoneCountry' => ['required', 'string', 'size:2'],
         ];
@@ -318,6 +341,41 @@ class VerificationWizard extends Component
             'dataConsentAccepted' => ['accepted'],
             'callConsentAccepted' => ['accepted'],
         ];
+    }
+
+    private function validateStepTwo(): void
+    {
+        $this->validate([
+            ...$this->step2Rules(),
+            'middleName' => ['nullable', 'string', 'max:60'],
+            'dob' => ['nullable', 'date', 'before:today'],
+        ]);
+    }
+
+    private function validateStepThree(): void
+    {
+        $this->normalizeContactPhones();
+        $this->validate($this->step3Rules());
+    }
+
+    private function validateStepFour(): void
+    {
+        $this->validate($this->step4Rules());
+    }
+
+    private function validateStepFive(): void
+    {
+        $this->normalizeNextOfKinPhones();
+        $this->validate([
+            ...$this->step5Rules(),
+            'nok2Name' => ['nullable', 'string', 'max:100'],
+            'nok2Relationship' => ['nullable', 'in:spouse,parent,sibling,friend,relative,other'],
+        ]);
+    }
+
+    private function validateStepSix(): void
+    {
+        $this->validate($this->step6Rules());
     }
 
     public function addAccessoryPreset(string $code): void
@@ -336,6 +394,35 @@ class VerificationWizard extends Component
         }
 
         $this->deviceAccessories[] = $preset;
+    }
+
+    public function updatedIncludeScreenProtector(): void
+    {
+        $this->syncAccessoryToggle('screen_protector', $this->includeScreenProtector);
+    }
+
+    public function updatedIncludePhoneCover(): void
+    {
+        $this->syncAccessoryToggle('phone_cover', $this->includePhoneCover);
+    }
+
+    private function syncAccessoryToggle(string $code, bool $enabled): void
+    {
+        $normalized = app(KycAccessoryOfferService::class)->normalize($this->deviceAccessories);
+        $index = collect($normalized)->search(fn (array $item): bool => ($item['code'] ?? '') === $code);
+
+        if ($enabled) {
+            if ($index === false) {
+                $normalized[] = app(KycAccessoryOfferService::class)->presetItem($code);
+            }
+        } else {
+            if ($index !== false) {
+                unset($normalized[$index]);
+                $normalized = array_values($normalized);
+            }
+        }
+
+        $this->deviceAccessories = $normalized;
     }
 
     public function addCustomAccessory(): void
@@ -366,7 +453,7 @@ class VerificationWizard extends Component
         $this->scanFeedbackTone = 'slate';
     }
 
-    public function updatedPhoneModelId(KycDeviceCatalogService $catalog): void
+    public function updatedPhoneModelId(): void
     {
         $this->reset([
             'inventoryUnitId',
@@ -386,16 +473,20 @@ class VerificationWizard extends Component
             return;
         }
 
-        $phoneModel = $catalog->accessibleModel(auth()->user(), $this->phoneModelId);
+        $phoneModel = PhoneModel::query()
+            ->with('brand')
+            ->whereKey($this->phoneModelId)
+            ->where('is_active', true)
+            ->first();
 
         if (! $phoneModel) {
-            $this->addError('phoneModelId', 'Selected model is not available in your accessible stock.');
+            $this->addError('phoneModelId', 'Selected model is not available.');
 
             return;
         }
 
         $this->brandId = (string) $phoneModel->brand_id;
-        $this->deviceSpecs = $catalog->buildDeviceSpecs($phoneModel);
+        $this->deviceSpecs = app(KycDeviceCatalogService::class)->buildDeviceSpecs($phoneModel);
         $this->cashPrice = (string) ((float) $phoneModel->retail_price);
         $this->seedLoanTermsFromDefaults();
     }
@@ -471,7 +562,14 @@ class VerificationWizard extends Component
         $this->deviceScan = $scan;
 
         $detectedImei = $scan['selected_imei'] ?? null;
+        $detectedImei2 = $scan['selected_imei_2'] ?? null;
         $detectedSerial = $scan['selected_serial'] ?? null;
+        $detectedEmail = is_string($payload['detected_email'] ?? null) ? trim((string) $payload['detected_email']) : null;
+        $detectedModelText = is_string($payload['detected_model_text'] ?? null) ? trim((string) $payload['detected_model_text']) : null;
+        $detectedModelCode = is_string($payload['detected_model_code'] ?? null) ? trim((string) $payload['detected_model_code']) : null;
+        $detectedColor = is_string($payload['detected_color'] ?? null) ? trim((string) $payload['detected_color']) : null;
+        $detectedRam = is_string($payload['detected_ram'] ?? null) ? trim((string) $payload['detected_ram']) : null;
+        $detectedStorage = is_string($payload['detected_storage'] ?? null) ? trim((string) $payload['detected_storage']) : null;
         $linkedUnit = $catalog->accessibleUnit(auth()->user(), $this->inventoryUnitId);
 
         if (! $detectedImei && ! $detectedSerial) {
@@ -479,6 +577,48 @@ class VerificationWizard extends Component
             $this->scanFeedbackMessage = 'Uploaded image was received, but no clear IMEI or serial number was detected. You can still type them manually.';
 
             return;
+        }
+
+        // Helpful UX: if user hasn't started searching inventory yet, auto-fill the search box
+        // with the best identifier so they can select the right stock unit faster.
+        if ($this->inventorySearch === '') {
+            $this->inventorySearch = (string) ($detectedImei ?: $detectedSerial ?: '');
+        }
+
+        // If a device box scan detected an email and the user hasn't entered one, prefill it.
+        if ($this->email === '' && $detectedEmail) {
+            $this->email = strtolower($detectedEmail);
+        }
+
+        // Keep a small hint in scan metadata (no DB write here; it will persist on submit).
+        if ($detectedModelText) {
+            $this->deviceScan['detected_model_text'] = $detectedModelText;
+        }
+        if ($detectedModelCode) {
+            $this->deviceScan['detected_model_code'] = $detectedModelCode;
+        }
+        if ($detectedColor) {
+            $this->deviceScan['detected_color'] = $detectedColor;
+        }
+        if ($detectedRam) {
+            $this->deviceScan['detected_ram'] = $detectedRam;
+        }
+        if ($detectedStorage) {
+            $this->deviceScan['detected_storage'] = $detectedStorage;
+        }
+
+        // If the user hasn't selected a model yet, build a helpful draft specs string
+        // from what the box provides (model code / RAM / storage / color).
+        if ($this->phoneModelId === '' && $this->deviceSpecs === '') {
+            $parts = collect([
+                $detectedModelCode ?: null,
+                $detectedRam && $detectedStorage ? "{$detectedRam}/{$detectedStorage}" : null,
+                $detectedColor ?: null,
+            ])->filter()->implode(' - ');
+
+            if ($parts !== '') {
+                $this->deviceSpecs = $parts;
+            }
         }
 
         if ($linkedUnit) {
@@ -511,6 +651,10 @@ class VerificationWizard extends Component
             $this->imeiNumber = $detectedImei;
         }
 
+        if ($this->imei2 === '' && $detectedImei2) {
+            $this->imei2 = $detectedImei2;
+        }
+
         if ($detectedSerial) {
             $this->serialNumber = strtoupper($detectedSerial);
         }
@@ -523,11 +667,11 @@ class VerificationWizard extends Component
     {
         match ($this->step) {
             1 => $this->validateStepOne(),
-            2 => $this->validate($this->step2Rules()),
+            2 => $this->validateStepTwo(),
             3 => $this->validateStepThree(),
-            4 => $this->validate($this->step4Rules()),
+            4 => $this->validateStepFour(),
             5 => $this->validateStepFive(),
-            6 => $this->validate($this->step6Rules()),
+            6 => $this->validateStepSix(),
             default => null,
         };
 
@@ -539,23 +683,10 @@ class VerificationWizard extends Component
     private function validateStepOne(): void
     {
         $this->validate($this->step1Rules());
-        $this->normalizeAccessorySelection();
         $this->enforceDeviceSelectionIntegrity(
             app(KycDeviceCatalogService::class),
             app(IMEITrackingService::class)
         );
-    }
-
-    private function validateStepThree(): void
-    {
-        $this->normalizeContactPhones();
-        $this->validate($this->step3Rules());
-    }
-
-    private function validateStepFive(): void
-    {
-        $this->normalizeNextOfKinPhones();
-        $this->validate($this->step5Rules());
     }
 
     private function normalizeContactPhones(): void
@@ -802,6 +933,37 @@ class VerificationWizard extends Component
             : 'Payment status refreshed. It is still waiting for completion.', type: $payment->isCompleted() ? 'success' : 'error');
     }
 
+    public function linkDepositTransaction(SelcomCheckoutService $selcom): void
+    {
+        abort_unless(auth()->user()->canAccess('loans.create'), 403);
+
+        $ref = trim($this->linkPaymentReference);
+
+        if ($ref === '') {
+            throw ValidationException::withMessages([
+                'linkPaymentReference' => 'Enter a Selcom reference, order id, or transid to link.',
+            ]);
+        }
+
+        $payment = $selcom->findByAnyReference($ref);
+
+        if (! $payment) {
+            throw ValidationException::withMessages([
+                'linkPaymentReference' => 'No Selcom payment record was found with that reference.',
+            ]);
+        }
+
+        if (! $payment->isCompleted()) {
+            throw ValidationException::withMessages([
+                'linkPaymentReference' => 'That payment exists but is not completed yet.',
+            ]);
+        }
+
+        $payment->forceFill(['draft_reference' => $this->draftReference])->save();
+        $this->hydratePaymentBadge($payment->fresh());
+        $this->dispatch('toast', message: 'Deposit transaction linked successfully.', type: 'success');
+    }
+
     private function hydratePaymentBadge(?SelcomPaymentRequest $payment): void
     {
         $this->paymentRecordId = $payment?->id;
@@ -883,22 +1045,19 @@ class VerificationWizard extends Component
             // Step 1
             'brandId' => ['required', 'exists:brands,id'],
             'phoneModelId' => ['required', 'exists:phone_models,id'],
-            'inventoryUnitId' => ['nullable', 'exists:inventory_units,id'],
             'deviceSpecs' => ['required', 'string', 'min:3', 'max:200'],
             'imeiNumber' => ['required', 'string', 'digits:15'],
+            'imei2' => ['nullable', 'string', 'digits:15'],
+            'serialNumber' => ['nullable', 'string', 'max:60'],
             'cashPrice' => ['required', 'numeric', 'min:1'],
             'depositAmount' => ['required', 'numeric', 'min:0'],
             'preferredRepayment' => ['required', 'in:weekly,biweekly,monthly'],
-            'loanInterestRate' => ['required', 'numeric', 'min:0'],
-            'loanInterestType' => ['required', 'in:flat,reducing_balance'],
-            'loanDurationWeeks' => ['required', 'integer', 'min:1', 'max:260'],
-            'loanGracePeriodDays' => ['required', 'integer', 'min:0', 'max:60'],
-            'deviceAccessories' => ['nullable', 'array', 'max:8'],
-            'storeOfferNotes' => ['nullable', 'string', 'max:500'],
             // Step 2
             'firstName' => ['required', 'string', 'min:2', 'max:60'],
+            'middleName' => ['nullable', 'string', 'max:60'],
             'lastName' => ['required', 'string', 'min:2', 'max:60'],
             'gender' => ['required', 'in:male,female,other'],
+            'dob' => ['nullable', 'date', 'before:today'],
             'nidaNumber' => ['required', 'string', 'size:20', 'unique:customers,nida_number'],
             'idType' => ['required', 'in:nida,passport,driving_license,voter_card'],
             // Step 3
@@ -906,18 +1065,32 @@ class VerificationWizard extends Component
             'phoneCountry' => ['required', 'string', 'size:2'],
             'altPhone' => ['nullable', 'string', 'min:7', 'max:20', 'different:phone'],
             'altPhoneCountry' => ['required', 'string', 'size:2'],
+            'email' => ['nullable', 'email', 'max:120'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'landmark' => ['nullable', 'string', 'max:255'],
+            'region' => ['required', 'string', 'max:80'],
+            'district' => ['required', 'string', 'max:80'],
             'branchId' => ['required', 'exists:branches,id'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             // Step 4
+            'occupation' => ['required', 'string', 'max:100'],
+            'incomePaymentCycle' => ['required', 'in:daily,weekly,biweekly,monthly,irregular'],
+            'isPep' => ['boolean'],
+            'employer' => ['nullable', 'string', 'max:100'],
+            'workLocation' => ['nullable', 'string', 'max:200'],
             'monthlyIncome' => ['required', 'numeric', 'min:0'],
+            'monthlyExpenses' => ['nullable', 'numeric', 'min:0'],
+            'durationAtWork' => ['nullable', 'string', 'max:60'],
             // Step 5
             'nokName' => ['required', 'string', 'min:2', 'max:100'],
             'nokPhone' => ['required', 'string', 'min:7', 'max:20'],
             'nokPhoneCountry' => ['required', 'string', 'size:2'],
-            'nokRelationship' => ['required', 'string', 'max:60'],
+            'nokRelationship' => ['required', 'in:spouse,parent,sibling,friend,relative,other'],
             'nok2Phone' => ['nullable', 'string', 'min:7', 'max:20', 'different:nokPhone'],
             'nok2PhoneCountry' => ['required', 'string', 'size:2'],
+            'nok2Name' => ['nullable', 'string', 'max:100'],
+            'nok2Relationship' => ['nullable', 'in:spouse,parent,sibling,friend,relative,other'],
             // Step 6
             'termsAccepted' => ['accepted'],
             'dataConsentAccepted' => ['accepted'],
@@ -925,7 +1098,8 @@ class VerificationWizard extends Component
             // Final packaging
             'paymentPhone' => ['required', 'string', 'min:10', 'max:20'],
             'agreementDecision' => ['required', 'in:yes,no'],
-            'assetHandoverList' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
+            'etrReceiptPhoto' => ['required', 'image', 'max:5120'],
+            'assetHandoverList' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
             'assetHandoverNotes' => ['nullable', 'string', 'max:500'],
         ];
     }
@@ -970,7 +1144,10 @@ class VerificationWizard extends Component
             'device_scan_metadata' => $this->deviceScan !== [] ? $this->deviceScan : null,
             'device_accessories' => $this->deviceAccessories !== [] ? $this->deviceAccessories : null,
             'store_offer_notes' => $this->storeOfferNotes !== '' ? trim($this->storeOfferNotes) : null,
-            'metadata' => ['loan_terms' => $loanTerms],
+            'metadata' => [
+                'loan_terms' => $loanTerms,
+                'is_pep' => $this->isPep,
+            ],
             // Step 2 – Identity
             'first_name' => ucfirst(strtolower(trim($this->firstName))),
             'middle_name' => $this->middleName ? ucfirst(strtolower(trim($this->middleName))) : null,
@@ -1022,6 +1199,7 @@ class VerificationWizard extends Component
             'customer_signature_path' => $this->storeSignature($this->customerSignatureData, 'customer-signatures'),
             'fo_signature_path' => $this->storeSignature($this->foSignatureData, 'fo-signatures'),
             'asset_handover_list_path' => $this->storePhoto($this->assetHandoverList, 'handover'),
+            'etr_receipt_path' => $this->storePhoto($this->etrReceiptPhoto, 'etr'),
             'asset_handover_notes' => $this->assetHandoverNotes !== '' ? trim($this->assetHandoverNotes) : null,
             'deposit_payment_status' => 'completed',
             'deposit_payment_amount' => $successfulPayment->amount,
@@ -1064,11 +1242,21 @@ class VerificationWizard extends Component
         KycDeviceCatalogService $catalog,
         IMEITrackingService $imeiTracking
     ): void {
-        $phoneModel = $catalog->accessibleModel(auth()->user(), $this->phoneModelId);
+        $phoneModel = PhoneModel::query()
+            ->with('brand')
+            ->whereKey($this->phoneModelId)
+            ->where('is_active', true)
+            ->first();
 
-        if (! $phoneModel || (string) $phoneModel->brand_id !== $this->brandId) {
+        if (! $phoneModel) {
             throw ValidationException::withMessages([
-                'phoneModelId' => 'Choose a valid phone model from the selected brand.',
+                'phoneModelId' => 'Choose a valid phone model.',
+            ]);
+        }
+
+        if ($this->brandId !== '' && (string) $phoneModel->brand_id !== $this->brandId) {
+            throw ValidationException::withMessages([
+                'brandId' => 'Selected brand does not match the chosen phone model.',
             ]);
         }
 
@@ -1078,28 +1266,6 @@ class VerificationWizard extends Component
             throw ValidationException::withMessages([
                 'depositAmount' => 'Deposit cannot be greater than the device cash price.',
             ]);
-        }
-
-        $selectedUnit = $catalog->accessibleUnit(auth()->user(), $this->inventoryUnitId);
-
-        if ($catalog->hasAvailableUnitsFor(auth()->user(), $this->phoneModelId) && ! $selectedUnit) {
-            throw ValidationException::withMessages([
-                'inventoryUnitId' => 'Select an available stock unit for this device before continuing.',
-            ]);
-        }
-
-        if ($selectedUnit) {
-            if ((string) $selectedUnit->phone_model_id !== $this->phoneModelId) {
-                throw ValidationException::withMessages([
-                    'inventoryUnitId' => 'The selected stock unit does not belong to the chosen phone model.',
-                ]);
-            }
-
-            $this->imeiNumber = $selectedUnit->imei_1;
-            $this->imei2 = $selectedUnit->imei_2 ?? '';
-            $this->serialNumber = $selectedUnit->serial_number ?? '';
-
-            return;
         }
 
         try {
@@ -1181,14 +1347,34 @@ class VerificationWizard extends Component
         $this->step = 1;
         $this->scanFeedbackTone = 'slate';
         $this->draftReference = (string) Str::uuid();
+        $this->draftCode = $this->generateDraftCode();
         $this->preferredRepayment = 'weekly';
         $this->seedLoanTermsFromDefaults(overwrite: true);
         $this->paymentStatus = 'pending';
         $this->paymentMessage = '';
 
-        if (auth()->user()?->branch_id) {
-            $this->branchId = (string) auth()->user()->branch_id;
+        $this->branchId = $this->resolveBranchIdForCapture() ?? '';
+    }
+
+    private function resolveBranchIdForCapture(): ?string
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return null;
         }
+
+        if ($user->branch_id) {
+            return (string) $user->branch_id;
+        }
+
+        $vendorId = $user->managedVendors()->value('id');
+
+        if (! $vendorId) {
+            return null;
+        }
+
+        return Vendor::query()->whereKey($vendorId)->value('branch_id');
     }
 
     public function render()
@@ -1198,23 +1384,37 @@ class VerificationWizard extends Component
             ->take(6)
             ->get();
 
-        $catalog = app(KycDeviceCatalogService::class);
-        $availableBrands = $catalog->brandsFor(auth()->user());
-        $availableModels = $catalog->modelsFor(auth()->user(), $this->brandId ?: null);
-        $availableUnits = $catalog->unitsFor(auth()->user(), $this->phoneModelId ?: null, trim($this->inventorySearch));
-        $selectedPhoneModel = $catalog->accessibleModel(auth()->user(), $this->phoneModelId ?: null);
-        $selectedInventoryUnit = $catalog->accessibleUnit(auth()->user(), $this->inventoryUnitId ?: null);
+        $availableBrands = Brand::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+        $availableModels = PhoneModel::query()
+            ->with('brand')
+            ->where('is_active', true)
+            ->when($this->brandId !== '', fn ($query) => $query->where('brand_id', $this->brandId))
+            ->orderBy('name')
+            ->get();
+        $availableUnits = collect();
+        $selectedPhoneModel = PhoneModel::query()
+            ->with('brand')
+            ->whereKey($this->phoneModelId ?: null)
+            ->first();
+        $selectedInventoryUnit = null;
         $branches = Branch::orderBy('name')->get();
+        $selectedBranch = $this->branchId !== ''
+            ? $branches->firstWhere('id', $this->branchId)
+            : null;
         $phoneCountries = collect(app(KycPhoneService::class)->supportedCountries())
             ->keyBy('iso')
             ->all();
-        $accessoryPresets = app(KycAccessoryOfferService::class)->presetOptions();
+        $accessoryPresets = [];
         $activeAgreementDocument = $this->activeAgreementDocument;
         $latestDraftPayment = $this->latestDraftPayment;
 
         return view('livewire.kyc.verification-wizard', compact(
             'recentProfiles',
             'branches',
+            'selectedBranch',
             'availableBrands',
             'availableModels',
             'availableUnits',
@@ -1226,5 +1426,10 @@ class VerificationWizard extends Component
             'latestDraftPayment'
         ))
             ->layout('layouts.app', ['title' => 'KYC Wizard']);
+    }
+
+    private function generateDraftCode(): string
+    {
+        return Str::upper(Str::random(10));
     }
 }

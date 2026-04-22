@@ -115,22 +115,21 @@ it('step1 creates a draft customer and returns customer_id', function () {
         ->and($draft?->metadata['loan_terms']['source'])->toBe('kyc_capture');
 });
 
-it('step1 requires explicit loan terms instead of falling back to defaults', function () {
+it('step1 falls back to default loan terms when omitted', function () {
     $this->postJson('/api/v1/kyc/application/step1', [
         'brand_id' => $this->brand->id,
         'phone_model_id' => $this->phoneModel->id,
         'inventory_unit_id' => $this->inventoryUnit->id,
         'deposit_amount' => 50000,
         'preferred_repayment' => 'monthly',
-    ])->assertUnprocessable()
-        ->assertJsonValidationErrors([
-            'loan_interest_rate',
-            'loan_interest_type',
-            'loan_duration_weeks',
-            'loan_grace_period_days',
-        ]);
+    ])->assertOk();
 
-    expect(Customer::count())->toBe(0);
+    $draft = Customer::query()->latest()->first();
+
+    expect($draft)->not->toBeNull()
+        ->and($draft?->loan_interest_type)->not->toBeNull()
+        ->and($draft?->loan_duration_weeks)->toBeGreaterThan(0)
+        ->and($draft?->metadata['loan_terms']['source'] ?? null)->toBe('kyc_capture');
 });
 
 it('step1 auto-links vendor store context from the selected stock unit', function () {
@@ -605,6 +604,7 @@ it('step7 submits application with payment, agreement and signatures', function 
         'agreement_decision' => 'yes',
         'customer_signature' => apiKycSignatureDataUrl(),
         'fo_signature' => apiKycSignatureDataUrl(),
+        'etr_receipt_photo' => UploadedFile::fake()->image('etr.jpg', 900, 600),
         'asset_handover_list' => UploadedFile::fake()->create('handover.pdf', 80, 'application/pdf'),
         'asset_handover_notes' => 'Phone, charger and free accessories handed over.',
     ]);
@@ -619,7 +619,7 @@ it('step7 submits application with payment, agreement and signatures', function 
         ->and($customer->fresh()->asset_release_status)->toBe('pending')
         ->and($customer->fresh()->customer_signature_path)->not->toBeNull()
         ->and($customer->fresh()->fo_signature_path)->not->toBeNull()
-        ->and($customer->fresh()->asset_handover_list_path)->not->toBeNull();
+        ->and($customer->fresh()->etr_receipt_path)->not->toBeNull();
 });
 
 it('step7 blocks submission when consent is missing', function () {

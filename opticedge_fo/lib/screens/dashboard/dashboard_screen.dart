@@ -10,6 +10,7 @@ import '../../core/providers/connectivity_provider.dart';
 import '../../core/providers/customer_provider.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../widgets/common/app_color_icon.dart';
+import '../../widgets/common/glass_card.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -135,7 +136,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final isOnline = onlineAsync.maybeWhen(data: (v) => v, orElse: () => true);
 
     return SliverAppBar(
-      expandedHeight: 345,
+      expandedHeight: 400,
       pinned: true,
       elevation: 0,
       backgroundColor: AppConstants.heroStart,
@@ -166,11 +167,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 height: 160,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF38BDF8).withValues(alpha: 0.10),
+                  color: DesignTokens.accentSky.withValues(alpha: 0.10),
                 ),
               ),
             ),
             SafeArea(
+              bottom: false,
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -189,7 +191,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                 _todayFormattedL10n(s),
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.white.withValues(alpha: 0.78),
+                                  color: Colors.white.withValues(
+                                    alpha: 0.78,
+                                  ),
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -217,8 +221,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                               dotColor: insight.pending > 0
                                   ? const Color(0xFFFDE68A)
                                   : null,
-                              badgeCount:
-                                  insight.pending > 0 ? insight.pending : null,
+                              badgeCount: insight.pending > 0
+                                  ? insight.pending
+                                  : null,
                               semanticsLabel: insight.pending > 0
                                   ? 'View ${insight.pending} pending applications'
                                   : 'No pending applications',
@@ -234,10 +239,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.18),
+                                  color: Colors.white.withValues(
+                                    alpha: 0.18,
+                                  ),
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.34),
+                                    color: Colors.white.withValues(
+                                      alpha: 0.34,
+                                    ),
                                     width: 1.5,
                                   ),
                                 ),
@@ -257,96 +266,121 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 18),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        if (user?.branch != null)
-                          _heroChip(
-                            icon: Icons.location_on_outlined,
-                            label: user!.branch!.name,
+                    Expanded(
+                          child: SingleChildScrollView(
+                            physics: const ClampingScrollPhysics(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 14),
+                                Wrap(
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  children: [
+                                    if (user?.branch != null)
+                                      _heroChip(
+                                        icon: Icons.location_on_outlined,
+                                        label: user!.branch!.name,
+                                      ),
+                                    _heroChip(
+                                      icon: Icons.circle,
+                                      label: isOnline ? 'Online' : 'Offline',
+                                      iconColor: isOnline
+                                          ? const Color(0xFF4ADE80)
+                                          : AppConstants.textHint,
+                                    ),
+                                    _heroChip(
+                                      icon: Icons.inventory_2_outlined,
+                                      label: '${insight.drafts} drafts',
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                GestureDetector(
+                                  onTap: () => context.go('/customers'),
+                                  child: Container(
+                                    height: 52,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.18,
+                                      ),
+                                      borderRadius: BorderRadius.circular(18),
+                                      border: Border.all(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.16,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.search_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          s.searchCustomers,
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.82,
+                                            ),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.14),
+                                    borderRadius: BorderRadius.circular(24),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: _heroInsight(
+                                          label: 'Pending review',
+                                          value: '${insight.pending}',
+                                          tone: const Color(0xFFFDE68A),
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 1,
+                                        height: 42,
+                                        color: Colors.white.withValues(
+                                          alpha: 0.16,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: _heroInsight(
+                                          label: 'Verified today',
+                                          value: '${insight.verified}',
+                                          tone: const Color(0xFF86EFAC),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        _heroChip(
-                          icon: Icons.circle,
-                          label: isOnline ? 'Online' : 'Offline',
-                          iconColor: isOnline
-                              ? const Color(0xFF4ADE80)
-                              : AppConstants.textHint,
-                        ),
-                        _heroChip(
-                          icon: Icons.inventory_2_outlined,
-                          label: '${insight.drafts} drafts',
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    GestureDetector(
-                      onTap: () => context.go('/customers'),
-                      child: Container(
-                        height: 52,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.16),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.search_rounded,
-                                color: Colors.white, size: 20),
-                            const SizedBox(width: 12),
-                            Text(
-                              s.searchCustomers,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.82),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.12),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _heroInsight(
-                              label: 'Pending review',
-                              value: '${insight.pending}',
-                              tone: const Color(0xFFFDE68A),
-                            ),
-                          ),
-                          Container(
-                            width: 1,
-                            height: 42,
-                            color: Colors.white.withValues(alpha: 0.16),
-                          ),
-                          Expanded(
-                            child: _heroInsight(
-                              label: 'Verified today',
-                              value: '${insight.verified}',
-                              tone: const Color(0xFF86EFAC),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],
@@ -509,36 +543,36 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         value: stats.totalRegistered.toString(),
         note: 'Customers onboarded',
         iconAsset: AppIconAssets.customers,
-        color: const Color(0xFF2F80ED),
-        background: const Color(0xFFF4F8FF),
-        accent: const Color(0xFFDCEAFF),
+        color: DesignTokens.statBlue,
+        background: DesignTokens.statBlueBg,
+        accent: DesignTokens.statBlueAccent,
       ),
       _StatData(
         label: s.drafts,
         value: stats.drafts.toString(),
         note: 'Need completion',
         iconAsset: AppIconAssets.drafts,
-        color: const Color(0xFFF59E0B),
-        background: const Color(0xFFFFF8EC),
-        accent: const Color(0xFFFFE9BF),
+        color: DesignTokens.statAmber,
+        background: DesignTokens.statAmberBg,
+        accent: DesignTokens.statAmberAccent,
       ),
       _StatData(
         label: s.pending,
         value: stats.pending.toString(),
         note: 'Waiting review',
         iconAsset: AppIconAssets.pending,
-        color: const Color(0xFF8B5CF6),
-        background: const Color(0xFFF6F1FF),
-        accent: const Color(0xFFE6DAFF),
+        color: DesignTokens.statViolet,
+        background: DesignTokens.statVioletBg,
+        accent: DesignTokens.statVioletAccent,
       ),
       _StatData(
         label: s.verified,
         value: stats.verified.toString(),
         note: 'Ready to release',
         iconAsset: AppIconAssets.verified,
-        color: AppConstants.success,
-        background: const Color(0xFFECFDF5),
-        accent: const Color(0xFFCFF8E3),
+        color: DesignTokens.statGreen,
+        background: DesignTokens.statGreenBg,
+        accent: DesignTokens.statGreenAccent,
       ),
     ];
 
@@ -578,24 +612,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         label: s.myCustomers,
         caption: 'Review active customers',
         iconAsset: AppIconAssets.customers,
-        color: const Color(0xFF2F80ED),
-        surface: const Color(0xFFF1F7FF),
+        color: DesignTokens.statBlue,
+        surface: DesignTokens.statBlueBg,
         onTap: () => context.go('/customers'),
       ),
       _ActionData(
         label: s.search,
         caption: 'Find by name, phone or NIDA',
         iconAsset: AppIconAssets.search,
-        color: const Color(0xFF8B5CF6),
-        surface: const Color(0xFFF7F3FF),
+        color: DesignTokens.statViolet,
+        surface: DesignTokens.statVioletBg,
         onTap: () => context.go('/customers'),
       ),
       _ActionData(
         label: s.drafts,
         caption: 'Resume unfinished onboarding',
         iconAsset: AppIconAssets.checklist,
-        color: const Color(0xFFF59E0B),
-        surface: const Color(0xFFFFF9ED),
+        color: DesignTokens.statAmber,
+        surface: DesignTokens.statAmberBg,
         onTap: () => context.go('/customers?tab=draft'),
       ),
     ];
@@ -614,20 +648,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Widget _buildActionCard(_ActionData action) {
     return GestureDetector(
       onTap: action.onTap,
-      child: Container(
+      child: GlassCard(
+        tint: action.surface,
+        borderRadius: BorderRadius.circular(22),
+        borderColor: action.color.withValues(alpha: 0.22),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: action.surface,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: action.color.withValues(alpha: 0.16)),
-          boxShadow: [
-            BoxShadow(
-              color: action.color.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -711,7 +736,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final theme = Theme.of(context);
     final shimmerColor = theme.cardTheme.color ?? theme.colorScheme.surface;
     final borderColor = theme.brightness == Brightness.dark
-        ? const Color(0xFF2A2D3A)
+        ? DesignTokens.darkBorder
         : AppConstants.border;
     return GridView.count(
       crossAxisCount: 2,
@@ -736,7 +761,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final theme = Theme.of(context);
     final shimmerColor = theme.cardTheme.color ?? theme.colorScheme.surface;
     final borderColor = theme.brightness == Brightness.dark
-        ? const Color(0xFF2A2D3A)
+        ? DesignTokens.darkBorder
         : AppConstants.border;
     return Column(
       children: List.generate(
@@ -883,22 +908,11 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> {
         opacity: _opacity.value,
         child: Transform.translate(
           offset: Offset(0, _slide.value),
-          child: Container(
+          child: GlassCard(
+            tint: widget.data.background,
+            borderRadius: BorderRadius.circular(24),
+            borderColor: widget.data.color.withValues(alpha: 0.18),
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: widget.data.background,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: widget.data.color.withValues(alpha: 0.12),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.data.color.withValues(alpha: 0.08),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -992,8 +1006,7 @@ class _CustomerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final cardColor = theme.cardTheme.color ?? theme.colorScheme.surface;
-    final borderColor = isDark ? const Color(0xFF2A2D3A) : AppConstants.border;
+    final borderColor = isDark ? DesignTokens.darkBorder : AppConstants.border;
     final statusColor =
         AppConstants.statusColors[status] ?? AppConstants.textSecondary;
     final statusBg = AppConstants.statusBg[status] ?? AppConstants.borderLight;
@@ -1001,21 +1014,18 @@ class _CustomerTile extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+      child: GlassCard(
+        tint: Colors.white,
+        borderColor: borderColor,
+        borderRadius: BorderRadius.circular(20),
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: borderColor),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x120B1220),
+            blurRadius: 18,
+            offset: Offset(0, 12),
+          ),
+        ],
         child: Row(
           children: [
             _CustomerAvatar(

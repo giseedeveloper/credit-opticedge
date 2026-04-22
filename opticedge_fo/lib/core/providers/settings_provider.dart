@@ -22,7 +22,7 @@ class SettingsState {
   final bool notificationsEnabled;
 
   const SettingsState({
-    this.themeMode = ThemeMode.system,
+    this.themeMode = ThemeMode.light,
     this.language = AppLanguage.en,
     this.biometricEnabled = false,
     this.notificationsEnabled = true,
@@ -48,12 +48,30 @@ class SettingsState {
         'notificationsEnabled': notificationsEnabled,
       };
 
-  factory SettingsState.fromJson(Map<String, dynamic> json) => SettingsState(
-        themeMode: ThemeMode.values[json['themeMode'] ?? 0],
-        language: AppLanguage.values[json['language'] ?? 0],
-        biometricEnabled: json['biometricEnabled'] ?? false,
-        notificationsEnabled: json['notificationsEnabled'] ?? true,
-      );
+  factory SettingsState.fromJson(Map<String, dynamic> json) {
+    final rawThemeIndex = json['themeMode'];
+    final themeIndex = rawThemeIndex is int ? rawThemeIndex : null;
+    final themeMode = (themeIndex != null &&
+            themeIndex >= 0 &&
+            themeIndex < ThemeMode.values.length)
+        ? ThemeMode.values[themeIndex]
+        : ThemeMode.light;
+
+    final rawLangIndex = json['language'];
+    final langIndex = rawLangIndex is int ? rawLangIndex : null;
+    final language = (langIndex != null &&
+            langIndex >= 0 &&
+            langIndex < AppLanguage.values.length)
+        ? AppLanguage.values[langIndex]
+        : AppLanguage.en;
+
+    return SettingsState(
+      themeMode: themeMode,
+      language: language,
+      biometricEnabled: json['biometricEnabled'] ?? false,
+      notificationsEnabled: json['notificationsEnabled'] ?? true,
+    );
+  }
 }
 
 // ─── Notifier ────────────────────────────────────────────────────────────────

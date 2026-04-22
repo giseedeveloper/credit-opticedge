@@ -179,10 +179,10 @@ class KycApiController extends Controller
             'cash_price' => ['required_without:phone_model_id', 'nullable', 'numeric', 'min:1'],
             'deposit_amount' => ['required', 'numeric', 'min:0'],
             'preferred_repayment' => ['required', 'in:weekly,biweekly,monthly'],
-            'loan_interest_rate' => ['required', 'numeric', 'min:0'],
-            'loan_interest_type' => ['required', 'in:flat,reducing_balance'],
-            'loan_duration_weeks' => ['required', 'integer', 'min:1', 'max:260'],
-            'loan_grace_period_days' => ['required', 'integer', 'min:0', 'max:60'],
+            'loan_interest_rate' => ['nullable', 'numeric', 'min:0'],
+            'loan_interest_type' => ['nullable', 'in:flat,reducing_balance'],
+            'loan_duration_weeks' => ['nullable', 'integer', 'min:1', 'max:260'],
+            'loan_grace_period_days' => ['nullable', 'integer', 'min:0', 'max:60'],
             'imei_photo' => ['nullable', 'image', 'max:5120'],
             'device_box_photo' => ['nullable', 'image', 'max:5120'],
             'device_photo' => ['nullable', 'image', 'max:5120'],
@@ -199,6 +199,15 @@ class KycApiController extends Controller
 
         $normalizedAccessories = $this->normalizeAccessories($validated['accessories'] ?? [], $accessoryOffers);
         $scopeContext = $catalog->scopeContextFor($request->user());
+        $recommendedTerms = $loanProvisioning->defaultTerms(
+            $request->string('preferred_repayment')->toString() ?: null
+        );
+
+        $validated['loan_interest_rate'] = $validated['loan_interest_rate'] ?? ($recommendedTerms['interest_rate'] ?? 0);
+        $validated['loan_interest_type'] = $validated['loan_interest_type'] ?? ($recommendedTerms['interest_type'] ?? 'flat');
+        $validated['loan_duration_weeks'] = $validated['loan_duration_weeks'] ?? ($recommendedTerms['duration_weeks'] ?? 52);
+        $validated['loan_grace_period_days'] = $validated['loan_grace_period_days'] ?? ($recommendedTerms['grace_period_days'] ?? 0);
+
         $loanTerms = $this->resolvedLoanTermsSnapshot($validated);
 
         $deviceSelection = $this->resolveDeviceSelection(
@@ -381,9 +390,13 @@ class KycApiController extends Controller
             'monthly_income' => ['required', 'numeric', 'min:0'],
             'monthly_expenses' => ['nullable', 'numeric', 'min:0'],
             'income_payment_cycle' => ['nullable', 'in:weekly,biweekly,monthly,irregular'],
+            'is_pep' => ['nullable', 'boolean'],
             'duration_at_work' => ['nullable', 'string', 'max:60'],
             'business_photo' => ['nullable', 'image', 'max:5120'],
         ]);
+
+        $metadata = is_array($customer->metadata) ? $customer->metadata : [];
+        $metadata['is_pep'] = (bool) ($validated['is_pep'] ?? false);
 
         $customer->update([
             'occupation' => $validated['occupation'] ?? null,
@@ -394,6 +407,7 @@ class KycApiController extends Controller
             'income_payment_cycle' => $validated['income_payment_cycle'] ?? null,
             'duration_at_work' => $validated['duration_at_work'] ?? null,
             'business_photo_path' => $this->storeFile($request, 'business_photo', 'business'),
+            'metadata' => $metadata,
         ]);
 
         return $this->successResponse(['customer_id' => $customer->id, 'step' => 4], 'Step 4 (Income) saved.');
@@ -749,8 +763,12 @@ class KycApiController extends Controller
             'fo_notes' => ['nullable', 'string', 'max:1000'],
             'application_source' => ['nullable', 'in:walk_in,referral,vendor,social_media,agent'],
             'agreement_decision' => ['required', 'in:yes,no'],
+            'payment_phone' => ['nullable', 'string', 'max:20'],
+            'loan_term_months' => ['nullable', 'integer', 'min:1', 'max:60'],
+            'downpayment_amount' => ['nullable', 'numeric', 'min:0'],
             'customer_signature' => ['nullable', 'string'],
             'fo_signature' => ['nullable', 'string'],
+            'etr_receipt_photo' => ['nullable', 'image', 'max:5120'],
             'asset_handover_list' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
             'asset_handover_notes' => ['nullable', 'string', 'max:500'],
         ]);
@@ -765,8 +783,8 @@ class KycApiController extends Controller
             $finalStepErrors['fo_signature'] = 'FO signature is required.';
         }
 
-        if (! $request->hasFile('asset_handover_list') && ! $customer->asset_handover_list_path) {
-            $finalStepErrors['asset_handover_list'] = 'Asset handover checklist is required.';
+        if (! $request->hasFile('etr_receipt_photo') && ! filled($customer->etr_receipt_path)) {
+            $finalStepErrors['etr_receipt_photo'] = 'ETR receipt photo is required.';
         }
 
         if ($finalStepErrors !== []) {
@@ -815,6 +833,17 @@ class KycApiController extends Controller
             return $this->errorResponse('No active agreement PDF is available yet. Please contact admin.', 422);
         }
 
+        $metadata = is_array($customer->metadata) ? $customer->metadata : [];
+        if (isset($validated['loan_term_months'])) {
+            $metadata['loan_term_months'] = (int) $validated['loan_term_months'];
+        }
+        if (isset($validated['downpayment_amount'])) {
+            $metadata['downpayment_amount'] = (float) $validated['downpayment_amount'];
+        }
+        if (isset($validated['payment_phone'])) {
+            $metadata['payment_phone'] = trim((string) $validated['payment_phone']);
+        }
+
         $customer->update([
             'fo_notes' => $validated['fo_notes'] ?? null,
             'application_source' => $validated['application_source'] ?? null,
@@ -826,6 +855,7 @@ class KycApiController extends Controller
             'fo_signature_path' => $this->storeSignatureDataUrl($validated['fo_signature'] ?? null, 'fo-signatures') ?? $customer->fo_signature_path,
             'asset_handover_list_path' => $this->storeFile($request, 'asset_handover_list', 'handover') ?? $customer->asset_handover_list_path,
             'asset_handover_notes' => $validated['asset_handover_notes'] ?? null,
+            'etr_receipt_path' => $this->storeFile($request, 'etr_receipt_photo', 'etr') ?? $customer->etr_receipt_path,
             'deposit_payment_status' => 'completed',
             'deposit_payment_amount' => $successfulPayment->amount,
             'deposit_payment_reference' => $successfulPayment->selcom_reference ?: $successfulPayment->transid,
@@ -833,6 +863,7 @@ class KycApiController extends Controller
             'asset_release_status' => 'pending',
             'kyc_status' => 'pending',
             'kyc_stage' => 3,
+            'metadata' => $metadata,
         ]);
 
         $verification = Verification::firstOrCreate(

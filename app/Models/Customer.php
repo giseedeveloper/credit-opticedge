@@ -45,7 +45,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
     'terms_accepted', 'data_consent_accepted', 'call_consent_accepted', 'consent_timestamp',
     // Payment, agreement & release
     'agreement_document_id', 'agreement_accepted', 'agreement_presented_at', 'agreement_decision_at',
-    'customer_signature_path', 'fo_signature_path', 'asset_handover_list_path', 'asset_handover_notes',
+    'customer_signature_path', 'fo_signature_path', 'asset_handover_list_path', 'etr_receipt_path', 'asset_handover_notes',
     'deposit_payment_status', 'deposit_payment_amount', 'deposit_payment_reference', 'deposit_paid_at',
     'asset_release_status', 'asset_released_at', 'asset_released_by',
     // Step 7 – Submit metadata

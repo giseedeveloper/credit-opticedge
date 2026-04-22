@@ -215,6 +215,21 @@ class SelcomCheckoutService
             ->first();
     }
 
+    public function findByAnyReference(string $reference): ?SelcomPaymentRequest
+    {
+        $reference = trim($reference);
+
+        if ($reference === '') {
+            return null;
+        }
+
+        return SelcomPaymentRequest::query()
+            ->where('selcom_reference', $reference)
+            ->orWhere('order_id', $reference)
+            ->orWhere('transid', $reference)
+            ->first();
+    }
+
     protected function ensureConfigured(): void
     {
         if (! $this->isConfigured()) {

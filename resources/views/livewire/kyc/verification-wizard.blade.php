@@ -1,4 +1,4 @@
-{{-- KYC Wizard — 3-Stage Front Office Application --}}
+{{-- KYC Wizard — 7-Step Front Office Application --}}
 <div class="flex flex-col gap-6">
 
     {{-- Toast --}}
@@ -12,48 +12,17 @@
     </div>
 
     @php
-        $stageDefinitions = [
-            1 => [
-                'label' => 'Device & Offer',
-                'short' => 'Device',
-                'icon' => 'device-phone-mobile',
-                'palette' => 'amber',
-                'summary' => 'Lock handset, IMEI, deposit, offer terms and evidence.',
-                'legacy' => 'Step 1',
-            ],
-            2 => [
-                'label' => 'Customer & Verification',
-                'short' => 'Customer',
-                'icon' => 'identification',
-                'palette' => 'sky',
-                'summary' => 'Capture identity, contact, income, NOK and consent cleanly.',
-                'legacy' => 'Steps 2-6',
-            ],
-            3 => [
-                'label' => 'Payment, Agreement & Handover',
-                'short' => 'Finalize',
-                'icon' => 'clipboard-document-check',
-                'palette' => 'emerald',
-                'summary' => 'Confirm payment, present agreement, sign and submit.',
-                'legacy' => 'Step 7',
-            ],
+        $stepDefinitions = [
+            1 => ['label' => 'Device (Kifaa)', 'short' => 'Device', 'palette' => 'amber'],
+            2 => ['label' => 'Identity (Utambulisho)', 'short' => 'Identity', 'palette' => 'sky'],
+            3 => ['label' => 'Contact (Mawasiliano)', 'short' => 'Contact', 'palette' => 'indigo'],
+            4 => ['label' => 'Income (Kipato)', 'short' => 'Income', 'palette' => 'violet'],
+            5 => ['label' => 'Next of Kin (Mtu wa Karibu)', 'short' => 'NOK', 'palette' => 'cyan'],
+            6 => ['label' => 'Consent (Ridhaa)', 'short' => 'Consent', 'palette' => 'emerald'],
+            7 => ['label' => 'Submit (Mwisho)', 'short' => 'Submit', 'palette' => 'emerald'],
         ];
-        $activeStage = match (true) {
-            $step === 1 => 1,
-            $step >= 2 && $step <= 6 => 2,
-            default => 3,
-        };
-        $stageProgress = [
-            1 => $step > 1 ? 100 : 55,
-            2 => $step < 2 ? 0 : min(100, max(20, (($step - 1) / 5) * 100)),
-            3 => $step < 7 ? 0 : 100,
-        ];
-        $currentStage = $stageDefinitions[$activeStage];
-        $subStepLabel = match ($activeStage) {
-            1 => 'Device scan and offer setup',
-            2 => 'Customer packet item '.($step - 1).' of 5',
-            default => 'Payment, agreement and final handover',
-        };
+        $activeStep = min(7, max(1, (int) $step));
+        $currentStep = $stepDefinitions[$activeStep];
     @endphp
 
     {{-- Header --}}
@@ -66,6 +35,15 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
+            <div class="hidden items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-gray-300 sm:inline-flex">
+                <span class="text-gray-400 dark:text-gray-500">Application:</span>
+                <span class="font-mono font-black tracking-wider text-gray-900 dark:text-white">{{ $draftCode }}</span>
+            </div>
+            <button type="button" wire:click="startNew"
+                    class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-oe to-oe-hover text-white hover:opacity-90 transition-opacity">
+                <flux:icon name="plus" class="size-4" />
+                Create new application
+            </button>
             <a href="{{ route('kyc.pending') }}" wire:navigate
                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
                 <x-fluent-icon name="clock" size="xs" palette="amber" />
@@ -79,10 +57,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-
-        {{-- ══ LEFT: Wizard ══ --}}
-        <div class="lg:col-span-3">
+    <div class="mx-auto w-full max-w-5xl">
 
             @if($submitted)
             {{-- ══ Success State ══ --}}
@@ -155,60 +130,56 @@
             </div>
             @else
 
-            {{-- Stage Navigator --}}
+            {{-- Step Navigator --}}
             <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
 
-                {{-- Stage Header --}}
+                {{-- Step Header --}}
                 <div class="border-b border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950 px-4 py-5 sm:px-6">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div class="max-w-2xl">
-                            <p class="text-[10px] font-black uppercase tracking-[0.28em] text-amber-300">Stage {{ $activeStage }} of 3</p>
-                            <h2 class="mt-2 text-2xl font-black tracking-tight text-white">{{ $currentStage['label'] }}</h2>
-                            <p class="mt-1 max-w-xl text-sm leading-6 text-slate-300">{{ $currentStage['summary'] }}</p>
+                            <p class="text-[10px] font-black uppercase tracking-[0.28em] text-amber-300">Step {{ $activeStep }} of 7</p>
+                            <h2 class="mt-2 text-2xl font-black tracking-tight text-white">{{ $currentStep['label'] }}</h2>
+                            <p class="mt-1 max-w-xl text-sm leading-6 text-slate-300">Jaza taarifa kwa mpangilio. Mfumo hautaruhusu kuendelea bila sehemu muhimu.</p>
                         </div>
                         <div class="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-bold text-white shadow-sm">
-                            <x-fluent-icon :name="$currentStage['icon']" size="xs" :palette="$currentStage['palette']" />
-                            {{ $subStepLabel }}
+                            <flux:icon name="clipboard-document-check" class="size-4" />
+                            {{ $currentStep['short'] }}
                         </div>
                     </div>
 
-                    <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
-                        @foreach($stageDefinitions as $stageNumber => $stageItem)
+                    <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+                        @foreach($stepDefinitions as $n => $stepItem)
                         @php
-                            $isStageDone = $activeStage > $stageNumber;
-                            $isStageActive = $activeStage === $stageNumber;
-                            $percent = $isStageDone ? 100 : ($isStageActive ? $stageProgress[$stageNumber] : 0);
+                            $isDone = $activeStep > $n;
+                            $isActive = $activeStep === $n;
                         @endphp
                         <div @class([
                             'relative overflow-hidden rounded-2xl border p-4 transition-colors',
-                            'border-white/20 bg-white/15 shadow-lg shadow-black/10' => $isStageActive,
-                            'border-emerald-300/20 bg-emerald-400/10' => $isStageDone,
-                            'border-white/10 bg-white/5' => ! $isStageActive && ! $isStageDone,
+                            'border-white/20 bg-white/15 shadow-lg shadow-black/10' => $isActive,
+                            'border-emerald-300/20 bg-emerald-400/10' => $isDone,
+                            'border-white/10 bg-white/5' => ! $isActive && ! $isDone,
                         ])>
                             <div class="flex items-start gap-3">
                                 <div @class([
                                     'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl',
-                                    'bg-white text-slate-950' => $isStageActive,
-                                    'bg-emerald-400/20 text-emerald-200' => $isStageDone,
-                                    'bg-white/10 text-slate-300' => ! $isStageActive && ! $isStageDone,
+                                    'bg-white text-slate-950' => $isActive,
+                                    'bg-emerald-400/20 text-emerald-200' => $isDone,
+                                    'bg-white/10 text-slate-300' => ! $isActive && ! $isDone,
                                 ])>
-                                    @if($isStageDone)
+                                    @if($isDone)
                                     <flux:icon name="check" class="size-5" />
                                     @else
-                                    <x-fluent-icon :name="$stageItem['icon']" size="xs" :palette="$stageItem['palette']" />
+                                    <span class="text-sm font-black">{{ $n }}</span>
                                     @endif
                                 </div>
                                 <div class="min-w-0">
                                     <p @class([
                                         'text-sm font-black leading-5',
-                                        'text-white' => $isStageActive || $isStageDone,
-                                        'text-slate-300' => ! $isStageActive && ! $isStageDone,
-                                    ])>{{ $stageItem['short'] }}</p>
-                                    <p class="mt-0.5 text-[11px] font-semibold text-slate-400">{{ $stageItem['legacy'] }}</p>
+                                        'text-white' => $isActive || $isDone,
+                                        'text-slate-300' => ! $isActive && ! $isDone,
+                                    ])>{{ $stepItem['short'] }}</p>
+                                    <p class="mt-0.5 text-[11px] font-semibold text-slate-400">{{ $stepItem['label'] }}</p>
                                 </div>
-                            </div>
-                            <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
-                                <div class="h-full rounded-full bg-gradient-to-r from-amber-300 to-emerald-300 transition-all duration-500" style="width: {{ $percent }}%"></div>
                             </div>
                         </div>
                         @endforeach
@@ -223,298 +194,178 @@
                         @if($step === 1)
                         <div class="space-y-4">
                             <div>
-                                <h3 class="text-lg font-black text-gray-900 dark:text-white">Device Information</h3>
-                                <p class="text-sm text-gray-500 mt-0.5">Choose the exact device from stock, then confirm IMEI, serial, price &amp; proof photos</p>
+                                <h3 class="text-lg font-black text-gray-900 dark:text-white">Device (Kifaa)</h3>
+                                <p class="text-sm text-gray-500 mt-0.5">Lengo ni kutambua simu na gharama zake. Anza na picha (scan), kisha chagua model na repayment cycle, halafu weka bei na amana.</p>
                             </div>
 
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                            {{-- 1) Evidence Photos (scan first) --}}
+                            <div class="rounded-2xl border border-gray-100 bg-white/80 p-4 shadow-sm">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Picha (Scan)</p>
+                                        <p class="mt-1 text-sm font-black text-gray-900">IMEI Sticker · Device Box · Device Body</p>
+                                        <p class="mt-1 text-xs text-gray-500">IMEI 1 itasomwa moja kwa moja kutoka kwenye box/sticker ikiwa picha iko clear.</p>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+                                    @foreach([
+                                        ['imeiPhoto','IMEI / Box Sticker Photo','optional', true],
+                                        ['deviceBoxPhoto','Box Photo','optional', true],
+                                        ['devicePhoto','Device Photo','optional', false],
+                                    ] as [$field,$label,$hint,$supportsScan])
+                                    <div @if($supportsScan) x-data="deviceIdentifierScanner($wire, '{{ $field }}')" @endif>
+                                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{{ $label }} <span class="text-gray-400 font-normal">({{ $hint }})</span></label>
+                                        <input wire:model="{{ $field }}" type="file" accept="image/*"
+                                               @if($supportsScan) capture="environment" x-on:change="scan($event)" @endif
+                                               class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-oe-soft file:text-oe-hover hover:file:bg-oe/15 border border-gray-200 rounded-lg p-1" />
+                                        @error($field) <p class="mt-0.5 text-xs text-red-500">{{ $message }}</p> @enderror
+                                        <div wire:loading wire:target="{{ $field }}" class="mt-0.5 text-[10px] text-gray-400">Uploading…</div>
+                                        @if($supportsScan)
+                                        <div x-show="message" x-transition class="mt-1 text-[10px] text-sky-600" x-text="message"></div>
+                                        @endif
+                                    </div>
+                                    @endforeach
+                                </div>
+
+                                @if($scanFeedbackMessage)
+                                <div class="mt-4" @class([
+                                    'flex items-start gap-2 rounded-xl border p-3',
+                                    'border-emerald-100 bg-emerald-50 text-emerald-700' => $scanFeedbackTone === 'emerald',
+                                    'border-sky-100 bg-sky-50 text-sky-700' => $scanFeedbackTone === 'sky',
+                                    'border-red-100 bg-red-50 text-red-700' => $scanFeedbackTone === 'red',
+                                    'border-amber-100 bg-amber-50 text-amber-700' => $scanFeedbackTone === 'amber',
+                                    'border-slate-200 bg-slate-50 text-slate-700' => ! in_array($scanFeedbackTone, ['emerald', 'sky', 'red', 'amber'], true),
+                                ])>
+                                    <flux:icon name="sparkles" class="mt-0.5 size-4 shrink-0" />
+                                    <div>
+                                        <p class="text-xs font-semibold">Auto-scan feedback</p>
+                                        <p class="mt-0.5 text-xs">{{ $scanFeedbackMessage }}</p>
+                                        @if(($deviceScan['confidence'] ?? 0) > 0)
+                                        <p class="mt-1 text-[10px] uppercase tracking-[0.2em] opacity-80">Confidence {{ number_format((float) $deviceScan['confidence'] * 100, 0) }}%</p>
+                                        @endif
+                                    </div>
+                                </div>
+                                @endif
+
+                                @if(($deviceScan['selected_imei'] ?? null) || ($deviceScan['selected_imei_2'] ?? null) || ($deviceScan['selected_serial'] ?? null) || ($deviceScan['detected_model_code'] ?? null) || ($deviceScan['detected_color'] ?? null) || ($deviceScan['detected_ram'] ?? null) || ($deviceScan['detected_storage'] ?? null))
+                                <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                    <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">Detected from scan</p>
+                                    <div class="mt-3 flex flex-wrap gap-2 text-xs">
+                                        @foreach([
+                                            'Model' => $deviceScan['detected_model_code'] ?? null,
+                                            'Color' => $deviceScan['detected_color'] ?? null,
+                                            'RAM' => $deviceScan['detected_ram'] ?? null,
+                                            'Storage' => $deviceScan['detected_storage'] ?? null,
+                                            'IMEI 1' => $deviceScan['selected_imei'] ?? null,
+                                            'IMEI 2' => $deviceScan['selected_imei_2'] ?? null,
+                                            'Serial' => $deviceScan['selected_serial'] ?? null,
+                                        ] as $label => $value)
+                                            @continue(! filled($value))
+                                            <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-semibold text-slate-700">
+                                                <span class="text-slate-500">{{ $label }}:</span>
+                                                <span class="font-mono">{{ $value }}</span>
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                @endif
+
+                                <div class="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-2">
+                                    <flux:icon name="information-circle" class="size-4 text-amber-600 mt-0.5 shrink-0" />
+                                    <p class="text-xs text-amber-700">Tip: If you upload a clear sticker/box photo, IMEI and serial will be detected and filled automatically.</p>
+                                </div>
+                            </div>
+
+                            <div class="rounded-2xl border border-gray-100 bg-white/80 p-4 shadow-sm space-y-4">
+                                <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Selection (Kuchagua)</p>
                                 <flux:field>
-                                    <flux:label>Device Brand <span class="text-red-500">*</span></flux:label>
+                                    <flux:label>Brand / Manufacturer <span class="text-red-500">*</span></flux:label>
                                     <flux:select wire:model.live="brandId">
-                                        <flux:select.option value="">— Select brand —</flux:select.option>
+                                        <flux:select.option value="">— Chagua Brand —</flux:select.option>
                                         @foreach($availableBrands as $brand)
                                         <flux:select.option :value="$brand->id">{{ $brand->name }}</flux:select.option>
                                         @endforeach
                                     </flux:select>
                                     <flux:error name="brandId" />
                                 </flux:field>
+
                                 <flux:field>
-                                    <flux:label>Phone Model <span class="text-red-500">*</span></flux:label>
+                                    <flux:label>Device Specs / Model <span class="text-red-500">*</span></flux:label>
                                     <flux:select wire:model.live="phoneModelId" :disabled="$brandId === ''">
-                                        <flux:select.option value="">— Select model —</flux:select.option>
+                                        <flux:select.option value="">— Chagua Model —</flux:select.option>
                                         @foreach($availableModels as $model)
                                         <flux:select.option :value="$model->id">{{ $model->name }}</flux:select.option>
                                         @endforeach
                                     </flux:select>
                                     <flux:error name="phoneModelId" />
                                 </flux:field>
-                                <flux:field>
-                                    <flux:label>Find Stock Unit</flux:label>
-                                    <flux:input wire:model.live.debounce.300ms="inventorySearch" placeholder="Search IMEI, serial or model…" />
-                                    <flux:description>Filter the stock list before picking a specific device.</flux:description>
-                                </flux:field>
-                            </div>
 
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 <flux:field>
-                                    <flux:label>Available Stock Unit <span class="text-red-500">*</span></flux:label>
-                                    <flux:select wire:model.live="inventoryUnitId" :disabled="$phoneModelId === ''">
-                                        <flux:select.option value="">— Select stock unit —</flux:select.option>
-                                        @foreach($availableUnits as $unit)
-                                        <flux:select.option :value="$unit->id">
-                                            {{ $unit->phoneModel?->brand?->name }} {{ $unit->phoneModel?->name }} · {{ $unit->imei_1 }}{{ $unit->serial_number ? ' · '.$unit->serial_number : '' }}
-                                        </flux:select.option>
-                                        @endforeach
-                                    </flux:select>
-                                    <flux:error name="inventoryUnitId" />
-                                    <flux:description>{{ $availableUnits->count() }} matching unit(s) available for this step.</flux:description>
-                                </flux:field>
-                                <flux:field>
-                                    <flux:label>Device Summary <span class="text-red-500">*</span></flux:label>
-                                    <flux:input wire:model="deviceSpecs" placeholder="Auto-filled from selected model" readonly />
-                                    <flux:error name="deviceSpecs" />
-                                    <flux:description>Model, storage, RAM and color are pulled from the catalog automatically.</flux:description>
-                                </flux:field>
-                            </div>
-
-                            @if($selectedPhoneModel || $selectedInventoryUnit)
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                @if($selectedPhoneModel)
-                                <div class="rounded-2xl border border-sky-100 bg-sky-50/80 p-4">
-                                    <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-sky-500">Chosen Model</p>
-                                    <p class="mt-2 text-sm font-black text-slate-900">{{ $selectedPhoneModel->brand?->name }} {{ $selectedPhoneModel->name }}</p>
-                                    <p class="mt-1 text-xs text-slate-600">
-                                        @foreach(($selectedPhoneModel->specifications ?? []) as $label => $value)
-                                            {{ ucfirst($label) }}: {{ $value }}@if(! $loop->last) · @endif
-                                        @endforeach
-                                    </p>
-                                    <p class="mt-2 text-xs font-semibold text-sky-700">Recommended cash price: TZS {{ number_format((float) $selectedPhoneModel->retail_price) }}</p>
-                                </div>
-                                @endif
-                                @if($selectedInventoryUnit)
-                                <div class="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4">
-                                    <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-500">Linked Inventory</p>
-                                    <p class="mt-2 text-sm font-black text-slate-900">{{ $selectedInventoryUnit->imei_1 }}</p>
-                                    <p class="mt-1 text-xs text-slate-600">
-                                        {{ $selectedInventoryUnit->serial_number ?: 'No serial saved' }}
-                                        @if($selectedInventoryUnit->vendor)
-                                            · {{ $selectedInventoryUnit->vendor->name }}
-                                        @elseif($selectedInventoryUnit->branch)
-                                            · {{ $selectedInventoryUnit->branch->name }}
-                                        @endif
-                                    </p>
-                                    <p class="mt-2 text-xs font-semibold text-emerald-700">This unit is now tied to the application draft for confirmation.</p>
-                                </div>
-                                @endif
-                            </div>
-                            @endif
-
-                            <div class="rounded-2xl border border-gray-200 bg-white/80 p-4 shadow-sm">
-                                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                                    <div>
-                                        <h4 class="text-sm font-black text-gray-900">Store Offers & Accessories</h4>
-                                        <p class="mt-1 text-xs text-gray-500">Capture free gifts, discounted add-ons, or paid extras handed over with the phone.</p>
-                                    </div>
-                                    <button type="button" wire:click="addCustomAccessory"
-                                            class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50">
-                                        <flux:icon name="plus" class="size-4" />
-                                        Add Custom Item
-                                    </button>
-                                </div>
-
-                                <div class="mt-4 flex flex-wrap gap-2">
-                                    @foreach($accessoryPresets as $preset)
-                                    <button type="button" wire:click="addAccessoryPreset('{{ $preset['code'] }}')"
-                                            class="inline-flex items-center rounded-full border border-orange-200 bg-oe-soft px-3 py-1.5 text-xs font-semibold text-oe-hover hover:bg-oe/15">
-                                        {{ $preset['name'] }}
-                                    </button>
-                                    @endforeach
-                                </div>
-
-                                @if($deviceAccessories !== [])
-                                <div class="mt-4 space-y-3">
-                                    @foreach($deviceAccessories as $index => $accessory)
-                                    <div wire:key="accessory-{{ $index }}" class="rounded-2xl border border-gray-100 bg-gray-50/90 p-4">
-                                        <div class="flex items-start justify-between gap-3">
-                                            <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Accessory {{ $index + 1 }}</p>
-                                            <button type="button" wire:click="removeAccessoryItem({{ $index }})"
-                                                    class="inline-flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-600">
-                                                <flux:icon name="trash" class="size-4" />
-                                                Remove
-                                            </button>
-                                        </div>
-                                        <div class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-12">
-                                            <div class="lg:col-span-4">
-                                                <flux:field>
-                                                    <flux:label>Accessory Name</flux:label>
-                                                    <flux:input wire:model="deviceAccessories.{{ $index }}.name" placeholder="e.g. Screen Protector" />
-                                                    @error("deviceAccessories.$index.name") <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                                                </flux:field>
-                                            </div>
-                                            <div class="lg:col-span-2">
-                                                <flux:field>
-                                                    <flux:label>Qty</flux:label>
-                                                    <flux:input wire:model="deviceAccessories.{{ $index }}.quantity" type="number" min="1" max="10" />
-                                                    @error("deviceAccessories.$index.quantity") <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                                                </flux:field>
-                                            </div>
-                                            <div class="lg:col-span-3">
-                                                <flux:field>
-                                                    <flux:label>Offer Type</flux:label>
-                                                    <flux:select wire:model="deviceAccessories.{{ $index }}.offer_type">
-                                                        <flux:select.option value="free">Free Gift</flux:select.option>
-                                                        <flux:select.option value="discounted">Discounted</flux:select.option>
-                                                        <flux:select.option value="charged">Charged</flux:select.option>
-                                                    </flux:select>
-                                                    @error("deviceAccessories.$index.offer_type") <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                                                </flux:field>
-                                            </div>
-                                            <div class="lg:col-span-3">
-                                                <flux:field>
-                                                    <flux:label>Unit Price (TZS)</flux:label>
-                                                    <flux:input wire:model="deviceAccessories.{{ $index }}.unit_price" type="number" min="0" placeholder="0 for free" />
-                                                    @error("deviceAccessories.$index.unit_price") <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                                                </flux:field>
-                                            </div>
-                                            <div class="lg:col-span-12">
-                                                <flux:field>
-                                                    <flux:label>Notes</flux:label>
-                                                    <flux:input wire:model="deviceAccessories.{{ $index }}.notes" placeholder="Promo reason, brand of cover, colour, or handover note" />
-                                                    @error("deviceAccessories.$index.notes") <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                                                </flux:field>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    @endforeach
-                                </div>
-                                @endif
-
-                                <div class="mt-4">
-                                    <flux:field>
-                                        <flux:label>Store Offer Notes <span class="text-gray-400 font-normal">(optional)</span></flux:label>
-                                        <flux:textarea wire:model="storeOfferNotes" rows="2" placeholder="Example: Customer received a free cover and protector because of weekend promo." />
-                                        <flux:error name="storeOfferNotes" />
-                                    </flux:field>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-4">
-                                <flux:field>
-                                    <flux:label>IMEI 1 <span class="text-red-500">*</span></flux:label>
-                                    <flux:input wire:model="imeiNumber" placeholder="15 digits" class="font-mono" maxlength="15" />
-                                    <flux:error name="imeiNumber" />
-                                    <flux:description>Dial *#06# on device</flux:description>
-                                </flux:field>
-                                <flux:field>
-                                    <flux:label>IMEI 2 <span class="text-gray-400 font-normal">(optional)</span></flux:label>
-                                    <flux:input wire:model="imei2" placeholder="15 digits if dual SIM" class="font-mono" maxlength="15" />
-                                    <flux:error name="imei2" />
-                                </flux:field>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <flux:field>
-                                    <flux:label>Serial Number <span class="text-gray-400 font-normal">(optional)</span></flux:label>
-                                    <flux:input wire:model="serialNumber" placeholder="S/N from box or settings" class="font-mono" />
-                                </flux:field>
-                                <flux:field>
-                                    <flux:label>Repayment Plan <span class="text-red-500">*</span></flux:label>
+                                    <flux:label>Repayment Cycle <span class="text-red-500">*</span></flux:label>
                                     <flux:select wire:model="preferredRepayment">
-                                        <flux:select.option value="">— Select —</flux:select.option>
+                                        <flux:select.option value="">— Chagua —</flux:select.option>
                                         <flux:select.option value="weekly">Weekly</flux:select.option>
                                         <flux:select.option value="biweekly">Bi-weekly</flux:select.option>
                                         <flux:select.option value="monthly">Monthly</flux:select.option>
                                     </flux:select>
                                     <flux:error name="preferredRepayment" />
                                 </flux:field>
+
+                                <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Store Extras</p>
+                                <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                                    <label class="flex items-start gap-3 p-4 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors {{ $includeScreenProtector ? 'border-emerald-300 bg-emerald-50' : '' }}">
+                                        <input type="checkbox" wire:model="includeScreenProtector" class="mt-0.5 w-4 h-4 accent-emerald-600 flex-shrink-0" />
+                                        <div>
+                                            <p class="text-sm font-semibold text-gray-800">Screen Protector</p>
+                                            <p class="text-xs text-gray-500 mt-0.5">Washa kama mteja amepewa protector.</p>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-start gap-3 p-4 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors {{ $includePhoneCover ? 'border-emerald-300 bg-emerald-50' : '' }}">
+                                        <input type="checkbox" wire:model="includePhoneCover" class="mt-0.5 w-4 h-4 accent-emerald-600 flex-shrink-0" />
+                                        <div>
+                                            <p class="text-sm font-semibold text-gray-800">Phone Cover</p>
+                                            <p class="text-xs text-gray-500 mt-0.5">Washa kama mteja amepewa cover.</p>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
+
+                            <div class="rounded-2xl border border-gray-100 bg-white/80 p-4 shadow-sm space-y-4">
+                                <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Manual (Mkono)</p>
+                                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                                    <flux:field>
+                                        <flux:label>IMEI 1 <span class="text-red-500">*</span></flux:label>
+                                        <flux:input wire:model="imeiNumber" placeholder="15 digits" class="font-mono" maxlength="15" />
+                                        <flux:error name="imeiNumber" />
+                                    </flux:field>
+                                    <flux:field>
+                                        <flux:label>IMEI 2 <span class="text-gray-400 font-normal">(optional)</span></flux:label>
+                                        <flux:input wire:model="imei2" placeholder="15 digits (dual SIM)" class="font-mono" maxlength="15" />
+                                        <flux:error name="imei2" />
+                                    </flux:field>
+                                </div>
                                 <flux:field>
-                                    <flux:label>Cash Price (TZS) <span class="text-red-500">*</span></flux:label>
-                                    <flux:input wire:model="cashPrice" type="number" min="1" placeholder="e.g. 450000" />
-                                    <flux:error name="cashPrice" />
-                                </flux:field>
-                                <flux:field>
-                                    <flux:label>Deposit / Down Payment (TZS) <span class="text-red-500">*</span></flux:label>
-                                    <flux:input wire:model="depositAmount" type="number" min="0" placeholder="e.g. 50000" />
-                                    <flux:error name="depositAmount" />
+                                    <flux:label>Serial Number <span class="text-gray-400 font-normal">(optional)</span></flux:label>
+                                    <flux:input wire:model="serialNumber" placeholder="S/N" class="font-mono" />
+                                    <flux:error name="serialNumber" />
                                 </flux:field>
                             </div>
-                            <div class="rounded-2xl border border-sky-100 bg-sky-50/70 p-4 space-y-4">
-                                <div>
-                                    <p class="text-sm font-semibold text-gray-900 dark:text-white">Credit Offer Terms</p>
-                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                        These terms will be snapshotted onto the customer record and later used when the loan account is created.
-                                    </p>
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
+
+                            <div class="rounded-2xl border border-gray-100 bg-white/80 p-4 shadow-sm space-y-4">
+                                <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Cash Price & Starting Deposit</p>
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     <flux:field>
-                                        <flux:label>Interest Type <span class="text-red-500">*</span></flux:label>
-                                        <flux:select wire:model="loanInterestType">
-                                            <flux:select.option value="flat">Flat Rate</flux:select.option>
-                                            <flux:select.option value="reducing_balance">Reducing Balance</flux:select.option>
-                                        </flux:select>
-                                        <flux:error name="loanInterestType" />
+                                        <flux:label>Cash Price (TZS) <span class="text-red-500">*</span></flux:label>
+                                        <flux:input wire:model="cashPrice" type="number" min="1" placeholder="e.g. 450000" />
+                                        <flux:error name="cashPrice" />
                                     </flux:field>
                                     <flux:field>
-                                        <flux:label>Interest Rate (%) <span class="text-red-500">*</span></flux:label>
-                                        <flux:input wire:model="loanInterestRate" type="number" min="0" step="0.01" placeholder="e.g. 3.5" />
-                                        <flux:error name="loanInterestRate" />
+                                        <flux:label>Deposit / Down Payment (TZS) <span class="text-red-500">*</span></flux:label>
+                                        <flux:input wire:model="depositAmount" type="number" min="0" placeholder="e.g. 50000" />
+                                        <flux:error name="depositAmount" />
                                     </flux:field>
                                 </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <flux:field>
-                                        <flux:label>Duration (Weeks) <span class="text-red-500">*</span></flux:label>
-                                        <flux:input wire:model="loanDurationWeeks" type="number" min="1" max="260" placeholder="e.g. 52" />
-                                        <flux:error name="loanDurationWeeks" />
-                                    </flux:field>
-                                    <flux:field>
-                                        <flux:label>Grace Period (Days) <span class="text-red-500">*</span></flux:label>
-                                        <flux:input wire:model="loanGracePeriodDays" type="number" min="0" max="60" placeholder="e.g. 3" />
-                                        <flux:error name="loanGracePeriodDays" />
-                                    </flux:field>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-3 gap-3">
-                                @foreach([
-                                    ['imeiPhoto','IMEI / Box Sticker Photo','optional', true],
-                                    ['deviceBoxPhoto','Box Photo','optional', true],
-                                    ['devicePhoto','Device Photo','optional', false],
-                                ] as [$field,$label,$hint,$supportsScan])
-                                <div @if($supportsScan) x-data="deviceIdentifierScanner($wire, '{{ $field }}')" @endif>
-                                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{{ $label }} <span class="text-gray-400 font-normal">({{ $hint }})</span></label>
-                                    <input wire:model="{{ $field }}" type="file" accept="image/*"
-                                           @if($supportsScan) capture="environment" x-on:change="scan($event)" @endif
-                                           class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-oe-soft file:text-oe-hover hover:file:bg-oe/15 border border-gray-200 rounded-lg p-1" />
-                                    @error($field) <p class="mt-0.5 text-xs text-red-500">{{ $message }}</p> @enderror
-                                    <div wire:loading wire:target="{{ $field }}" class="mt-0.5 text-[10px] text-gray-400">Uploading…</div>
-                                    @if($supportsScan)
-                                    <div x-show="message" x-transition class="mt-1 text-[10px] text-sky-600" x-text="message"></div>
-                                    @endif
-                                </div>
-                                @endforeach
-                            </div>
-                            @if($scanFeedbackMessage)
-                            <div @class([
-                                'flex items-start gap-2 rounded-xl border p-3',
-                                'border-emerald-100 bg-emerald-50 text-emerald-700' => $scanFeedbackTone === 'emerald',
-                                'border-sky-100 bg-sky-50 text-sky-700' => $scanFeedbackTone === 'sky',
-                                'border-red-100 bg-red-50 text-red-700' => $scanFeedbackTone === 'red',
-                                'border-amber-100 bg-amber-50 text-amber-700' => $scanFeedbackTone === 'amber',
-                                'border-slate-200 bg-slate-50 text-slate-700' => ! in_array($scanFeedbackTone, ['emerald', 'sky', 'red', 'amber'], true),
-                            ])>
-                                <flux:icon name="sparkles" class="mt-0.5 size-4 shrink-0" />
-                                <div>
-                                    <p class="text-xs font-semibold">Auto-scan feedback</p>
-                                    <p class="mt-0.5 text-xs">{{ $scanFeedbackMessage }}</p>
-                                    @if(($deviceScan['confidence'] ?? 0) > 0)
-                                    <p class="mt-1 text-[10px] uppercase tracking-[0.2em] opacity-80">Confidence {{ number_format((float) $deviceScan['confidence'] * 100, 0) }}%</p>
-                                    @endif
-                                </div>
-                            </div>
-                            @endif
-                            <div class="p-3 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-2">
-                                <flux:icon name="information-circle" class="size-4 text-amber-600 mt-0.5 shrink-0" />
-                                <p class="text-xs text-amber-700">IMEI and serial should come from the linked stock unit. Uploading the box or sticker photo will also try to auto-detect identifiers on supported browsers.</p>
                             </div>
                         </div>
                         @endif
@@ -601,8 +452,8 @@
                         @if($step === 3)
                         <div class="space-y-4">
                             <div>
-                                <h3 class="text-lg font-black text-gray-900 dark:text-white">Contact & Location</h3>
-                                <p class="text-sm text-gray-500 mt-0.5">Phone numbers, branch, and residential address</p>
+                                <h3 class="text-lg font-black text-gray-900 dark:text-white">Contact (Mawasiliano)</h3>
+                                <p class="text-sm text-gray-500 mt-0.5">Namba za simu + makazi (mkoa/wilaya) ili mteja apatikane kirahisi</p>
                             </div>
                             <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
                                 <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4">
@@ -649,16 +500,31 @@
                                     <flux:label>Email <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
                                     <flux:input wire:model="email" type="email" placeholder="amina@example.com" />
                                 </flux:field>
-                                <flux:field>
-                                    <flux:label>Branch <span class="text-red-500">*</span></flux:label>
-                                    <flux:select wire:model="branchId">
-                                        <flux:select.option value="">— Select branch —</flux:select.option>
-                                        @foreach($branches as $b)
-                                        <flux:select.option :value="$b->id">{{ $b->name }}</flux:select.option>
-                                        @endforeach
-                                    </flux:select>
-                                    <flux:error name="branchId" />
-                                </flux:field>
+                                @php
+                                    $u = auth()->user();
+                                    $canPickBranch = $u?->isAdmin() || $u?->isOwner() || $u?->isManager() || $u?->isSupervisor();
+                                @endphp
+                                @if($canPickBranch)
+                                    <flux:field>
+                                        <flux:label>Branch <span class="text-red-500">*</span></flux:label>
+                                        <flux:select wire:model="branchId">
+                                            <flux:select.option value="">— Select branch —</flux:select.option>
+                                            @foreach($branches as $b)
+                                            <flux:select.option :value="$b->id">{{ $b->name }}</flux:select.option>
+                                            @endforeach
+                                        </flux:select>
+                                        <flux:error name="branchId" />
+                                    </flux:field>
+                                @else
+                                    <flux:field>
+                                        <flux:label>Branch</flux:label>
+                                        <div class="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                                            {{ $selectedBranch?->name ?? '—' }}
+                                        </div>
+                                        <flux:error name="branchId" />
+                                        <flux:description>Branch inajazwa automatically kulingana na account yako.</flux:description>
+                                    </flux:field>
+                                @endif
                             </div>
                             <flux:field>
                                 <flux:label>Physical Address <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
@@ -666,12 +532,22 @@
                             </flux:field>
                             <div class="grid grid-cols-2 gap-4">
                                 <flux:field>
-                                    <flux:label>Region</flux:label>
-                                    <flux:input wire:model="region" placeholder="e.g. Dar es Salaam" />
+                                    <flux:label>Region (Mkoa) <span class="text-red-500">*</span></flux:label>
+                                    @php
+                                        $regions = ['Dar es Salaam','Arusha','Dodoma','Mwanza','Mbeya','Morogoro','Tanga','Kilimanjaro','Pwani','Kigoma','Kagera','Mtwara','Lindi','Ruvuma','Rukwa','Katavi','Singida','Manyara','Tabora','Shinyanga','Simiyu','Geita','Njombe','Iringa','Mara','Songwe','Pemba North','Pemba South','Unguja North','Unguja South','Unguja West','Unguja City'];
+                                    @endphp
+                                    <flux:select wire:model="region">
+                                        <flux:select.option value="">— Chagua Mkoa —</flux:select.option>
+                                        @foreach($regions as $r)
+                                        <flux:select.option value="{{ $r }}">{{ $r }}</flux:select.option>
+                                        @endforeach
+                                    </flux:select>
+                                    <flux:error name="region" />
                                 </flux:field>
                                 <flux:field>
-                                    <flux:label>District</flux:label>
-                                    <flux:input wire:model="district" placeholder="e.g. Kinondoni" />
+                                    <flux:label>District (Wilaya) <span class="text-red-500">*</span></flux:label>
+                                    <flux:input wire:model="district" placeholder="Mfano: Kinondoni" />
+                                    <flux:error name="district" />
                                 </flux:field>
                             </div>
                             <flux:field>
@@ -697,27 +573,58 @@
                         @if($step === 4)
                         <div class="space-y-4">
                             <div>
-                                <h3 class="text-lg font-black text-gray-900 dark:text-white">Income & Employment</h3>
-                                <p class="text-sm text-gray-500 mt-0.5">Work details and monthly income for affordability assessment</p>
+                                <h3 class="text-lg font-black text-gray-900 dark:text-white">Income (Kazi na Kipato)</h3>
+                                <p class="text-sm text-gray-500 mt-0.5">Uhakiki wa kazi, mzunguko wa kipato, na uwezo wa kulipa</p>
+                            </div>
+                            <div class="rounded-2xl border border-gray-100 bg-white/80 p-4 shadow-sm">
+                                <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">A · Occupation Type <span class="text-red-500">*</span></p>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    @foreach([
+                                        'salaried' => 'Salaried',
+                                        'self_employed' => 'Self Employed',
+                                        'driver' => 'Driver',
+                                        'farmer' => 'Farmer',
+                                        'teacher' => 'Teacher',
+                                        'other' => 'Other',
+                                    ] as $val => $label)
+                                    <button type="button" wire:click="$set('occupation', '{{ $val }}')"
+                                            class="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition-colors {{ $occupation === $val ? 'bg-oe-soft text-oe-hover border border-oe/20' : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-50' }}">
+                                        {{ $label }}
+                                    </button>
+                                    @endforeach
+                                </div>
+                                <flux:error name="occupation" />
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                                <flux:field>
+                                    <flux:label>Employer/Business Name <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
+                                    <flux:input wire:model="employer" placeholder="Mfano: Duka la Juma / Serikali" />
+                                    <flux:error name="employer" />
+                                </flux:field>
+                                <flux:field>
+                                    <flux:label>Work Location <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
+                                    <flux:input wire:model="workLocation" placeholder="Mfano: Kariakoo" />
+                                    <flux:error name="workLocation" />
+                                </flux:field>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <flux:field>
-                                    <flux:label>Occupation <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
-                                    <flux:input wire:model="occupation" placeholder="e.g. Teacher, Trader" />
+                                    <flux:label>Duration at Work <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
+                                    <flux:input wire:model="durationAtWork" placeholder="Mfano: Miaka 2" />
+                                    <flux:error name="durationAtWork" />
                                 </flux:field>
                                 <flux:field>
-                                    <flux:label>Employer / Business <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
-                                    <flux:input wire:model="employer" placeholder="e.g. Govt, Self-employed" />
-                                </flux:field>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <flux:field>
-                                    <flux:label>Work / Business Location <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
-                                    <flux:input wire:model="workLocation" placeholder="e.g. Kariakoo, Dar es Salaam" />
-                                </flux:field>
-                                <flux:field>
-                                    <flux:label>Duration at Work / Business <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
-                                    <flux:input wire:model="durationAtWork" placeholder="e.g. 2 years, 6 months" />
+                                    <flux:label>Income Cycle <span class="text-red-500">*</span></flux:label>
+                                    <flux:select wire:model="incomePaymentCycle">
+                                        <flux:select.option value="">— Chagua —</flux:select.option>
+                                        <flux:select.option value="daily">Daily</flux:select.option>
+                                        <flux:select.option value="weekly">Weekly</flux:select.option>
+                                        <flux:select.option value="biweekly">Bi-weekly</flux:select.option>
+                                        <flux:select.option value="monthly">Monthly</flux:select.option>
+                                        <flux:select.option value="irregular">Irregular</flux:select.option>
+                                    </flux:select>
+                                    <flux:error name="incomePaymentCycle" />
                                 </flux:field>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
@@ -729,18 +636,17 @@
                                 <flux:field>
                                     <flux:label>Monthly Expenses (TZS) <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
                                     <flux:input wire:model="monthlyExpenses" type="number" min="0" placeholder="e.g. 200000" />
+                                    <flux:error name="monthlyExpenses" />
                                 </flux:field>
                             </div>
-                            <flux:field>
-                                <flux:label>Income Payment Cycle <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
-                                <flux:select wire:model="incomePaymentCycle">
-                                    <flux:select.option value="">— Select —</flux:select.option>
-                                    <flux:select.option value="weekly">Weekly</flux:select.option>
-                                    <flux:select.option value="biweekly">Bi-weekly</flux:select.option>
-                                    <flux:select.option value="monthly">Monthly (salary)</flux:select.option>
-                                    <flux:select.option value="irregular">Irregular / Daily</flux:select.option>
-                                </flux:select>
-                            </flux:field>
+                            <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4">
+                                <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">Politically Exposed Person (PEP)</p>
+                                <p class="mt-0.5 text-xs text-gray-500">Tiki kama mteja ni PEP (au ana uhusiano wa karibu na PEP).</p>
+                                <label class="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-200">
+                                    <input type="checkbox" wire:model="isPep" class="w-4 h-4 accent-oe" />
+                                    Yes, customer is PEP
+                                </label>
+                            </div>
                             <div>
                                 <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Business / Workplace Photo <span class="text-gray-400 font-normal">(optional)</span></label>
                                 <input wire:model="businessPhoto" type="file" accept="image/*"
@@ -755,8 +661,8 @@
                         @if($step === 5)
                         <div class="space-y-5">
                             <div>
-                                <h3 class="text-lg font-black text-gray-900 dark:text-white">Next of Kin</h3>
-                                <p class="text-sm text-gray-500 mt-0.5">Emergency contacts for tracing and verification calls</p>
+                                <h3 class="text-lg font-black text-gray-900 dark:text-white">Next of Kin (Mtu wa Karibu)</h3>
+                                <p class="text-sm text-gray-500 mt-0.5">Mtu wa dharura ambaye tunaweza kumpata kwa urahisi</p>
                             </div>
                             {{-- Primary NOK --}}
                             <div class="border border-gray-100 dark:border-zinc-700 rounded-xl p-4 space-y-4">
@@ -791,8 +697,8 @@
                                         <flux:select.option value="spouse">Spouse</flux:select.option>
                                         <flux:select.option value="parent">Parent</flux:select.option>
                                         <flux:select.option value="sibling">Sibling</flux:select.option>
-                                        <flux:select.option value="child">Child</flux:select.option>
                                         <flux:select.option value="friend">Friend</flux:select.option>
+                                        <flux:select.option value="relative">Relative</flux:select.option>
                                         <flux:select.option value="other">Other</flux:select.option>
                                     </flux:select>
                                     <flux:error name="nokRelationship" />
@@ -830,8 +736,8 @@
                                         <flux:select.option value="spouse">Spouse</flux:select.option>
                                         <flux:select.option value="parent">Parent</flux:select.option>
                                         <flux:select.option value="sibling">Sibling</flux:select.option>
-                                        <flux:select.option value="child">Child</flux:select.option>
                                         <flux:select.option value="friend">Friend</flux:select.option>
+                                        <flux:select.option value="relative">Relative</flux:select.option>
                                         <flux:select.option value="other">Other</flux:select.option>
                                     </flux:select>
                                 </flux:field>
@@ -843,8 +749,8 @@
                         @if($step === 6)
                         <div class="space-y-5">
                             <div>
-                                <h3 class="text-lg font-black text-gray-900 dark:text-white">Consent & Declaration</h3>
-                                <p class="text-sm text-gray-500 mt-0.5">Customer must verbally confirm all items below before you check them</p>
+                                <h3 class="text-lg font-black text-gray-900 dark:text-white">Consent (Ridhaa)</h3>
+                                <p class="text-sm text-gray-500 mt-0.5">Mteja lazima akubaliane kwa maneno, ndipo uweke tiki</p>
                             </div>
                             <div class="space-y-3">
                                 <label class="flex items-start gap-3 p-4 rounded-xl border border-gray-200 dark:border-zinc-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors {{ $termsAccepted ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-900/10' : '' }}">
@@ -881,7 +787,7 @@
                         </div>
                         @endif
 
-                        {{-- ═══ STEP 7: REVIEW & SUBMIT ═══ --}}
+                        {{-- ═══ STEP 7: SUBMIT ═══ --}}
                         @if($step === 7)
                         @php
                             $paymentRecord = $latestDraftPayment;
@@ -1027,6 +933,12 @@
                                         </div>
 
                                         <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+                                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">ETR Receipt Photo <span class="text-red-500">*</span></label>
+                                            <input wire:model="etrReceiptPhoto" type="file" accept="image/*"
+                                                   class="mt-2 block w-full rounded-lg border border-gray-200 p-1 text-xs text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-oe-soft file:px-2 file:py-1 file:text-xs file:font-semibold file:text-oe-hover hover:file:bg-oe/15" />
+                                            @error('etrReceiptPhoto') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                                            <div wire:loading wire:target="etrReceiptPhoto" class="mt-1 text-[10px] text-gray-400">Uploading ETR receipt…</div>
+
                                             <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Asset Handover List <span class="text-red-500">*</span></label>
                                             <input wire:model="assetHandoverList" type="file" accept=".pdf,image/*"
                                                    class="mt-2 block w-full rounded-lg border border-gray-200 p-1 text-xs text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-oe-soft file:px-2 file:py-1 file:text-xs file:font-semibold file:text-oe-hover hover:file:bg-oe/15" />
@@ -1048,13 +960,13 @@
                                 <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
                                     <div><span class="text-gray-500">Device:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $deviceSpecs ?: '—' }}</span></div>
                                     <div><span class="text-gray-500">IMEI:</span> <span class="font-mono font-semibold text-gray-800 dark:text-gray-100">{{ $imeiNumber ?: '—' }}</span></div>
-                                    <div><span class="text-gray-500">Cash Price:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">TZS {{ number_format($cashPrice) }}</span></div>
-                                    <div><span class="text-gray-500">Deposit:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">TZS {{ number_format($depositAmount) }}</span></div>
+                                    <div><span class="text-gray-500">Cash Price:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">TZS {{ number_format((float) $cashPrice) }}</span></div>
+                                    <div><span class="text-gray-500">Deposit:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">TZS {{ number_format((float) $depositAmount) }}</span></div>
                                     <div><span class="text-gray-500">Customer:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">{{ trim("$firstName $lastName") ?: '—' }}</span></div>
                                     <div><span class="text-gray-500">Phone:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $phone ?: '—' }}</span></div>
                                     <div><span class="text-gray-500">Accessories:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">{{ count($deviceAccessories) ? count($deviceAccessories).' item(s)' : 'None' }}</span></div>
                                     <div><span class="text-gray-500">NIDA:</span> <span class="font-mono font-semibold text-gray-800 dark:text-gray-100">{{ $nidaNumber ?: '—' }}</span></div>
-                                    <div><span class="text-gray-500">Monthly Income:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">TZS {{ number_format($monthlyIncome) }}</span></div>
+                                    <div><span class="text-gray-500">Monthly Income:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">TZS {{ number_format((float) $monthlyIncome) }}</span></div>
                                     <div><span class="text-gray-500">NOK:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $nokName ?: '—' }} ({{ $nokPhone ?: '—' }})</span></div>
                                     <div><span class="text-gray-500">Repayment:</span> <span class="font-semibold text-gray-800 dark:text-gray-100 capitalize">{{ $preferredRepayment ?: '—' }}</span></div>
                                     <div><span class="text-gray-500">Payment:</span> <span class="font-semibold text-gray-800 dark:text-gray-100">{{ $paymentLabel }}</span></div>
@@ -1063,7 +975,15 @@
                                 <div class="pt-2 border-t border-gray-100 dark:border-zinc-700 flex gap-4 text-xs">
                                     @foreach(['Terms' => $termsAccepted, 'Data Consent' => $dataConsentAccepted, 'Call Consent' => $callConsentAccepted] as $label => $val)
                                     <span class="inline-flex items-center gap-1 {{ $val ? 'text-emerald-600' : 'text-red-500' }}">
-                                        @if($val)<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>@else<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>@endif
+                                        @if($val)
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                        @else
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                        @endif
                                         {{ $label }}
                                     </span>
                                     @endforeach
@@ -1124,81 +1044,6 @@
                 </div>
             </div>
             @endif
-        </div>
-
-        {{-- ══ RIGHT: Recent Profiles ══ --}}
-        <div class="lg:col-span-2 flex flex-col gap-4">
-            <div class="flex items-center justify-between">
-                <h3 class="font-bold text-gray-900 dark:text-white text-sm">Recently Registered</h3>
-                <a href="{{ route('kyc.customers') }}" wire:navigate class="text-xs text-oe hover:text-blue-800 font-semibold">View all →</a>
-            </div>
-
-            <div class="flex flex-col gap-3">
-                @forelse($recentProfiles as $profile)
-                @php
-                    $pv = $profile->latestVerification;
-                    $pLabel = match($pv?->status) {
-                        'approved' => 'Verified',
-                        'pending'  => 'In Review',
-                        'rejected' => 'Rejected',
-                        default    => 'Not Started',
-                    };
-                    $pBadge = match($pv?->status) {
-                        'approved' => 'bg-emerald-100 text-emerald-700',
-                        'pending'  => 'bg-amber-100 text-amber-700',
-                        'rejected' => 'bg-red-100 text-red-700',
-                        default    => 'bg-zinc-100 text-zinc-600',
-                    };
-                    $pDot = match($pv?->status) {
-                        'approved' => 'bg-emerald-400',
-                        'pending'  => 'bg-amber-400',
-                        'rejected' => 'bg-red-400',
-                        default    => 'bg-zinc-400',
-                    };
-                @endphp
-                <div wire:key="vault-{{ $profile->id }}"
-                     class="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm p-4 flex items-center gap-3 hover:border-oe/25 dark:hover:border-oe/30 transition-colors">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-oe/90 to-oe flex items-center justify-center text-white text-xs font-black flex-shrink-0">
-                        {{ strtoupper(substr($profile->first_name, 0, 1).substr($profile->last_name, 0, 1)) }}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="font-semibold text-sm text-gray-900 dark:text-white truncate">{{ $profile->full_name }}</p>
-                        <p class="font-mono text-[10px] text-gray-400 mt-0.5">
-                            {{ $profile->phone }}
-                        </p>
-                    </div>
-                    <div class="flex flex-col items-end gap-1 flex-shrink-0">
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold {{ $pBadge }}">
-                            <span class="w-1.5 h-1.5 rounded-full {{ $pDot }}"></span>
-                            {{ $pLabel }}
-                        </span>
-                        <span class="text-[10px] text-gray-400">{{ $profile->created_at->diffForHumans() }}</span>
-                    </div>
-                </div>
-                @empty
-                <div class="p-8 border border-dashed border-gray-200 dark:border-zinc-700 rounded-xl text-center text-gray-500">
-                    <flux:icon name="users" class="size-8 mx-auto mb-2 text-gray-300" />
-                    <p class="text-sm">No customers registered yet</p>
-                </div>
-                @endforelse
-            </div>
-
-            {{-- Quick Stats --}}
-            <div class="bg-gradient-to-br from-oe to-oe-hover rounded-2xl p-5 text-white mt-2">
-                <p class="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1">Today's Registrations</p>
-                <p class="text-3xl font-black">{{ \App\Models\Customer::whereDate('created_at', today())->count() }}</p>
-                <p class="text-xs text-white/60 mt-1">customers registered today</p>
-                <div class="mt-3 flex gap-2">
-                    <a href="{{ route('kyc.pending') }}" wire:navigate
-                       class="flex-1 text-center py-2 text-xs font-bold rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
-                        Pending Queue
-                    </a>
-                    <a href="{{ route('kyc.customers') }}" wire:navigate
-                       class="flex-1 text-center py-2 text-xs font-bold rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
-                        All Profiles
-                    </a>
-                </div>
-            </div>
         </div>
 
     </div>

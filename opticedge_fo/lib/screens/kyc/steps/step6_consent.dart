@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/constants.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/common/glass_card.dart';
 
 class Step6ConsentScreen extends ConsumerStatefulWidget {
   const Step6ConsentScreen({super.key});
@@ -91,7 +93,7 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: _allAccepted(state)
-                    ? AppConstants.success.withOpacity(0.3)
+                    ? AppConstants.success.withValues(alpha: 0.3)
                     : AppConstants.border,
               ),
             ),
@@ -151,21 +153,12 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
   }) {
     return GestureDetector(
       onTap: () => onChanged(!value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      child: GlassCard(
+        tint: value ? AppConstants.primarySurface : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        borderColor:
+            value ? AppConstants.primary : AppConstants.border,
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: value
-              ? AppConstants.primarySurface
-              : AppConstants.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: value
-                ? AppConstants.primary.withOpacity(0.4)
-                : AppConstants.border,
-            width: value ? 1.5 : 1,
-          ),
-        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -221,7 +214,7 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
             ),
           ],
         ),
-      ),
+      ).animate().fadeIn(duration: 160.ms),
     );
   }
 

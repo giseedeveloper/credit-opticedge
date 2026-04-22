@@ -11,6 +11,7 @@ class DeviceIdentifierScanService
      * @param  array<string, mixed>  $payload
      * @return array{
      *     selected_imei: ?string,
+     *     selected_imei_2: ?string,
      *     selected_serial: ?string,
      *     imei_candidates: array<int, string>,
      *     serial_candidates: array<int, string>,
@@ -45,10 +46,12 @@ class DeviceIdentifierScanService
             ->values();
 
         $selectedImei = $this->pickBestImei($barcodeValues, $combinedText, $imeiCandidates);
+        $selectedImei2 = $this->pickSecondImei($selectedImei, $imeiCandidates);
         $selectedSerial = $this->pickBestSerial($barcodeValues, $combinedText, $serialCandidates);
 
         return [
             'selected_imei' => $selectedImei,
+            'selected_imei_2' => $selectedImei2,
             'selected_serial' => $selectedSerial,
             'imei_candidates' => $imeiCandidates->all(),
             'serial_candidates' => $serialCandidates->all(),
@@ -153,6 +156,16 @@ class DeviceIdentifierScanService
         }
 
         return $serialCandidates->first();
+    }
+
+    private function pickSecondImei(?string $selectedImei, Collection $imeiCandidates): ?string
+    {
+        if (! $selectedImei) {
+            return null;
+        }
+
+        return $imeiCandidates
+            ->first(fn (string $candidate): bool => $candidate !== $selectedImei);
     }
 
     private function calculateConfidence(?string $imei, ?string $serial, Collection $barcodeValues, string $combinedText): float

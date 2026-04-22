@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/constants.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/common/glass_card.dart';
 import '../../../widgets/kyc/phone_number_field.dart';
 
 class Step5NokScreen extends ConsumerStatefulWidget {
@@ -23,10 +24,9 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
     'Spouse',
     'Parent',
     'Sibling',
-    'Child',
     'Friend',
     'Relative',
-    'Colleague',
+    'Other',
   ];
 
   @override
@@ -228,13 +228,10 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
     required bool required,
     VoidCallback? onRemove,
   }) {
-    return Container(
+    return GlassCard(
+      tint: Colors.white,
+      borderRadius: BorderRadius.circular(18),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppConstants.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppConstants.border),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

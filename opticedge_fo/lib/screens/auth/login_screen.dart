@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/constants.dart';
+import '../../config/design_tokens.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../widgets/common/app_button.dart';
+import '../../widgets/common/glass_card.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -78,77 +81,100 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       }
     });
 
-    return Scaffold(
-      body: SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-        child: Stack(
-          children: [
-            // Gradient header
-            Container(
-              width: double.infinity,
-              height: size.height * 0.42,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFEA580C), Color(0xFFC2410C)],
-                ),
-              ),
-            ),
-
-            // Wave shape at bottom of gradient
-            Positioned(
-              top: size.height * 0.38,
-              left: 0,
-              right: 0,
-              child: Container(
-                height: 50,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Stack(
+            children: [
+              // Brand hero (same navy system as dashboard)
+              Container(
+                width: double.infinity,
+                height: size.height * 0.44,
                 decoration: BoxDecoration(
-                  color: theme.scaffoldBackgroundColor,
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(32)),
+                  gradient: DesignTokens.heroGradientWithPrimaryHint,
                 ),
               ),
-            ),
+              Positioned(
+                top: -28,
+                right: -16,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppConstants.primaryLight.withValues(alpha: 0.12),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: -36,
+                top: size.height * 0.12,
+                child: Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: DesignTokens.accentSky.withValues(alpha: 0.10),
+                  ),
+                ),
+              ),
 
-            // Scrollable content
-            SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 32),
-
-                    // Header
-                    AnimatedBuilder(
-                      animation: _headerOpacity,
-                      builder: (_, __) => Opacity(
-                        opacity: _headerOpacity.value,
-                        child: _buildHeader(),
+              // Wave — soft handoff to scaffold
+              Positioned(
+                top: size.height * 0.40,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: theme.scaffoldBackgroundColor,
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(36)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 24,
+                        offset: const Offset(0, -4),
                       ),
-                    ),
+                    ],
+                  ),
+                ),
+              ),
 
-                    const SizedBox(height: 40),
-
-                    // Login card
-                    AnimatedBuilder(
-                      animation: _animController,
-                      builder: (_, __) => Opacity(
-                        opacity: _cardOpacity.value,
-                        child: Transform.translate(
-                          offset: Offset(0, _cardSlide.value),
-                          child: _buildLoginCard(authState),
+              SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 28),
+                      AnimatedBuilder(
+                        animation: _headerOpacity,
+                        builder: (_, __) => Opacity(
+                          opacity: _headerOpacity.value,
+                          child: _buildHeader(),
                         ),
                       ),
-                    ),
-
-                    const SizedBox(height: 32),
-                  ],
+                      const SizedBox(height: 36),
+                      AnimatedBuilder(
+                        animation: _animController,
+                        builder: (_, __) => Opacity(
+                          opacity: _cardOpacity.value,
+                          child: Transform.translate(
+                            offset: Offset(0, _cardSlide.value),
+                            child: _buildLoginCard(authState),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -164,24 +190,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           height: 72,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.35),
+              width: 1.5,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 20,
-                offset: const Offset(0, 6),
+                color: Colors.black.withValues(alpha: 0.18),
+                blurRadius: 28,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
-          child: const Center(
-            child: Text(
-              'OE',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                color: AppConstants.primary,
-                letterSpacing: -1,
-              ),
+          child: Center(
+            child: Image.asset(
+              'assets/images/app_logo.png',
+              width: 44,
+              height: 44,
+              fit: BoxFit.contain,
             ),
           ),
         ),
@@ -212,27 +239,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final s = S.of(ref);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final cardColor = theme.cardTheme.color ?? theme.colorScheme.surface;
-    final borderColor = isDark ? const Color(0xFF2A2D3A) : AppConstants.border;
+    final borderColor =
+        isDark ? DesignTokens.darkBorder : AppConstants.border;
     final fillColor =
-        isDark ? const Color(0xFF2A2D3A) : AppConstants.borderLight;
+        isDark ? DesignTokens.darkSurface : AppConstants.borderLight;
 
-    return Container(
+    return GlassCard(
+      tint: Colors.white,
+      borderRadius: BorderRadius.circular(26),
+      borderColor: borderColor,
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: borderColor, width: isDark ? 1 : 0),
-        boxShadow: isDark
-            ? []
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-      ),
       child: Form(
         key: _formKey,
         child: Column(

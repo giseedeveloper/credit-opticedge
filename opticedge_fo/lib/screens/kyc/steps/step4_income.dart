@@ -20,15 +20,14 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
       _expenses,
       _duration;
 
-  final _cycles = ['daily', 'weekly', 'bi-weekly', 'monthly'];
+  final _cycles = ['daily', 'weekly', 'monthly'];
   final _occupationChips = [
     'Salaried',
     'Self Employed',
-    'Business Owner',
-    'Freelancer',
+    'Driver',
     'Farmer',
     'Teacher',
-    'Driver',
+    'Other',
   ];
 
   @override
@@ -86,7 +85,8 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _sectionHeader(
-                'Work & Income', 'Customer\'s employment and income details'),
+                'Hatua ya 4: Income (Kazi na Kipato)',
+                'Chagua aina ya kazi, mzunguko wa kipato, PEP, kisha jaza kipato na matumizi.'),
             const SizedBox(height: 20),
             _label('Occupation Type', optional: true),
             const SizedBox(height: 8),
@@ -164,6 +164,49 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
                   ),
                 );
               }).toList(),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppConstants.surfaceMuted,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppConstants.border),
+              ),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Politically Exposed Person (PEP)',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppConstants.textPrimary,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Washa kama mteja ni PEP au ana uhusiano wa karibu na PEP.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.4,
+                            color: AppConstants.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: state.isPep,
+                    onChanged: (v) => ref
+                        .read(kycProvider.notifier)
+                        .update((s) => s.copyWith(isPep: v)),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 14),
             _field(_duration, 'Duration at Work',

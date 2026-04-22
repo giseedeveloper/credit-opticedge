@@ -7,9 +7,14 @@ import '../../config/constants.dart';
 import '../../core/providers/connectivity_provider.dart';
 import '../../core/providers/kyc_provider.dart';
 import '../../widgets/common/app_color_icon.dart';
-import 'steps/stage2_customer_verification.dart';
 import 'steps/step1_device.dart';
+import 'steps/step2_identity.dart';
+import 'steps/step3_contact.dart';
+import 'steps/step4_income.dart';
+import 'steps/step5_nok.dart';
+import 'steps/step6_consent.dart';
 import 'steps/step7_submit.dart';
+import '../../widgets/kyc/step_indicator.dart';
 
 class KycWizardScreen extends ConsumerStatefulWidget {
   final int routeStep;
@@ -28,21 +33,23 @@ class KycWizardScreen extends ConsumerStatefulWidget {
 class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
   bool _bootstrappingDraft = true;
 
-  static const _stageLabels = [
-    'Device & Offer',
-    'Customer & Verification',
-    'Payment & Handover',
-  ];
-
-  static const _stageShortLabels = [
+  static const _stepLabels = [
     'Device',
-    'Customer',
-    'Finalize',
+    'Identity',
+    'Contact',
+    'Income',
+    'Next of Kin',
+    'Consent',
+    'Submit',
   ];
 
-  static const _stageIcons = [
+  static const _stepIcons = [
     AppIconAssets.handset,
     AppIconAssets.identity,
+    AppIconAssets.contact,
+    AppIconAssets.income,
+    AppIconAssets.nok,
+    AppIconAssets.consent,
     AppIconAssets.receipt,
   ];
 
@@ -108,25 +115,12 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
   }
 
   int _canonicalStep(int step) {
-    final s = step.clamp(1, 7);
-    if (s <= 1) {
-      return 1;
-    }
-    if (s < 7) {
-      return 2;
-    }
-    return 7;
+    return step.clamp(1, 7);
   }
 
   int _previousCanonicalStep(int step) {
     final s = _canonicalStep(step);
-    if (s == 7) {
-      return 2;
-    }
-    if (s == 2) {
-      return 1;
-    }
-    return 1;
+    return (s - 1).clamp(1, 7);
   }
 
   void _goToStep(int step, String? customerId) {
@@ -237,47 +231,19 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
       case 1:
         return const Step1DeviceScreen();
       case 2:
+        return const Step2IdentityScreen();
       case 3:
+        return const Step3ContactScreen();
       case 4:
+        return const Step4IncomeScreen();
       case 5:
+        return const Step5NokScreen();
       case 6:
-        return const Stage2CustomerVerificationScreen();
+        return const Step6ConsentScreen();
       case 7:
       default:
         return const Step7SubmitScreen();
     }
-  }
-
-  int _stageForStep(int step) {
-    if (step <= 1) {
-      return 1;
-    }
-    if (step <= 6) {
-      return 2;
-    }
-    return 3;
-  }
-
-  double _stageProgressForStep(int step) {
-    final stage = _stageForStep(step);
-    if (stage == 1) {
-      return step > 1 ? 1 : 0.55;
-    }
-    if (stage == 2) {
-      return 0.72;
-    }
-    return 1;
-  }
-
-  String _stageSubstepForStep(int step) {
-    final stage = _stageForStep(step);
-    if (stage == 1) {
-      return 'Scan and offer setup';
-    }
-    if (stage == 2) {
-      return 'Identity, contact, income, NOK and consent';
-    }
-    return 'Payment, agreement and handover';
   }
 
   Widget _buildStageHeader({
@@ -285,10 +251,6 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
     required ({String title, String subtitle, String outcome}) descriptor,
     required KycDraftState kycState,
   }) {
-    final activeStage = _stageForStep(stepIndex);
-    final activeStageIndex = activeStage - 1;
-    final stageProgress = _stageProgressForStep(stepIndex);
-
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
       decoration: BoxDecoration(
@@ -322,9 +284,9 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                 ),
                 child: Center(
                   child: AppColorIcon(
-                    assetName: _stageIcons[activeStageIndex],
+                    assetName: _stepIcons[stepIndex - 1],
                     size: 27,
-                    semanticsLabel: _stageLabels[activeStageIndex],
+                    semanticsLabel: _stepLabels[stepIndex - 1],
                   ),
                 ),
               ),
@@ -334,7 +296,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Stage $activeStage of 3',
+                      'Step $stepIndex of 7',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
@@ -345,7 +307,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _stageLabels[activeStageIndex],
+                      _stepLabels[stepIndex - 1],
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -407,114 +369,13 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            children: List.generate(3, (index) {
-              final stageNumber = index + 1;
-              final done = activeStage > stageNumber;
-              final active = activeStage == stageNumber;
-              final progress = done ? 1.0 : (active ? stageProgress : 0.0);
-
-              return Expanded(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 260),
-                  margin: EdgeInsets.only(right: index == 2 ? 0 : 8),
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: active
-                        ? Colors.white.withValues(alpha: 0.15)
-                        : done
-                            ? AppConstants.success.withValues(alpha: 0.16)
-                            : Colors.white.withValues(alpha: 0.07),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: active
-                          ? Colors.white.withValues(alpha: 0.18)
-                          : done
-                              ? AppConstants.success.withValues(alpha: 0.24)
-                              : Colors.white.withValues(alpha: 0.08),
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          if (done)
-                            const Icon(
-                              Icons.check_circle_rounded,
-                              color: AppConstants.success,
-                              size: 18,
-                            )
-                          else
-                            AppColorIcon(
-                              assetName: _stageIcons[index],
-                              size: 18,
-                              opacity: active ? 1 : 0.64,
-                              semanticsLabel: _stageShortLabels[index],
-                            ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              _stageShortLabels[index],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: active || done
-                                    ? Colors.white
-                                    : Colors.white.withValues(alpha: 0.62),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          minHeight: 4,
-                          value: progress,
-                          backgroundColor: Colors.white.withValues(alpha: 0.11),
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            done
-                                ? AppConstants.success
-                                : AppConstants.kycWizardAccentLine,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _stageSubstepForStep(stepIndex),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white.withValues(alpha: 0.72),
-                  ),
-                ),
-              ),
-              if (kycState.maxReachableStep > stepIndex)
-                Text(
-                  'Resume ready',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: AppConstants.success.withValues(alpha: 0.95),
-                  ),
-                ),
-            ],
+          StepIndicator(
+            totalSteps: 7,
+            currentStep: stepIndex,
+            labels: _stepLabels,
+            iconAssets: _stepIcons,
+            compact: true,
+            onDarkBackground: true,
           ),
         ],
       ),

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
+import '../../config/design_tokens.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../widgets/common/app_button.dart';
+import '../../widgets/common/glass_card.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -36,18 +38,21 @@ class ProfileScreen extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFEA580C), Color(0xFFC2410C)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
+                gradient: DesignTokens.heroGradientWithPrimaryHint,
+                borderRadius: BorderRadius.circular(26),
+                boxShadow: [
+                  BoxShadow(
+                    color: DesignTokens.heroEnd.withValues(alpha: 0.35),
+                    blurRadius: 28,
+                    offset: const Offset(0, 14),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
                   CircleAvatar(
                     radius: 36,
-                    backgroundColor: Colors.white.withOpacity(0.25),
+                    backgroundColor: Colors.white.withValues(alpha: 0.25),
                     child: Text(
                       user?.initials ?? 'FO',
                       style: const TextStyle(
@@ -70,7 +75,7 @@ class ProfileScreen extends ConsumerWidget {
                   Text(
                     user?.role?.toUpperCase() ?? '',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                       letterSpacing: 0.8,
@@ -82,7 +87,7 @@ class ProfileScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -186,15 +191,14 @@ class ProfileScreen extends ConsumerWidget {
   Widget _infoCard(BuildContext context, List<_InfoRow> rows) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final cardColor = theme.cardTheme.color ?? theme.colorScheme.surface;
-    final borderColor = isDark ? const Color(0xFF2A2D3A) : AppConstants.border;
+    final borderColor =
+        isDark ? DesignTokens.darkBorder : AppConstants.border;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-      ),
+    return GlassCard(
+      tint: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      borderColor: borderColor,
+      padding: EdgeInsets.zero,
       child: Column(
         children: rows.asMap().entries.map((e) {
           final row = e.value;

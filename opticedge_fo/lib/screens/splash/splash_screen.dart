@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
+import '../../config/design_tokens.dart';
 import '../../core/providers/auth_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -93,23 +95,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFEA580C),
-              Color(0xFFC2410C),
-              Color(0xFF9A3412),
-            ],
-            stops: [0.0, 0.55, 1.0],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            gradient: DesignTokens.heroGradientWithPrimaryHint,
           ),
-        ),
-        child: Stack(
+          child: Stack(
           children: [
             // Floating particles background
             AnimatedBuilder(
@@ -138,8 +133,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         gradient: LinearGradient(
                           colors: [
                             Colors.transparent,
-                            Colors.white.withOpacity(0.8),
-                            Colors.white.withOpacity(0.8),
+                            AppConstants.primaryLight.withValues(alpha: 0.45),
+                            Colors.white.withValues(alpha: 0.85),
                             Colors.transparent,
                           ],
                         ),
@@ -192,10 +187,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 6),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.15),
+                                color: Colors.white.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                    color: Colors.white.withOpacity(0.3)),
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                ),
                               ),
                               child: const Text(
                                 AppConstants.tagline,
@@ -229,15 +225,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                             width: 8,
                             height: 8,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(
-                                (math.sin(
-                                              (_particleController.value *
-                                                      2 *
-                                                      math.pi) +
-                                                  (i * math.pi / 1.5),
-                                            ) *
-                                            0.5 +
-                                        0.5)
+                              color: Colors.white.withValues(
+                                alpha: (math.sin(
+                                          (_particleController.value *
+                                                  2 *
+                                                  math.pi) +
+                                              (i * math.pi / 1.5),
+                                        ) *
+                                        0.5 +
+                                    0.5)
                                     .clamp(0.2, 1.0),
                               ),
                               shape: BoxShape.circle,
@@ -257,16 +253,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               left: 0,
               right: 0,
               child: Text(
-                'Opticedge Africa © 2025',
+                'Opticedge Africa © 2026',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withValues(alpha: 0.52),
                   fontWeight: FontWeight.w400,
                 ),
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -279,29 +276,29 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.4),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 40,
-            offset: const Offset(0, 12),
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 44,
+            offset: const Offset(0, 14),
           ),
           BoxShadow(
-            color: Colors.white.withOpacity(0.15),
-            blurRadius: 0,
-            offset: const Offset(0, 0),
-            spreadRadius: 2,
+            color: AppConstants.primary.withValues(alpha: 0.18),
+            blurRadius: 32,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: const Center(
-        child: Text(
-          'OE',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.w900,
-            color: AppConstants.primary,
-            letterSpacing: -1,
-          ),
+      child: Center(
+        child: Image.asset(
+          'assets/images/app_logo.png',
+          width: 60,
+          height: 60,
+          fit: BoxFit.contain,
         ),
       ),
     );
@@ -325,7 +322,7 @@ class _ParticlePainter extends CustomPainter {
       final radius = 1.5 + rng.nextDouble() * 3;
       final opacity = 0.05 + rng.nextDouble() * 0.12;
 
-      paint.color = Colors.white.withOpacity(opacity);
+      paint.color = Colors.white.withValues(alpha: opacity);
       canvas.drawCircle(Offset(x, y), radius, paint);
     }
   }

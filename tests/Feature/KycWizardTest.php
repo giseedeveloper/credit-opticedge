@@ -145,7 +145,25 @@ it('validates step 2 identity fields', function () {
     Livewire::test(VerificationWizard::class)
         ->set('step', 2)
         ->call('nextStep')
-        ->assertHasErrors(['firstName', 'lastName', 'gender', 'nidaNumber', 'idType']);
+        ->assertHasErrors([
+            // Stage 2 (Customer & Verification) is validated as a full packet.
+            'firstName',
+            'lastName',
+            'gender',
+            'nidaNumber',
+            'idType',
+            'idFrontPhoto',
+            'idBackPhoto',
+            'headshotPhoto',
+            'phone',
+            'monthlyIncome',
+            'nokName',
+            'nokPhone',
+            'nokRelationship',
+            'termsAccepted',
+            'dataConsentAccepted',
+            'callConsentAccepted',
+        ]);
 });
 
 it('validates step 3 phone uniqueness', function () {
@@ -153,10 +171,26 @@ it('validates step 3 phone uniqueness', function () {
     Customer::factory()->create(['phone' => '+255712000001']);
 
     Livewire::test(VerificationWizard::class)
-        ->set('step', 3)
+        ->set('step', 2)
+        ->set('firstName', 'Amina')
+        ->set('lastName', 'Juma')
+        ->set('gender', 'female')
+        ->set('nidaNumber', str_pad('2', 20, '0'))
+        ->set('idType', 'nida')
+        ->set('idFrontPhoto', UploadedFile::fake()->image('id-front.jpg'))
+        ->set('idBackPhoto', UploadedFile::fake()->image('id-back.jpg'))
+        ->set('headshotPhoto', UploadedFile::fake()->image('headshot.jpg'))
         ->set('phone', '0712000001')
         ->set('phoneCountry', 'TZ')
         ->set('branchId', $this->branch->id)
+        ->set('monthlyIncome', '450000')
+        ->set('nokName', 'John Mwangi')
+        ->set('nokPhone', '0754111222')
+        ->set('nokPhoneCountry', 'TZ')
+        ->set('nokRelationship', 'spouse')
+        ->set('termsAccepted', true)
+        ->set('dataConsentAccepted', true)
+        ->set('callConsentAccepted', true)
         ->call('nextStep')
         ->assertHasErrors(['phone']);
 });
@@ -165,7 +199,23 @@ it('validates step 6 consent required', function () {
     actingAs($this->fo);
 
     Livewire::test(VerificationWizard::class)
-        ->set('step', 6)
+        ->set('step', 2)
+        ->set('firstName', 'Amina')
+        ->set('lastName', 'Juma')
+        ->set('gender', 'female')
+        ->set('nidaNumber', str_pad('3', 20, '0'))
+        ->set('idType', 'nida')
+        ->set('idFrontPhoto', UploadedFile::fake()->image('id-front.jpg'))
+        ->set('idBackPhoto', UploadedFile::fake()->image('id-back.jpg'))
+        ->set('headshotPhoto', UploadedFile::fake()->image('headshot.jpg'))
+        ->set('phone', '0712999888')
+        ->set('phoneCountry', 'TZ')
+        ->set('branchId', $this->branch->id)
+        ->set('monthlyIncome', '500000')
+        ->set('nokName', 'John Mwangi')
+        ->set('nokPhone', '0754111222')
+        ->set('nokPhoneCountry', 'TZ')
+        ->set('nokRelationship', 'spouse')
         ->call('nextStep')
         ->assertHasErrors(['termsAccepted', 'dataConsentAccepted', 'callConsentAccepted']);
 });
@@ -286,7 +336,7 @@ it('resets state on startNew', function () {
     actingAs($this->fo);
 
     Livewire::test(VerificationWizard::class)
-        ->set('step', 4)
+        ->set('step', 3)
         ->set('firstName', 'Test')
         ->call('startNew')
         ->assertSet('step', 1)

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
+import '../../config/design_tokens.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/l10n/app_strings.dart';
+import '../../widgets/common/glass_card.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -15,7 +17,8 @@ class SettingsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final surfaceColor = theme.cardTheme.color ?? theme.colorScheme.surface;
-    final borderColor = isDark ? const Color(0xFF2A2D3A) : AppConstants.border;
+    final borderColor =
+        isDark ? DesignTokens.darkBorder : AppConstants.border;
     final s = S.of(ref);
 
     return Scaffold(
@@ -373,12 +376,11 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor, width: 1),
-      ),
+    return GlassCard(
+      tint: surfaceColor,
+      borderRadius: BorderRadius.circular(18),
+      borderColor: borderColor,
+      padding: EdgeInsets.zero,
       child: Column(children: children),
     );
   }

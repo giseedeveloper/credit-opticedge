@@ -6,11 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/constants.dart';
+import '../../config/design_tokens.dart';
 import '../../core/api/api_client.dart';
 import '../../core/models/customer_model.dart';
 import '../../core/providers/customer_provider.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/status_badge.dart';
+import '../../widgets/common/glass_card.dart';
 
 class CustomerDetailScreen extends ConsumerWidget {
   final String customerId;
@@ -268,17 +270,13 @@ class _DetailViewState extends ConsumerState<_DetailView>
   SliverAppBar _buildAppBar(BuildContext context) {
     return SliverAppBar(
       pinned: true,
-      expandedHeight: 150,
-      backgroundColor: AppConstants.primary,
+      expandedHeight: 158,
+      backgroundColor: DesignTokens.heroStart,
       foregroundColor: Colors.white,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFFEA580C), Color(0xFFC2410C)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+          decoration: BoxDecoration(
+            gradient: DesignTokens.heroGradientWithPrimaryHint,
           ),
           child: SafeArea(
             child: Padding(
@@ -386,13 +384,11 @@ class _DetailViewState extends ConsumerState<_DetailView>
     final background =
         AppConstants.statusBg[status] ?? AppConstants.borderLight;
 
-    return Container(
+    return GlassCard(
+      tint: background,
+      borderRadius: BorderRadius.circular(18),
+      borderColor: color.withValues(alpha: 0.22),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
-      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -429,15 +425,11 @@ class _DetailViewState extends ConsumerState<_DetailView>
   }
 
   Widget _releasedBanner() {
-    return Container(
+    return GlassCard(
+      tint: const Color(0xFFF0FDF4),
+      borderRadius: BorderRadius.circular(18),
+      borderColor: AppConstants.success.withValues(alpha: 0.22),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppConstants.success.withValues(alpha: 0.2),
-        ),
-      ),
       child: Row(
         children: [
           const Icon(Icons.check_circle_rounded, color: AppConstants.success),
@@ -464,13 +456,13 @@ class _DetailViewState extends ConsumerState<_DetailView>
   }) {
     final isOpen = _expanded.contains(keyName);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: AppConstants.surface,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        tint: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppConstants.border),
-      ),
+        borderColor: AppConstants.border,
+        padding: EdgeInsets.zero,
       child: Column(
         children: [
           InkWell(
@@ -526,6 +518,7 @@ class _DetailViewState extends ConsumerState<_DetailView>
             ),
           ],
         ],
+      ),
       ),
     );
   }
@@ -922,16 +915,11 @@ class _DetailViewState extends ConsumerState<_DetailView>
         ),
         if (!isReleased && blockers.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
+          GlassCard(
+            tint: AppConstants.warning.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(18),
+            borderColor: AppConstants.warning.withValues(alpha: 0.22),
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppConstants.warning.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppConstants.warning.withValues(alpha: 0.25),
-              ),
-            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -995,13 +983,11 @@ class _DetailViewState extends ConsumerState<_DetailView>
   }
 
   Widget _resumeDraftCard(BuildContext context) {
-    return Container(
+    return GlassCard(
+      tint: AppConstants.infoSurface,
+      borderRadius: BorderRadius.circular(18),
+      borderColor: AppConstants.info.withValues(alpha: 0.22),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppConstants.infoSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppConstants.info.withValues(alpha: 0.18)),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

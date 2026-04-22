@@ -717,6 +717,57 @@ it('customer detail includes payment, agreement and release data', function () {
         ->assertJsonPath('data.flow.total_stages', 3);
 });
 
+it('treats deposit as paid when Selcom request is completed but customer snapshot is still pending', function () {
+    $draftRef = 'draft-stale-selcom-'.uniqid();
+
+    $customer = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'application_draft_reference' => $draftRef,
+        'deposit_payment_status' => 'pending',
+        'deposit_paid_at' => null,
+        'deposit_payment_reference' => null,
+    ]);
+
+    SelcomPaymentRequest::factory()->create([
+        'customer_id' => $customer->id,
+        'initiated_by' => $this->agent->id,
+        'draft_reference' => $draftRef,
+        'status' => 'completed',
+        'payment_status' => 'COMPLETED',
+        'selcom_reference' => 'SEL-STALE-SNAP',
+        'amount' => 2000,
+        'paid_at' => now(),
+    ]);
+
+    expect($customer->fresh()->hasSuccessfulDepositPayment())->toBeTrue();
+});
+
+it('treats deposit as paid when Selcom completed row draft_reference differs from customer draft ref', function () {
+    $customerDraft = 'customer-draft-'.uniqid();
+    $paymentDraft = 'payment-draft-other-'.uniqid();
+
+    $customer = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'application_draft_reference' => $customerDraft,
+        'deposit_payment_status' => 'pending',
+        'deposit_paid_at' => null,
+        'deposit_payment_reference' => null,
+    ]);
+
+    SelcomPaymentRequest::factory()->create([
+        'customer_id' => $customer->id,
+        'initiated_by' => $this->agent->id,
+        'draft_reference' => $paymentDraft,
+        'status' => 'completed',
+        'payment_status' => 'COMPLETED',
+        'selcom_reference' => 'SEL-DRAFT-MISMATCH',
+        'amount' => 2000,
+        'paid_at' => now(),
+    ]);
+
+    expect($customer->fresh()->hasSuccessfulDepositPayment())->toBeTrue();
+});
+
 it('customer detail exposes resume metadata and vendor context for draft editing', function () {
     $vendor = Vendor::factory()->create([
         'branch_id' => $this->branch->id,

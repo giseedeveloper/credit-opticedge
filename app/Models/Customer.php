@@ -184,8 +184,20 @@ class Customer extends Model implements Authenticatable, HasMedia
         }
 
         // Legacy rows: deposit was completed in Selcom while snapshot stored a non-completed `status` string
-        return $this->deposit_paid_at !== null
-            && filled($this->deposit_payment_reference);
+        if ($this->deposit_paid_at !== null && filled($this->deposit_payment_reference)) {
+            return true;
+        }
+
+        // Selcom row can be COMPLETED while `customers.deposit_*` lagged. Do not require
+        // `draft_reference` to match `application_draft_reference` — those strings can drift
+        // (retries, gateway order ids) while the payment row is still the correct customer deposit.
+        return SelcomPaymentRequest::query()
+            ->where('customer_id', $this->id)
+            ->where(function (Builder $q): void {
+                $q->where('payment_status', 'COMPLETED')
+                    ->orWhere('status', 'completed');
+            })
+            ->exists();
     }
 
     public function hasAcceptedAgreement(): bool

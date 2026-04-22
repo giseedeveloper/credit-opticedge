@@ -7,6 +7,7 @@ import '../../core/providers/settings_provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../widgets/common/glass_card.dart';
+import '../../widgets/common/premium_glass_background.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -39,9 +40,11 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(width: 8),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        children: [
+      backgroundColor: Colors.transparent,
+      body: PremiumGlassBackground(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          children: [
           // ─── Appearance ──────────────────────────────────
           _SectionHeader(label: s.appearance, icon: Icons.palette_outlined),
           const SizedBox(height: 10),
@@ -225,7 +228,8 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-        ],
+          ],
+        ),
       ),
     );
   }

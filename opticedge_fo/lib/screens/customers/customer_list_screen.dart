@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
 import '../../core/providers/customer_provider.dart';
 import '../../widgets/common/glass_card.dart';
+import '../../widgets/common/premium_glass_background.dart';
 import '../../widgets/common/status_badge.dart';
 
 class CustomerListScreen extends ConsumerStatefulWidget {
@@ -78,7 +79,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen>
     final state = ref.watch(customerListProvider);
 
     return Scaffold(
-      backgroundColor: AppConstants.background,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('My Customers'),
         actions: [
@@ -168,37 +169,42 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen>
           ),
         ),
       ),
-      body: state.items.isEmpty && state.isLoading
-          ? _buildShimmer()
-          : state.items.isEmpty && !state.isLoading
-              ? _buildEmpty(state.selectedTab)
-              : RefreshIndicator(
-                  color: AppConstants.primary,
-                  onRefresh: () =>
-                      ref.read(customerListProvider.notifier).load(reset: true),
-                  child: ListView.separated(
-                    controller: _scrollCtrl,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: state.items.length + (state.hasMore ? 1 : 0),
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, i) {
-                      if (i == state.items.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: AppConstants.primary),
-                          ),
+      body: PremiumGlassBackground(
+        child: state.items.isEmpty && state.isLoading
+            ? _buildShimmer()
+            : state.items.isEmpty && !state.isLoading
+                ? _buildEmpty(state.selectedTab)
+                : RefreshIndicator(
+                    color: AppConstants.primary,
+                    onRefresh: () => ref
+                        .read(customerListProvider.notifier)
+                        .load(reset: true),
+                    child: ListView.separated(
+                      controller: _scrollCtrl,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: state.items.length + (state.hasMore ? 1 : 0),
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, i) {
+                        if (i == state.items.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppConstants.primary,
+                              ),
+                            ),
+                          );
+                        }
+                        final c = state.items[i];
+                        return _CustomerCard(
+                          item: c,
+                          onTap: () => context.go('/customers/${c.id}'),
                         );
-                      }
-                      final c = state.items[i];
-                      return _CustomerCard(
-                        item: c,
-                        onTap: () => context.go('/customers/${c.id}'),
-                      );
-                    },
+                      },
+                    ),
                   ),
-                ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('/kyc/new'),
         backgroundColor: AppConstants.primary,

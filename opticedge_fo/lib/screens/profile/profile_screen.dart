@@ -7,6 +7,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/glass_card.dart';
+import '../../widgets/common/premium_glass_background.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -19,7 +20,7 @@ class ProfileScreen extends ConsumerWidget {
     final s = S.of(ref);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(s.profile),
         actions: [
@@ -29,161 +30,183 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // Avatar card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: DesignTokens.heroGradientWithPrimaryHint,
+      body: PremiumGlassBackground(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              // Avatar card
+              GlassCard(
+                tint: Colors.white,
                 borderRadius: BorderRadius.circular(26),
-                boxShadow: [
-                  BoxShadow(
-                    color: DesignTokens.heroEnd.withValues(alpha: 0.35),
-                    blurRadius: 28,
-                    offset: const Offset(0, 14),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: Colors.white.withValues(alpha: 0.25),
-                    child: Text(
-                      user?.initials ?? 'FO',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    user?.name ?? '—',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user?.role?.toUpperCase() ?? '',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  if (user?.branch != null) ...[
-                    const SizedBox(height: 8),
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 5),
+                      width: 64,
+                      height: 64,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
+                        gradient: DesignTokens.heroGradientWithPrimaryHint,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.55),
+                          width: 1.2,
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Center(
+                        child: Text(
+                          user?.initials ?? 'FO',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.location_on_outlined,
-                              color: Colors.white70, size: 13),
-                          const SizedBox(width: 4),
                           Text(
-                            user!.branch!.name,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 12),
+                            user?.name ?? '—',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: theme.textTheme.bodyLarge?.color,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _pill(
+                                label: (user?.role?.toUpperCase() ?? ''),
+                                icon: Icons.verified_user_outlined,
+                              ),
+                              if (user?.branch != null)
+                                _pill(
+                                  label: user!.branch!.name,
+                                  icon: Icons.location_on_outlined,
+                                ),
+                            ],
                           ),
                         ],
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // Info card
-            _infoCard(context, [
-              _InfoRow(Icons.email_outlined, s.email, user?.email ?? '—'),
-              _InfoRow(Icons.phone_outlined, s.phone, user?.phone ?? '—'),
-              _InfoRow(Icons.verified_user_outlined, s.status,
-                  user?.isActive == true ? s.active : s.inactive),
-            ]),
+              // Info card
+              _infoCard(context, [
+                _InfoRow(Icons.email_outlined, s.email, user?.email ?? '—'),
+                _InfoRow(Icons.phone_outlined, s.phone, user?.phone ?? '—'),
+                _InfoRow(Icons.verified_user_outlined, s.status,
+                    user?.isActive == true ? s.active : s.inactive),
+              ]),
 
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-            // Permissions card
-            _infoCard(context, [
-              _InfoRow(
-                Icons.person_add_outlined,
-                s.canRegisterCustomers,
-                user?.canRegisterCustomers == true ? s.yes : s.no,
-                valueColor: user?.canRegisterCustomers == true
-                    ? AppConstants.success
-                    : AppConstants.error,
+              // Permissions card
+              _infoCard(context, [
+                _InfoRow(
+                  Icons.person_add_outlined,
+                  s.canRegisterCustomers,
+                  user?.canRegisterCustomers == true ? s.yes : s.no,
+                  valueColor: user?.canRegisterCustomers == true
+                      ? AppConstants.success
+                      : AppConstants.error,
+                ),
+                _InfoRow(
+                  Icons.admin_panel_settings_outlined,
+                  s.adminAccess,
+                  user?.isAdmin == true ? s.yes : s.no,
+                  valueColor: user?.isAdmin == true
+                      ? AppConstants.success
+                      : AppConstants.textSecondary,
+                ),
+              ]),
+
+              const SizedBox(height: 32),
+
+              AppButton(
+                label: s.signOut,
+                width: double.infinity,
+                outlined: true,
+                color: AppConstants.error,
+                icon: Icons.logout_rounded,
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      title: Text(s.signOut),
+                      content: Text(s.signOutConfirm),
+                      actions: [
+                        TextButton(
+                            onPressed: () => Navigator.pop(dialogContext, false),
+                            child: Text(s.cancel)),
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext, true),
+                          child: Text(s.signOut,
+                              style: const TextStyle(color: AppConstants.error)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm == true && context.mounted) {
+                    context.go('/login');
+                    ref.read(authProvider.notifier).logout();
+                  }
+                },
               ),
-              _InfoRow(
-                Icons.admin_panel_settings_outlined,
-                s.adminAccess,
-                user?.isAdmin == true ? s.yes : s.no,
-                valueColor: user?.isAdmin == true
-                    ? AppConstants.success
-                    : AppConstants.textSecondary,
+              const SizedBox(height: 8),
+              Text(
+                'Opticedge FO v1.0.0',
+                style: TextStyle(
+                    fontSize: 11, color: theme.textTheme.bodySmall?.color),
               ),
-            ]),
-
-            const SizedBox(height: 32),
-
-            AppButton(
-              label: s.signOut,
-              width: double.infinity,
-              outlined: true,
-              color: AppConstants.error,
-              icon: Icons.logout_rounded,
-              onPressed: () async {
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (dialogContext) => AlertDialog(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                    title: Text(s.signOut),
-                    content: Text(s.signOutConfirm),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(dialogContext, false),
-                          child: Text(s.cancel)),
-                      TextButton(
-                        onPressed: () => Navigator.pop(dialogContext, true),
-                        child: Text(s.signOut,
-                            style: const TextStyle(color: AppConstants.error)),
-                      ),
-                    ],
-                  ),
-                );
-                if (confirm == true && context.mounted) {
-                  context.go('/login');
-                  ref.read(authProvider.notifier).logout();
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Opticedge FO v1.0.0',
-              style: TextStyle(
-                  fontSize: 11, color: theme.textTheme.bodySmall?.color),
-            ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _pill({required String label, required IconData icon}) {
+    if (label.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppConstants.borderLight.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppConstants.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppConstants.textSecondary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppConstants.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }

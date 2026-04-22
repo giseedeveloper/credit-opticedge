@@ -13,6 +13,7 @@ import '../../core/providers/customer_provider.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/status_badge.dart';
 import '../../widgets/common/glass_card.dart';
+import '../../widgets/common/premium_glass_background.dart';
 
 class CustomerDetailScreen extends ConsumerWidget {
   final String customerId;
@@ -131,7 +132,7 @@ class _DetailViewState extends ConsumerState<_DetailView>
     final canResumeDraft = customer.canResumeDraft;
 
     return Scaffold(
-      backgroundColor: AppConstants.background,
+      backgroundColor: Colors.transparent,
       bottomNavigationBar: customer.canReleaseAsset && !isReleased
           ? SafeArea(
               minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -143,83 +144,85 @@ class _DetailViewState extends ConsumerState<_DetailView>
               ),
             )
           : null,
-      body: CustomScrollView(
-        slivers: [
-          _buildAppBar(context),
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                if (verification != null) _buildStatusBanner(verification),
-                if (canResumeDraft) ...[
-                  if (verification != null) const SizedBox(height: 12),
-                  _resumeDraftCard(context),
-                ],
-                if (customer.release?.status == 'released') ...[
+      body: PremiumGlassBackground(
+        child: CustomScrollView(
+          slivers: [
+            _buildAppBar(context),
+            SliverPadding(
+              padding: const EdgeInsets.all(16),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  if (verification != null) _buildStatusBanner(verification),
+                  if (canResumeDraft) ...[
+                    if (verification != null) const SizedBox(height: 12),
+                    _resumeDraftCard(context),
+                  ],
+                  if (customer.release?.status == 'released') ...[
+                    const SizedBox(height: 12),
+                    _releasedBanner(),
+                  ],
                   const SizedBox(height: 12),
-                  _releasedBanner(),
-                ],
-                const SizedBox(height: 12),
-                _buildSection(
-                  keyName: 'personal',
-                  title: 'Personal Info',
-                  icon: Icons.person_outline_rounded,
-                  content: _buildPersonalInfo(),
-                ),
-                _buildSection(
-                  keyName: 'identity',
-                  title: 'Identity & Contact',
-                  icon: Icons.badge_outlined,
-                  content: _buildIdentityAndContact(),
-                ),
-                _buildSection(
-                  keyName: 'device',
-                  title: 'Device & Offer Details',
-                  icon: Icons.smartphone_rounded,
-                  content: _buildDeviceInfo(),
-                ),
-                _buildSection(
-                  keyName: 'income',
-                  title: 'Work & Income',
-                  icon: Icons.work_outline_rounded,
-                  content: _buildIncomeInfo(),
-                ),
-                _buildSection(
-                  keyName: 'nok',
-                  title: 'Next of Kin',
-                  icon: Icons.people_outline_rounded,
-                  content: _buildNokInfo(),
-                ),
-                _buildSection(
-                  keyName: 'payment',
-                  title: 'Payment & Agreement',
-                  icon: Icons.payments_outlined,
-                  content: _buildPaymentAgreement(),
-                ),
-                _buildSection(
-                  keyName: 'photos',
-                  title: 'Photos, Signatures & Files',
-                  icon: Icons.photo_library_outlined,
-                  content: _buildPhotos(),
-                ),
-                if (verification != null)
                   _buildSection(
-                    keyName: 'verification',
-                    title: 'Verification Status',
-                    icon: Icons.verified_outlined,
-                    content: _buildVerification(verification),
+                    keyName: 'personal',
+                    title: 'Personal Info',
+                    icon: Icons.person_outline_rounded,
+                    content: _buildPersonalInfo(),
                   ),
-                _buildSection(
-                  keyName: 'release',
-                  title: 'Asset Release',
-                  icon: Icons.inventory_2_outlined,
-                  content: _buildRelease(),
-                ),
-                const SizedBox(height: 24),
-              ]),
+                  _buildSection(
+                    keyName: 'identity',
+                    title: 'Identity & Contact',
+                    icon: Icons.badge_outlined,
+                    content: _buildIdentityAndContact(),
+                  ),
+                  _buildSection(
+                    keyName: 'device',
+                    title: 'Device & Offer Details',
+                    icon: Icons.smartphone_rounded,
+                    content: _buildDeviceInfo(),
+                  ),
+                  _buildSection(
+                    keyName: 'income',
+                    title: 'Work & Income',
+                    icon: Icons.work_outline_rounded,
+                    content: _buildIncomeInfo(),
+                  ),
+                  _buildSection(
+                    keyName: 'nok',
+                    title: 'Next of Kin',
+                    icon: Icons.people_outline_rounded,
+                    content: _buildNokInfo(),
+                  ),
+                  _buildSection(
+                    keyName: 'payment',
+                    title: 'Payment & Agreement',
+                    icon: Icons.payments_outlined,
+                    content: _buildPaymentAgreement(),
+                  ),
+                  _buildSection(
+                    keyName: 'photos',
+                    title: 'Photos, Signatures & Files',
+                    icon: Icons.photo_library_outlined,
+                    content: _buildPhotos(),
+                  ),
+                  if (verification != null)
+                    _buildSection(
+                      keyName: 'verification',
+                      title: 'Verification Status',
+                      icon: Icons.verified_outlined,
+                      content: _buildVerification(verification),
+                    ),
+                  _buildSection(
+                    keyName: 'release',
+                    title: 'Asset Release',
+                    icon: Icons.inventory_2_outlined,
+                    content: _buildRelease(),
+                  ),
+                  const SizedBox(height: 24),
+                ]),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

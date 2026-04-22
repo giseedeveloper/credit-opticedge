@@ -1675,11 +1675,9 @@ class KycApiController extends Controller
             ]);
         }
 
-        if ($phoneModel && $catalog->hasAvailableUnitsFor($user, $phoneModel->id) && ! $inventoryUnit) {
-            throw ValidationException::withMessages([
-                'inventory_unit_id' => 'Select an available stock unit for the chosen model.',
-            ]);
-        }
+        // In the 7-step flow, selecting an inventory/stock unit is optional.
+        // If an implementation chooses to link stock later (e.g., at release),
+        // we should not block Step 1 when stock exists.
 
         if ($inventoryUnit && $phoneModel && (string) $inventoryUnit->phone_model_id !== (string) $phoneModel->id) {
             throw ValidationException::withMessages([

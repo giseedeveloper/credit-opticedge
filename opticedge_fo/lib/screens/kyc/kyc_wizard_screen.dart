@@ -7,6 +7,7 @@ import '../../config/constants.dart';
 import '../../core/providers/connectivity_provider.dart';
 import '../../core/providers/kyc_provider.dart';
 import '../../widgets/common/app_color_icon.dart';
+import '../../widgets/common/premium_glass_background.dart';
 import 'steps/step1_device.dart';
 import 'steps/step2_identity.dart';
 import 'steps/step3_contact.dart';
@@ -428,21 +429,8 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
         await _onWillPop();
       },
       child: Scaffold(
-        backgroundColor: AppConstants.kycWizardSurface,
-        body: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppConstants.kycWizardHeroTop,
-                AppConstants.kycWizardHeroMid,
-                AppConstants.kycWizardHeroBottom,
-                AppConstants.kycWizardSurface,
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: [0, 0.18, 0.42, 0.43],
-            ),
-          ),
+        backgroundColor: Colors.transparent,
+        body: PremiumGlassBackground(
           child: SafeArea(
             child: Column(
               children: [

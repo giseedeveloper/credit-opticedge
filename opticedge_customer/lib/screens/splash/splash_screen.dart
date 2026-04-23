@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/constants.dart';
+import '../../config/customer_colors.dart';
 import '../../config/design_tokens.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../widgets/common/app_brand_logo.dart';
@@ -98,6 +99,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cc = CustomerColors.of(context);
+    final heroGradient = theme.brightness == Brightness.dark
+        ? LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: cc.homeHeroGradientColors,
+            stops: const [0.0, 0.52, 1.0],
+          )
+        : DesignTokens.heroGradientWithPrimaryHint;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
@@ -106,7 +118,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           width: double.infinity,
           height: double.infinity,
           decoration: BoxDecoration(
-            gradient: DesignTokens.heroGradientWithPrimaryHint,
+            gradient: heroGradient,
           ),
           child: Stack(
           children: [

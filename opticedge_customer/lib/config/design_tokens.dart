@@ -48,4 +48,16 @@ abstract final class DesignTokens {
         ],
         stops: const [0.0, 0.58, 1.0],
       );
+
+  /// Customer app headers / hero — light frosted, no heavy navy blocks.
+  static LinearGradient get consumerLightHero => const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFFFFFFFF),
+          Color(0xFFFDF8F5),
+          Color(0xFFFFF6F0),
+        ],
+        stops: [0.0, 0.45, 1.0],
+      );
 }

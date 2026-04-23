@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'customer_colors.dart';
 import '../core/providers/auth_provider.dart';
 import '../widgets/common/floating_glass_nav.dart';
 import '../screens/auth/login_screen.dart';
@@ -90,12 +91,27 @@ class MainShell extends StatelessWidget {
     ];
     const labels = ['Home', 'Ratiba', 'Lipa', 'Kifaa', 'Profaili'];
 
+    final cc = CustomerColors.of(context);
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
       body: Stack(
         fit: StackFit.expand,
         children: [
+          // Fills safe areas + gap above floating nav (transparent scaffold would show OS black).
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: cc.premiumGradientColors,
+                  stops: cc.premiumGradientStops,
+                ),
+              ),
+            ),
+          ),
           Padding(
             padding: EdgeInsets.only(bottom: navReserve + bottomInset),
             child: child,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/constants.dart';
+import '../../config/customer_colors.dart';
 import '../../config/design_tokens.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../widgets/common/app_brand_logo.dart';
@@ -123,6 +124,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final auth = ref.watch(authProvider);
     final size = MediaQuery.of(context).size;
     final theme = Theme.of(context);
+    final cc = CustomerColors.of(context);
+    final heroGradient = theme.brightness == Brightness.dark
+        ? LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: cc.homeHeroGradientColors,
+            stops: const [0.0, 0.52, 1.0],
+          )
+        : DesignTokens.heroGradientWithPrimaryHint;
+    final sheetTint = theme.brightness == Brightness.dark
+        ? cc.glassCardTint.withValues(alpha: 0.72)
+        : Colors.white.withValues(alpha: 0.45);
 
     ref.listen(authProvider, (_, next) {
       if (next.error != null) {
@@ -153,7 +166,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 width: double.infinity,
                 height: size.height * 0.42,
                 decoration: BoxDecoration(
-                  gradient: DesignTokens.heroGradientWithPrimaryHint,
+                  gradient: heroGradient,
                 ),
               ),
               Positioned(
@@ -175,13 +188,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 child: Container(
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.45),
+                    color: sheetTint,
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(36),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
+                        color: Colors.black.withValues(
+                          alpha: theme.brightness == Brightness.dark
+                              ? 0.35
+                              : 0.04,
+                        ),
                         blurRadius: 24,
                         offset: const Offset(0, -6),
                       ),
@@ -210,8 +227,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           child: Transform.translate(
                             offset: Offset(0, _cardSlide.value),
                             child: _isPhoneStep
-                                ? _buildPhoneCard(auth, theme)
-                                : _buildPinCard(auth, theme),
+                                ? _buildPhoneCard(auth, theme, cc)
+                                : _buildPinCard(auth, theme, cc),
                           ),
                         ),
                       ),
@@ -254,8 +271,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 
-  Widget _buildPhoneCard(AuthState auth, ThemeData theme) {
-    final fillColor = AppConstants.surfaceMuted;
+  Widget _buildPhoneCard(AuthState auth, ThemeData theme, CustomerColors cc) {
+    final fillColor = cc.chromeMuted;
 
     return GlassCard.surface(
       context,
@@ -267,9 +284,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Karibu!',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -312,15 +333,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
 
             const SizedBox(height: 20),
-            _securityNote(theme),
+            _securityNote(theme, cc),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPinCard(AuthState auth, ThemeData theme) {
-    final fillColor = AppConstants.surfaceMuted;
+  Widget _buildPinCard(AuthState auth, ThemeData theme, CustomerColors cc) {
+    final fillColor = cc.chromeMuted;
     final isNewPin = _hasPin != true;
 
     return GlassCard.surface(
@@ -341,22 +362,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppConstants.primarySurface.withValues(alpha: 0.8),
+                      color: cc.primarySurface.withValues(alpha: 0.8),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppConstants.border.withValues(alpha: 0.6),
+                        color: cc.border.withValues(alpha: 0.6),
                       ),
                     ),
-                    child: const Icon(Icons.arrow_back_rounded, size: 18),
+                    child: Icon(
+                      Icons.arrow_back_rounded,
+                      size: 18,
+                      color: theme.colorScheme.onSurface,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     isNewPin ? 'Weka PIN Yako' : 'Karibu, $_customerName!',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                 ),
@@ -462,20 +488,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
 
             const SizedBox(height: 20),
-            _securityNote(theme),
+            _securityNote(theme, cc),
           ],
         ),
       ),
     );
   }
 
-  Widget _securityNote(ThemeData theme) {
+  Widget _securityNote(ThemeData theme, CustomerColors cc) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppConstants.surfaceMuted.withValues(alpha: 0.9),
+        color: cc.chromeMuted.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppConstants.border.withValues(alpha: 0.5)),
+        border: Border.all(color: cc.border.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [

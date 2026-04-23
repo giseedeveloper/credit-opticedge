@@ -1,7 +1,9 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/constants.dart';
-import '../../config/design_tokens.dart';
+import '../../config/customer_colors.dart';
 import '../../core/api/api_client.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../widgets/common/glass_card.dart';
@@ -14,13 +16,18 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authProvider);
     final c = auth.customer;
+    final cc = CustomerColors.of(context);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Profaili Yangu',
-          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.4),
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.4,
+            color: cc.textPrimary,
+          ),
         ),
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
@@ -34,77 +41,92 @@ class ProfileScreen extends ConsumerWidget {
             : ListView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                 children: [
-                Container(
-                  padding: const EdgeInsets.all(28),
-                  decoration: BoxDecoration(
-                    gradient: DesignTokens.heroGradient,
-                    borderRadius: BorderRadius.circular(26),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.22),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppConstants.heroStart.withValues(alpha: 0.25),
-                        blurRadius: 28,
-                        offset: const Offset(0, 14),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            width: 2,
-                          ),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(26),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    child: Container(
+                      padding: const EdgeInsets.all(28),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: cc.homeHeroGradientColors,
                         ),
-                        child: Center(
-                          child: Text(
-                            _initials(c.firstName, c.lastName),
-                            style: const TextStyle(
-                              fontSize: 30,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
+                        borderRadius: BorderRadius.circular(26),
+                        border: Border.all(
+                          color: cc.isDark
+                              ? cc.glassCardBorder.withValues(alpha: 0.55)
+                              : Colors.white.withValues(alpha: 0.72),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppConstants.primary.withValues(alpha: 0.1),
+                            blurRadius: 32,
+                            offset: const Offset(0, 18),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: cc.primarySurface,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: AppConstants.primary.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                _initials(c.firstName, c.lastName),
+                                style: const TextStyle(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppConstants.primaryDark,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        c.fullName,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: -0.4,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          c.phoneDisplay ?? c.phone,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.85),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
+                          const SizedBox(height: 16),
+                          Text(
+                            c.fullName,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: cc.textPrimary,
+                              letterSpacing: -0.4,
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: cc.isDark
+                                  ? cc.glassCardTint.withValues(alpha: 0.65)
+                                  : Colors.white.withValues(alpha: 0.58),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: cc.border.withValues(alpha: 0.55),
+                              ),
+                            ),
+                            child: Text(
+                              c.phoneDisplay ?? c.phone,
+                              style: TextStyle(
+                                color: cc.textSecondary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -112,8 +134,8 @@ class ProfileScreen extends ConsumerWidget {
                 _SectionCard(
                   title: 'Taarifa Binafsi',
                   icon: Icons.person_rounded,
-                  iconColor: const Color(0xFF2F80ED),
-                  iconBg: const Color(0xFFF1F7FF),
+                  iconColor: AppConstants.primaryDark,
+                  iconBg: cc.primarySurface,
                   children: [
                     _InfoRow('Jina Kamili', c.fullName),
                     _InfoRow('Simu', c.phoneDisplay ?? c.phone),
@@ -134,7 +156,7 @@ class ProfileScreen extends ConsumerWidget {
                     title: 'Muuzaji',
                     icon: Icons.store_rounded,
                     iconColor: AppConstants.primary,
-                    iconBg: AppConstants.primarySurface,
+                    iconBg: cc.primarySurface,
                     children: [
                       _InfoRow('Jina', c.vendor!.name),
                       if (c.vendor!.phone != null)
@@ -151,7 +173,7 @@ class ProfileScreen extends ConsumerWidget {
                     title: 'Tawi',
                     icon: Icons.location_on_rounded,
                     iconColor: AppConstants.success,
-                    iconBg: AppConstants.successSurface,
+                    iconBg: cc.successSurface,
                     children: [
                       _InfoRow('Jina', c.branch!.name),
                       if (c.branch!.phone != null)
@@ -169,7 +191,8 @@ class ProfileScreen extends ConsumerWidget {
                   context,
                   icon: Icons.lock_rounded,
                   iconColor: const Color(0xFF8B5CF6),
-                  iconBg: const Color(0xFFF7F3FF),
+                  iconBg:
+                      cc.isDark ? const Color(0xFF231A30) : const Color(0xFFF7F3FF),
                   title: 'Badilisha PIN',
                   onTap: () => _showChangePinDialog(context, ref),
                 ),
@@ -180,7 +203,7 @@ class ProfileScreen extends ConsumerWidget {
                   context,
                   icon: Icons.logout_rounded,
                   iconColor: AppConstants.error,
-                  iconBg: AppConstants.errorSurface,
+                  iconBg: cc.errorSurface,
                   title: 'Ondoka',
                   titleColor: AppConstants.error,
                   onTap: () => _confirmLogout(context, ref),
@@ -190,7 +213,7 @@ class ProfileScreen extends ConsumerWidget {
                   child: Text(
                     'Opticedge Customer v1.0',
                     style: TextStyle(
-                      color: AppConstants.textHint,
+                      color: cc.textHint,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -235,13 +258,13 @@ class ProfileScreen extends ConsumerWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 15,
-                  color: titleColor ?? AppConstants.textPrimary,
+                  color: titleColor ?? CustomerColors.of(context).textPrimary,
                 ),
               ),
             ),
             Icon(
               Icons.chevron_right_rounded,
-              color: AppConstants.textHint,
+              color: CustomerColors.of(context).textHint,
               size: 22,
             ),
           ],
@@ -430,10 +453,10 @@ class _SectionCard extends StatelessWidget {
               const SizedBox(width: 10),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
-                  color: AppConstants.textPrimary,
+                  color: CustomerColors.of(context).textPrimary,
                 ),
               ),
             ],
@@ -460,8 +483,8 @@ class _InfoRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: AppConstants.textSecondary,
+            style: TextStyle(
+              color: CustomerColors.of(context).textSecondary,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -470,10 +493,10 @@ class _InfoRow extends StatelessWidget {
           Flexible(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
-                color: AppConstants.textPrimary,
+                color: CustomerColors.of(context).textPrimary,
               ),
               textAlign: TextAlign.end,
             ),

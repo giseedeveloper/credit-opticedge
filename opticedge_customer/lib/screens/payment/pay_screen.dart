@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
+import '../../config/customer_colors.dart';
 import '../../core/providers/loan_provider.dart';
 import '../../core/providers/payment_provider.dart';
 import '../../widgets/common/glass_card.dart';
@@ -110,7 +111,7 @@ class _PayScreenState extends ConsumerState<PayScreen> {
               _buildUnavailableState(loan.statusMessage)
             else ...[
               GlassCard.tinted(
-                surfaceTint: AppConstants.primarySurface,
+                surfaceTint: CustomerColors.of(context).primarySurface,
                 accent: AppConstants.primary,
                 borderRadius: BorderRadius.circular(26),
                 padding: const EdgeInsets.all(24),
@@ -133,7 +134,7 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                     Text(
                       'Deni Lililobaki',
                       style: TextStyle(
-                        color: AppConstants.textSecondary,
+                        color: CustomerColors.of(context).textSecondary,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -156,13 +157,16 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: AppConstants.surface,
-                          borderRadius: BorderRadius.circular(10),
+                          color: CustomerColors.of(context).glassInputFill,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppConstants.border.withValues(alpha: 0.55),
+                          ),
                         ),
                         child: Text(
                           'Malipo yajayo: TZS ${_currencyFmt.format(nextAmount)}',
-                          style: const TextStyle(
-                            color: AppConstants.textSecondary,
+                          style: TextStyle(
+                            color: CustomerColors.of(context).textSecondary,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -174,12 +178,12 @@ class _PayScreenState extends ConsumerState<PayScreen> {
               ),
               const SizedBox(height: 24),
 
-              const Text(
+              Text(
                 'Kiasi cha Kulipa (TZS)',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
-                  color: AppConstants.textPrimary,
+                  color: CustomerColors.of(context).textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -194,14 +198,18 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                     color: AppConstants.primary,
                   ),
                   filled: true,
-                  fillColor: AppConstants.surface,
+                  fillColor: CustomerColors.of(context).glassInputFill,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: AppConstants.border),
+                    borderSide: BorderSide(
+                      color: CustomerColors.of(context).border,
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: AppConstants.border),
+                    borderSide: BorderSide(
+                      color: CustomerColors.of(context).border,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -235,12 +243,12 @@ class _PayScreenState extends ConsumerState<PayScreen> {
               const SizedBox(height: 20),
 
               // Phone (optional)
-              const Text(
+              Text(
                 'Namba ya M-Pesa (hiari)',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
-                  color: AppConstants.textPrimary,
+                  color: CustomerColors.of(context).textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -252,17 +260,21 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                   hintText: 'Acha tupu kutumia namba yako',
                   prefixIcon: const Icon(
                     Icons.phone_rounded,
-                    color: Color(0xFF8B5CF6),
+                    color: AppConstants.primary,
                   ),
                   filled: true,
-                  fillColor: AppConstants.surface,
+                  fillColor: CustomerColors.of(context).glassInputFill,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: AppConstants.border),
+                    borderSide: BorderSide(
+                      color: CustomerColors.of(context).border,
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: AppConstants.border),
+                    borderSide: BorderSide(
+                      color: CustomerColors.of(context).border,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -282,7 +294,7 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppConstants.errorSurface,
+                      color: CustomerColors.of(context).errorSurface,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: AppConstants.error.withValues(alpha: 0.2),
@@ -353,7 +365,7 @@ class _PayScreenState extends ConsumerState<PayScreen> {
 
   Widget _buildPortalError(String message) {
     return GlassCard.tinted(
-      surfaceTint: AppConstants.errorSurface,
+      surfaceTint: CustomerColors.of(context).errorSurface,
       accent: AppConstants.error,
       borderRadius: BorderRadius.circular(22),
       padding: const EdgeInsets.all(18),
@@ -380,7 +392,7 @@ class _PayScreenState extends ConsumerState<PayScreen> {
 
   Widget _buildUnavailableState(String? message) {
     return GlassCard.tinted(
-      surfaceTint: AppConstants.primarySurface,
+      surfaceTint: CustomerColors.of(context).primarySurface,
       accent: AppConstants.primary,
       borderRadius: BorderRadius.circular(26),
       padding: const EdgeInsets.all(24),
@@ -400,13 +412,13 @@ class _PayScreenState extends ConsumerState<PayScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Malipo Hayajafunguliwa',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: AppConstants.textPrimary,
+              color: CustomerColors.of(context).textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -414,8 +426,8 @@ class _PayScreenState extends ConsumerState<PayScreen> {
             message ??
                 'Ukishapatiwa akaunti ya mkopo kwenye mfumo wa credit, utaweza kutuma malipo hapa.',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppConstants.textSecondary,
+            style: TextStyle(
+              color: CustomerColors.of(context).textSecondary,
               fontSize: 13,
               height: 1.5,
             ),
@@ -438,7 +450,7 @@ class _PayScreenState extends ConsumerState<PayScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         GlassCard.tinted(
-          surfaceTint: AppConstants.warningSurface,
+          surfaceTint: CustomerColors.of(context).warningSurface,
           accent: AppConstants.warning,
           borderRadius: BorderRadius.circular(26),
           padding: const EdgeInsets.all(24),
@@ -458,13 +470,13 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Akaunti ya Malipo Inaandaliwa',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: AppConstants.textPrimary,
+                  color: CustomerColors.of(context).textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -472,8 +484,8 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                 loan.statusMessage ??
                     'Kifaa kimeshatolewa. Subiri mfumo wa credit ukamilishe akaunti yako kabla ya kutuma malipo.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppConstants.textSecondary,
+                style: TextStyle(
+                  color: CustomerColors.of(context).textSecondary,
                   fontSize: 13,
                   height: 1.5,
                 ),
@@ -488,21 +500,21 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                     'Malipo',
                     repaymentLabel,
                     AppConstants.warning,
-                    const Color(0xFFFFF0D9),
+                    CustomerColors.of(context).warningSurface,
                   ),
                   if ((release?.depositAmount ?? 0) > 0)
                     _buildContextChip(
                       'Amana',
                       'TZS ${_currencyFmt.format(release!.depositAmount)}',
                       AppConstants.success,
-                      AppConstants.successSurface,
+                      CustomerColors.of(context).successSurface,
                     ),
                   if (release?.assetReleasedAt != null)
                     _buildContextChip(
                       'Released',
                       release!.assetReleasedAt!.split(' ').first,
                       AppConstants.info,
-                      const Color(0xFFEFF6FF),
+                      CustomerColors.of(context).primarySurface,
                     ),
                 ],
               ),
@@ -514,20 +526,20 @@ class _PayScreenState extends ConsumerState<PayScreen> {
           context,
           borderRadius: BorderRadius.circular(22),
           padding: const EdgeInsets.all(18),
-          child: const Row(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
+              const Icon(
                 Icons.info_outline_rounded,
                 color: AppConstants.info,
                 size: 20,
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Ukishaanza kuona salio na installment inayofuata kwenye app, hapo ndipo malipo yatakuwa yamefunguliwa.',
                   style: TextStyle(
-                    color: AppConstants.textSecondary,
+                    color: CustomerColors.of(context).textSecondary,
                     fontSize: 13,
                     height: 1.5,
                   ),
@@ -590,9 +602,39 @@ class _QuickAmountChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ActionChip(
-      label: Text('$label: ${_currencyFmt.format(amount)}'),
-      onPressed: () => controller.text = amount.toStringAsFixed(0),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => controller.text = amount.toStringAsFixed(0),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: CustomerColors.of(context).glassInputFill,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppConstants.primary.withValues(alpha: 0.28),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppConstants.primary.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Text(
+            '$label: ${_currencyFmt.format(amount)}',
+            style: TextStyle(
+              color: CustomerColors.of(context).isDark
+                  ? AppConstants.primaryLight
+                  : AppConstants.primaryDark,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -639,12 +681,12 @@ class _PaymentStatusSheet extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(
               'Angalia simu yako na uthibitishe malipo',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: CustomerColors.of(context).textSecondary),
             ),
           ] else ...[
             Text(
               payment.statusMessage ?? '',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: CustomerColors.of(context).textSecondary),
             ),
           ],
           const SizedBox(height: 24),

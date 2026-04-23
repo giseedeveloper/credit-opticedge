@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../config/constants.dart';
+import '../../config/customer_colors.dart';
 import '../../config/design_tokens.dart';
 
 /// Floating pill navigation — premium glass (reference UI style).
@@ -22,6 +23,7 @@ class FloatingGlassNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = CustomerColors.of(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(32),
       child: BackdropFilter(
@@ -29,10 +31,10 @@ class FloatingGlassNavBar extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.62),
+            color: cc.floatingNavFill,
             borderRadius: BorderRadius.circular(32),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.85),
+              color: cc.floatingNavBorder,
               width: 1.2,
             ),
             boxShadow: [
@@ -63,12 +65,15 @@ class FloatingGlassNavBar extends StatelessWidget {
                     margin: const EdgeInsets.symmetric(horizontal: 2),
                     decoration: BoxDecoration(
                       color: selected
-                          ? AppConstants.primarySurface.withValues(alpha: 0.95)
+                          ? (cc.isDark
+                              ? AppConstants.primary.withValues(alpha: 0.22)
+                              : AppConstants.primarySurface
+                                  .withValues(alpha: 0.95))
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(22),
                       border: Border.all(
                         color: selected
-                            ? AppConstants.primary.withValues(alpha: 0.2)
+                            ? AppConstants.primary.withValues(alpha: 0.35)
                             : Colors.transparent,
                       ),
                     ),
@@ -80,7 +85,7 @@ class FloatingGlassNavBar extends StatelessWidget {
                           size: selected ? 24 : 22,
                           color: selected
                               ? AppConstants.primary
-                              : AppConstants.textHint,
+                              : cc.glassNavMuted,
                         ),
                         if (selected) ...[
                           const SizedBox(height: 4),

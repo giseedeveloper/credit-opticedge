@@ -38,14 +38,19 @@ class AppConstants {
   static const Color error = Color(0xFFEF4444);
   static const Color warning = Color(0xFFF59E0B);
   static const Color info = Color(0xFF2F80ED);
-  static const Color ink = Color(0xFF0E1826);
+  /// Deep ink reserved for snackbars / tiny accents — avoid large UI fills.
+  static const Color ink = Color(0xFF1A2836);
 
   static const Color heroStart = Color(0xFF103454);
   static const Color heroEnd = Color(0xFF1F5A88);
 
-  static const Color textPrimary = Color(0xFF111B2A);
-  static const Color textSecondary = Color(0xFF607087);
-  static const Color textHint = Color(0xFF94A3B8);
+  /// Softer than pure black — reads well on frosted glass.
+  static const Color textPrimary = Color(0xFF2A3648);
+  static const Color textSecondary = Color(0xFF5C6B7D);
+  static const Color textHint = Color(0xFF8B99AA);
+
+  /// Bottom nav / chrome: visible but calm on light glass.
+  static const Color glassNavMuted = Color(0xFF5A6D82);
 
   static const Color background = Color(0xFFF2F5F9);
   static const Color surface = Color(0xFFFFFFFF);
@@ -63,7 +68,7 @@ class AppConstants {
   static Color loanStatusColor(String status) {
     return switch (status) {
       'paid' => success,
-      'pending' => info,
+      'pending' => primaryDark,
       'partial' => warning,
       'overdue' => error,
       _ => textHint,
@@ -73,7 +78,7 @@ class AppConstants {
   static Color loanStatusBg(String status) {
     return switch (status) {
       'paid' => successSurface,
-      'pending' => const Color(0xFFEFF6FF),
+      'pending' => primarySurface.withValues(alpha: 0.65),
       'partial' => warningSurface,
       'overdue' => errorSurface,
       _ => surfaceMuted,

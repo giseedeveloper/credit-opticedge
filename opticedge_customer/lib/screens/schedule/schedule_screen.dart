@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../config/constants.dart';
+import '../../config/customer_colors.dart';
 import '../../core/providers/loan_provider.dart';
 import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/premium_glass_background.dart';
@@ -82,8 +83,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppConstants.textPrimary,
+              style: TextStyle(
+                color: CustomerColors.of(context).textPrimary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -123,7 +124,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: AppConstants.primarySurface,
+                    color: CustomerColors.of(context).primarySurface,
                     borderRadius: BorderRadius.circular(22),
                   ),
                   child: const Icon(
@@ -133,12 +134,12 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                const Text(
+                Text(
                   'Ratiba Haijapatikana',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: AppConstants.textPrimary,
+                    color: CustomerColors.of(context).textPrimary,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -146,9 +147,9 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                   message ??
                       'Ratiba ya malipo itaonekana hapa akaunti ya mkopo ikishatayarishwa.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: AppConstants.textSecondary,
+                    color: CustomerColors.of(context).textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -164,6 +165,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     BuildContext context,
     ScheduleState state,
   ) {
+    final cc = CustomerColors.of(context);
     final release = state.releaseContext;
     final repaymentLabel = switch (release?.preferredRepayment) {
       'weekly' => 'Kila wiki',
@@ -180,7 +182,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         children: [
           GlassCard.tinted(
-            surfaceTint: AppConstants.warningSurface,
+            surfaceTint: CustomerColors.of(context).warningSurface,
             accent: AppConstants.warning,
             borderRadius: BorderRadius.circular(26),
             padding: const EdgeInsets.all(24),
@@ -200,13 +202,13 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Ratiba Inaandaliwa',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: AppConstants.textPrimary,
+                    color: CustomerColors.of(context).textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -214,8 +216,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                   state.statusMessage ??
                       'Kifaa kimeshatolewa. Mfumo unaandaa ratiba yako ya malipo.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppConstants.textSecondary,
+                  style: TextStyle(
+                    color: CustomerColors.of(context).textSecondary,
                     fontSize: 13,
                     height: 1.5,
                   ),
@@ -230,21 +232,21 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                       'Malipo',
                       repaymentLabel,
                       AppConstants.warning,
-                      const Color(0xFFFFF0D9),
+                      cc.warningSurface,
                     ),
                     if (release?.assetReleasedAt != null)
                       _buildContextChip(
                         'Released',
                         release!.assetReleasedAt!.split(' ').first,
                         AppConstants.info,
-                        const Color(0xFFEFF6FF),
+                        cc.primarySurface,
                       ),
                     if ((release?.cashPrice ?? 0) > 0)
                       _buildContextChip(
                         'Bei ya kifaa',
                         'TZS ${_currencyFmt.format(release!.cashPrice)}',
                         AppConstants.primary,
-                        AppConstants.primarySurface,
+                        cc.primarySurface,
                       ),
                   ],
                 ),
@@ -256,20 +258,20 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
             context,
             borderRadius: BorderRadius.circular(22),
             padding: const EdgeInsets.all(18),
-            child: const Row(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
+                const Icon(
                   Icons.info_outline_rounded,
                   color: AppConstants.info,
                   size: 20,
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Ratiba itaonekana hapa mara tu akaunti ya mkopo ikikamilika kwenye mfumo wa credit.',
                     style: TextStyle(
-                      color: AppConstants.textSecondary,
+                      color: CustomerColors.of(context).textSecondary,
                       fontSize: 13,
                       height: 1.5,
                     ),
@@ -358,8 +360,9 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
         }
 
         final item = s.schedule[index - 1];
-        final statusColor = AppConstants.loanStatusColor(item.status);
-        final statusBg = AppConstants.loanStatusBg(item.status);
+        final cc = CustomerColors.of(context);
+        final statusColor = cc.loanStatusColor(item.status);
+        final statusBg = cc.loanStatusBg(item.status);
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
@@ -394,17 +397,17 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                   children: [
                     Text(
                       'TZS ${_currencyFmt.format(item.amountDue)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
-                        color: AppConstants.textPrimary,
+                        color: CustomerColors.of(context).textPrimary,
                       ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       item.dueDate ?? '-',
-                      style: const TextStyle(
-                        color: AppConstants.textSecondary,
+                      style: TextStyle(
+                        color: CustomerColors.of(context).textSecondary,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -450,8 +453,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
                         item.paidAt!,
-                        style: const TextStyle(
-                          color: AppConstants.textHint,
+                        style: TextStyle(
+                          color: CustomerColors.of(context).textHint,
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
                         ),
@@ -492,13 +495,21 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = CustomerColors.of(context);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: bg,
+          color: cc.scheduleStatGlassFill,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.12)),
+          border: Border.all(color: color.withValues(alpha: 0.22)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.05),
+              blurRadius: 14,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Column(
           children: [

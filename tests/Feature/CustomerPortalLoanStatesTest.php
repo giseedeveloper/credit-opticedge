@@ -6,6 +6,8 @@ use App\Models\InventoryUnit;
 use App\Models\Loan;
 use App\Models\PhoneModel;
 use App\Models\RepaymentSchedule;
+use App\Models\SelcomPaymentRequest;
+use App\Services\SelcomCheckoutService;
 
 beforeEach(function () {
     $this->branch = Branch::factory()->create();
@@ -79,4 +81,41 @@ test('payment endpoint blocks released customer whose loan account is not ready 
             'message',
             'Your device has been released, but your loan account is still being prepared.',
         );
+});
+
+test('customer loan pay persists selcom payment with transid when loan is active', function () {
+    $this->customer->update([
+        'cash_price' => 560000,
+        'deposit_amount' => 500,
+        'preferred_repayment' => 'weekly',
+    ]);
+
+    $this->withToken($this->token)
+        ->getJson('/api/v1/customer/loan')
+        ->assertOk()
+        ->assertJsonPath('data.portal_state', 'loan_active');
+
+    $this->mock(SelcomCheckoutService::class, function ($mock) {
+        $mock->shouldReceive('isConfigured')->andReturn(true);
+        $mock->shouldReceive('initiateWalletPush')
+            ->once()
+            ->andReturnUsing(fn (SelcomPaymentRequest $payment) => $payment->fresh());
+    });
+
+    $response = $this->withToken($this->token)
+        ->postJson('/api/v1/customer/loan/pay', [
+            'amount' => 10000,
+            'phone' => '0712345678',
+        ]);
+
+    $response->assertSuccessful()
+        ->assertJsonPath('success', true);
+
+    $paymentId = $response->json('data.payment_id');
+    expect($paymentId)->not->toBeNull();
+
+    $row = SelcomPaymentRequest::query()->find($paymentId);
+    expect($row)->not->toBeNull()
+        ->and($row->transid)->not->toBeEmpty()
+        ->and($row->phone)->toStartWith('255');
 });

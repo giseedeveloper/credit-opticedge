@@ -1,9 +1,12 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import '../../config/constants.dart';
+import '../../config/customer_colors.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/loan_provider.dart';
 import '../../widgets/common/glass_card.dart';
@@ -104,175 +107,203 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   SliverAppBar _buildHeroAppBar(String name, LoanState loan) {
+    final cc = CustomerColors.of(context);
     return SliverAppBar(
-      expandedHeight: 200,
+      expandedHeight: 198,
       pinned: true,
       elevation: 0,
-      backgroundColor: AppConstants.heroStart,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppConstants.heroStart,
-                    AppConstants.heroEnd,
-                    Color(0xFF10263F),
-                  ],
-                  stops: [0.0, 0.62, 1.0],
-                ),
-              ),
-            ),
-            Positioned(
-              top: -30,
-              right: -20,
-              child: Container(
-                width: 160,
-                height: 160,
+      scrolledUnderElevation: 0,
+      shadowColor: Colors.transparent,
+      backgroundColor: Colors.transparent,
+      flexibleSpace: ClipRRect(
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
+        child: FlexibleSpaceBar(
+          background: Stack(
+            fit: StackFit.expand,
+            children: [
+              DecoratedBox(
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppConstants.primaryLight.withValues(alpha: 0.10),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: cc.homeHeroGradientColors,
+                  ),
                 ),
               ),
-            ),
-            Positioned(
-              left: -40,
-              bottom: 10,
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF38BDF8).withValues(alpha: 0.08),
+              Positioned(
+                top: -36,
+                right: -28,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: cc.homeHeroOrbPrimary.withValues(alpha: 0.09),
+                  ),
                 ),
               ),
-            ),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _todayFormatted(),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white.withValues(alpha: 0.72),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                '${_greeting()}, $name',
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.1,
-                                  color: Colors.white,
-                                  letterSpacing: -0.6,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        GestureDetector(
-                          onTap: () => context.go('/profile'),
-                          child: Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.18),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.3),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                _initials(
-                                  ref.read(authProvider).customer?.firstName ??
-                                      '',
-                                  ref.read(authProvider).customer?.lastName ??
-                                      '',
-                                ),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.10),
-                        ),
-                      ),
-                      child: Row(
+              Positioned(
+                bottom: -24,
+                left: -50,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: cc.homeHeroOrbSky.withValues(alpha: 0.07),
+                  ),
+                ),
+              ),
+              BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.28),
+                  ),
+                ),
+              ),
+              SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: _heroInsight(
-                              label: 'Hali ya Mkopo',
-                              value: switch (loan.portalState) {
-                                'loan_active' => 'Unaendelea',
-                                'released_pending_disbursement' =>
-                                  'Inaandaliwa',
-                                _ => 'Hakuna',
-                              },
-                              tone: switch (loan.portalState) {
-                                'loan_active' => const Color(0xFF86EFAC),
-                                'released_pending_disbursement' => const Color(
-                                  0xFFFDE68A,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _todayFormatted(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: cc.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                                _ => const Color(0xFFFDE68A),
-                              },
+                                const SizedBox(height: 6),
+                                Text(
+                                  '${_greeting()}, $name',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.1,
+                                    color: cc.textPrimary,
+                                    letterSpacing: -0.6,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Container(
-                            width: 1,
-                            height: 38,
-                            color: Colors.white.withValues(alpha: 0.14),
-                          ),
-                          Expanded(
-                            child: _heroInsight(
-                              label: 'Tagline',
-                              value: AppConstants.tagline,
-                              tone: Colors.white.withValues(alpha: 0.85),
-                              small: true,
+                          const SizedBox(width: 14),
+                          GestureDetector(
+                            onTap: () => context.go('/profile'),
+                            child: Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: cc.isDark
+                                    ? cc.glassCardTint.withValues(alpha: 0.75)
+                                    : Colors.white.withValues(alpha: 0.62),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: AppConstants.primary.withValues(alpha: 0.18),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppConstants.primary.withValues(alpha: 0.08),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Text(
+                                  _initials(
+                                    ref.read(authProvider).customer?.firstName ??
+                                        '',
+                                    ref.read(authProvider).customer?.lastName ??
+                                        '',
+                                  ),
+                                  style: const TextStyle(
+                                    color: AppConstants.primaryDark,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                      const Spacer(),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: cc.isDark
+                              ? cc.glassCardTint.withValues(alpha: 0.55)
+                              : Colors.white.withValues(alpha: 0.52),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: cc.border.withValues(alpha: 0.45),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: cc.textPrimary.withValues(alpha: 0.04),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _heroInsight(
+                                cc: cc,
+                                label: 'Hali ya Mkopo',
+                                value: switch (loan.portalState) {
+                                  'loan_active' => 'Unaendelea',
+                                  'released_pending_disbursement' =>
+                                    'Inaandaliwa',
+                                  _ => 'Hakuna',
+                                },
+                                valueColor: switch (loan.portalState) {
+                                  'loan_active' => AppConstants.success,
+                                  'released_pending_disbursement' =>
+                                    AppConstants.warning,
+                                  _ => cc.textHint,
+                                },
+                              ),
+                            ),
+                            Container(
+                              width: 1,
+                              height: 38,
+                              color: cc.border.withValues(alpha: 0.6),
+                            ),
+                            Expanded(
+                              child: _heroInsight(
+                                cc: cc,
+                                label: 'Tagline',
+                                value: AppConstants.tagline,
+                                valueColor: cc.textPrimary,
+                                small: true,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -313,9 +344,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _heroInsight({
+    required CustomerColors cc,
     required String label,
     required String value,
-    required Color tone,
+    required Color valueColor,
     bool small = false,
   }) {
     return Padding(
@@ -326,7 +358,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.65),
+              color: cc.textSecondary,
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
@@ -337,7 +369,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: tone,
+              color: valueColor,
               fontSize: small ? 12 : 16,
               fontWeight: FontWeight.w700,
             ),
@@ -350,10 +382,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.w800,
-        color: AppConstants.textPrimary,
+        color: CustomerColors.of(context).textPrimary,
         letterSpacing: -0.4,
       ),
     );
@@ -378,7 +410,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Widget _buildNoLoanState() {
     return GlassCard.tinted(
-      surfaceTint: AppConstants.primarySurface,
+      surfaceTint: CustomerColors.of(context).primarySurface,
       accent: AppConstants.primary,
       borderRadius: BorderRadius.circular(26),
       padding: const EdgeInsets.all(32),
@@ -398,12 +430,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
           ),
           const SizedBox(height: 18),
-          const Text(
+          Text(
             'Hakuna Akaunti ya Mkopo',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: AppConstants.textPrimary,
+              color: CustomerColors.of(context).textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -412,7 +444,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
-              color: AppConstants.textSecondary,
+              color: CustomerColors.of(context).textSecondary,
               height: 1.5,
             ),
           ),
@@ -431,7 +463,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     };
 
     return GlassCard.tinted(
-      surfaceTint: AppConstants.warningSurface,
+      surfaceTint: CustomerColors.of(context).warningSurface,
       accent: AppConstants.warning,
       borderRadius: BorderRadius.circular(26),
       padding: const EdgeInsets.all(28),
@@ -451,13 +483,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
           ),
           const SizedBox(height: 18),
-          const Text(
+          Text(
             'Mkopo Wako Unaandaliwa',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: AppConstants.textPrimary,
+              color: CustomerColors.of(context).textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -467,7 +499,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
-              color: AppConstants.textSecondary,
+              color: CustomerColors.of(context).textSecondary,
               height: 1.5,
             ),
           ),
@@ -481,21 +513,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 'Malipo',
                 repaymentLabel,
                 AppConstants.warning,
-                const Color(0xFFFFF0D9),
+                CustomerColors.of(context).warningSurface,
               ),
               if (release?.assetReleasedAt != null)
                 _buildPendingChip(
                   'Released',
                   release!.assetReleasedAt!.split(' ').first,
                   AppConstants.info,
-                  const Color(0xFFEFF6FF),
+                  CustomerColors.of(context).primarySurface,
                 ),
               if ((release?.depositAmount ?? 0) > 0)
                 _buildPendingChip(
                   'Amana',
                   'TZS ${_currencyFmt.format(release!.depositAmount)}',
                   AppConstants.success,
-                  AppConstants.successSurface,
+                  CustomerColors.of(context).successSurface,
                 ),
             ],
           ),
@@ -542,13 +574,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildQuickActions(BuildContext context) {
+    final cc = CustomerColors.of(context);
     final actions = [
       _ActionData(
         label: 'Ratiba',
         caption: 'Angalia malipo',
         icon: Icons.calendar_month_rounded,
-        color: const Color(0xFF2F80ED),
-        surface: const Color(0xFFF1F7FF),
+        color: AppConstants.heroEnd,
+        surface: cc.primarySurface,
         onTap: () => context.go('/schedule'),
       ),
       _ActionData(
@@ -556,7 +589,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         caption: 'Fanya malipo',
         icon: Icons.payments_rounded,
         color: AppConstants.success,
-        surface: AppConstants.successSurface,
+        surface: cc.successSurface,
         onTap: () => context.go('/pay'),
       ),
       _ActionData(
@@ -564,7 +597,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         caption: 'Taarifa za simu',
         icon: Icons.phone_android_rounded,
         color: const Color(0xFF8B5CF6),
-        surface: const Color(0xFFF7F3FF),
+        surface: cc.isDark ? const Color(0xFF231A30) : const Color(0xFFF7F3FF),
         onTap: () => context.go('/device'),
       ),
       _ActionData(
@@ -572,7 +605,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         caption: 'Taarifa zako',
         icon: Icons.person_rounded,
         color: const Color(0xFFF59E0B),
-        surface: const Color(0xFFFFF9ED),
+        surface: cc.isDark ? const Color(0xFF2A2418) : const Color(0xFFFFF9ED),
         onTap: () => context.go('/profile'),
       ),
     ];
@@ -584,11 +617,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       crossAxisSpacing: 14,
       mainAxisSpacing: 14,
       childAspectRatio: 1.35,
-      children: actions.map((a) => _buildActionCard(a)).toList(),
+      children: actions.map((a) => _buildActionCard(context, a)).toList(),
     );
   }
 
-  Widget _buildActionCard(_ActionData action) {
+  Widget _buildActionCard(BuildContext context, _ActionData action) {
     return GestureDetector(
       onTap: action.onTap,
       child: GlassCard.tinted(
@@ -620,10 +653,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             const SizedBox(height: 2),
             Text(
               action.caption,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: AppConstants.textSecondary,
+                color: CustomerColors.of(context).textSecondary,
               ),
             ),
           ],
@@ -681,17 +714,17 @@ class _LoanProgressCard extends StatelessWidget {
                     children: [
                       Text(
                         '${l.progressPercent.toStringAsFixed(0)}%',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w800,
-                          color: AppConstants.textPrimary,
+                          color: CustomerColors.of(context).textPrimary,
                           letterSpacing: -0.5,
                         ),
                       ),
-                      const Text(
+                      Text(
                         'Umelipa',
                         style: TextStyle(
-                          color: AppConstants.textSecondary,
+                          color: CustomerColors.of(context).textSecondary,
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                         ),
@@ -701,7 +734,7 @@ class _LoanProgressCard extends StatelessWidget {
                   progressColor: l.isOverdue
                       ? AppConstants.error
                       : AppConstants.success,
-                  backgroundColor: AppConstants.border,
+                  backgroundColor: CustomerColors.of(context).border,
                   circularStrokeCap: CircularStrokeCap.round,
                   animation: true,
                   animationDuration: 1200,
@@ -713,21 +746,18 @@ class _LoanProgressCard extends StatelessWidget {
                       label: 'Umelipa',
                       amount: l.amountPaid,
                       color: AppConstants.success,
-                      bg: AppConstants.successSurface,
                     ),
                     const SizedBox(width: 10),
                     _AmountTile(
                       label: 'Imebaki',
                       amount: l.remainingBalance,
                       color: AppConstants.warning,
-                      bg: AppConstants.warningSurface,
                     ),
                     const SizedBox(width: 10),
                     _AmountTile(
                       label: 'Jumla',
                       amount: l.totalPayable,
                       color: AppConstants.primary,
-                      bg: AppConstants.primarySurface,
                     ),
                   ],
                 ),
@@ -744,29 +774,38 @@ class _AmountTile extends StatelessWidget {
   final String label;
   final double amount;
   final Color color;
-  final Color bg;
   const _AmountTile({
     required this.label,
     required this.amount,
     required this.color,
-    required this.bg,
   });
 
   @override
   Widget build(BuildContext context) {
+    final cc = CustomerColors.of(context);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
         decoration: BoxDecoration(
-          color: bg,
           borderRadius: BorderRadius.circular(14),
+          color: cc.isDark
+              ? cc.glassCardTint.withValues(alpha: 0.65)
+              : Colors.white.withValues(alpha: 0.55),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Column(
           children: [
             Text(
               label,
               style: TextStyle(
-                color: color.withValues(alpha: 0.7),
+                color: color.withValues(alpha: 0.75),
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
               ),
@@ -799,7 +838,7 @@ class _NextPaymentCard extends StatelessWidget {
     final next = loan.loan?.nextInstallment;
     if (next == null) {
       return GlassCard.tinted(
-        surfaceTint: AppConstants.successSurface,
+        surfaceTint: CustomerColors.of(context).successSurface,
         accent: AppConstants.success,
         borderRadius: BorderRadius.circular(24),
         padding: const EdgeInsets.all(20),
@@ -836,9 +875,8 @@ class _NextPaymentCard extends StatelessWidget {
 
     final isOverdue = next.status == 'overdue';
     final accent = isOverdue ? AppConstants.error : AppConstants.primary;
-    final bg = isOverdue
-        ? AppConstants.errorSurface
-        : AppConstants.primarySurface;
+    final cc = CustomerColors.of(context);
+    final bg = isOverdue ? cc.errorSurface : cc.primarySurface;
 
     return GlassCard.tinted(
       surfaceTint: bg,
@@ -886,7 +924,7 @@ class _NextPaymentCard extends StatelessWidget {
                   Text(
                     'Kiasi',
                     style: TextStyle(
-                      color: AppConstants.textSecondary,
+                      color: CustomerColors.of(context).textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -905,10 +943,10 @@ class _NextPaymentCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const Text(
+                  Text(
                     'Tarehe',
                     style: TextStyle(
-                      color: AppConstants.textSecondary,
+                      color: CustomerColors.of(context).textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -920,7 +958,7 @@ class _NextPaymentCard extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       color: isOverdue
                           ? AppConstants.error
-                          : AppConstants.textPrimary,
+                          : CustomerColors.of(context).textPrimary,
                     ),
                   ),
                   if (isOverdue && next.daysOverdue > 0)
@@ -1024,8 +1062,8 @@ class _DetailRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: AppConstants.textSecondary,
+            style: TextStyle(
+              color: CustomerColors.of(context).textSecondary,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -1035,7 +1073,7 @@ class _DetailRow extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 13,
-              color: valueColor ?? AppConstants.textPrimary,
+              color: valueColor ?? CustomerColors.of(context).textPrimary,
             ),
           ),
         ],
@@ -1052,7 +1090,7 @@ class _ErrorBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard.tinted(
-      surfaceTint: AppConstants.errorSurface,
+      surfaceTint: CustomerColors.of(context).errorSurface,
       accent: AppConstants.error,
       borderRadius: BorderRadius.circular(24),
       padding: const EdgeInsets.all(22),
@@ -1075,8 +1113,8 @@ class _ErrorBanner extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppConstants.textPrimary,
+            style: TextStyle(
+              color: CustomerColors.of(context).textPrimary,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),

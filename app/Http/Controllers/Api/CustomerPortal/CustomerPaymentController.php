@@ -58,7 +58,14 @@ class CustomerPaymentController extends Controller
 
         $paymentPhone = $request->phone
             ? $this->normalizePhone($request->string('phone')->toString())
-            : $customer->phone;
+            : (string) ($customer->phone ?? '');
+
+        if ($paymentPhone === '') {
+            return $this->errorResponse(
+                'Namba ya simu inahitajika kwa malipo ya M-Pesa.',
+                422,
+            );
+        }
 
         $orderId = 'REP-'.strtoupper(Str::random(8));
 
@@ -67,6 +74,7 @@ class CustomerPaymentController extends Controller
             'customer_id' => $customer->id,
             'initiated_by' => null,
             'order_id' => $orderId,
+            'transid' => 'SEL-'.strtoupper(Str::random(16)),
             'phone' => $paymentPhone,
             'amount' => $request->amount,
             'currency' => 'TZS',
@@ -92,6 +100,8 @@ class CustomerPaymentController extends Controller
                 'status' => $payment->status,
             ], 'Payment request sent. Check your phone to confirm.');
         } catch (\Throwable $e) {
+            report($e);
+
             $payment->update([
                 'status' => 'failed',
                 'result' => $e->getMessage(),

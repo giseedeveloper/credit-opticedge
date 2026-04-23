@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/constants.dart';
+import '../../config/customer_colors.dart';
 import '../../core/api/api_client.dart';
 import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/premium_glass_background.dart';
@@ -90,8 +91,8 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
                     Text(
                       state.error!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppConstants.textPrimary,
+                      style: TextStyle(
+                        color: CustomerColors.of(context).textPrimary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -133,12 +134,12 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text(
+                  Text(
                     'Hakuna Taarifa za Kifaa',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: AppConstants.textPrimary,
+                      color: CustomerColors.of(context).textPrimary,
                     ),
                   ),
                 ],
@@ -156,12 +157,13 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
   Widget _buildContent(BuildContext context, Map<String, dynamic> d) {
     final brand = d['brand'] as Map<String, dynamic>?;
     final model = d['model'] as Map<String, dynamic>?;
+    final cc = CustomerColors.of(context);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [
         GlassCard.tinted(
-          surfaceTint: const Color(0xFFF7F3FF),
+          surfaceTint: cc.isDark ? const Color(0xFF231A30) : const Color(0xFFF7F3FF),
           accent: const Color(0xFF8B5CF6),
           borderRadius: BorderRadius.circular(26),
           padding: const EdgeInsets.all(28),
@@ -183,10 +185,10 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
               const SizedBox(height: 18),
               Text(
                 '${brand?['name'] ?? ''} ${model?['name'] ?? ''}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
-                  color: AppConstants.textPrimary,
+                  color: cc.textPrimary,
                   letterSpacing: -0.4,
                 ),
                 textAlign: TextAlign.center,
@@ -198,8 +200,8 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
                     if (model?['storage'] != null) model!['storage'],
                     if (model?['ram'] != null) '${model!['ram']} RAM',
                   ].join(' • '),
-                  style: const TextStyle(
-                    color: AppConstants.textSecondary,
+                  style: TextStyle(
+                    color: cc.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -232,12 +234,12 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Text(
+                  Text(
                     'Taarifa za Kifaa',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 16,
-                      color: AppConstants.textPrimary,
+                      color: cc.textPrimary,
                     ),
                   ),
                 ],
@@ -368,8 +370,8 @@ class _InfoRow extends StatelessWidget {
           Flexible(
             child: Text(
               label,
-              style: const TextStyle(
-                color: AppConstants.textSecondary,
+              style: TextStyle(
+                color: CustomerColors.of(context).textSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -379,10 +381,10 @@ class _InfoRow extends StatelessWidget {
           Flexible(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
-                color: AppConstants.textPrimary,
+                color: CustomerColors.of(context).textPrimary,
               ),
               textAlign: TextAlign.end,
             ),

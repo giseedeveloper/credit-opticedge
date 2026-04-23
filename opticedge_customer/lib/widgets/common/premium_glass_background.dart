@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../config/design_tokens.dart';
+import '../../config/customer_colors.dart';
 
 /// Soft premium backdrop: light frosted wash + brand orbs (matches FO).
 class PremiumGlassBackground extends StatelessWidget {
@@ -15,15 +15,12 @@ class PremiumGlassBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cc = CustomerColors.of(context);
     final baseGradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [
-        const Color(0xFFF8FAFD),
-        DesignTokens.primarySurface.withValues(alpha: 0.55),
-        const Color(0xFFEEF2F8),
-      ],
-      stops: const [0.0, 0.45, 1.0],
+      colors: cc.premiumGradientColors,
+      stops: cc.premiumGradientStops,
     );
 
     return Stack(
@@ -36,7 +33,7 @@ class PremiumGlassBackground extends StatelessWidget {
             left: -100,
             child: _orb(
               size: 280,
-              color: DesignTokens.accentSky.withValues(alpha: 0.12),
+              color: cc.premiumOrbSky.withValues(alpha: cc.isDark ? 0.14 : 0.12),
             ),
           ),
         if (useHeroTint)
@@ -45,7 +42,9 @@ class PremiumGlassBackground extends StatelessWidget {
             right: -120,
             child: _orb(
               size: 300,
-              color: DesignTokens.primary.withValues(alpha: 0.10),
+              color: cc.premiumOrbPrimary.withValues(
+                alpha: cc.isDark ? 0.16 : 0.10,
+              ),
             ),
           ),
         Positioned(
@@ -53,7 +52,9 @@ class PremiumGlassBackground extends StatelessWidget {
           left: -100,
           child: _orb(
             size: 320,
-            color: DesignTokens.primaryLight.withValues(alpha: 0.08),
+            color: cc.premiumOrbPrimaryLight.withValues(
+              alpha: cc.isDark ? 0.12 : 0.08,
+            ),
           ),
         ),
         child,

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../config/constants.dart';
+import '../../config/customer_colors.dart';
 
 class GlassCard extends StatelessWidget {
   final Widget child;
@@ -18,7 +19,7 @@ class GlassCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(16),
     this.borderRadius = const BorderRadius.all(Radius.circular(24)),
-    this.blurSigma = 20,
+    this.blurSigma = 26,
     this.tint = const Color(0xFFFFFFFF),
     this.borderColor = AppConstants.border,
     this.boxShadow = const [
@@ -37,21 +38,23 @@ class GlassCard extends StatelessWidget {
     EdgeInsetsGeometry padding = const EdgeInsets.all(16),
     BorderRadiusGeometry borderRadius =
         const BorderRadius.all(Radius.circular(24)),
-    double blurSigma = 22,
+    double blurSigma = 26,
   }) {
-    final surface = Theme.of(context).cardTheme.color ?? AppConstants.surface;
+    final cc = CustomerColors.of(context);
     return GlassCard(
       key: key,
       padding: padding,
       borderRadius: borderRadius,
       blurSigma: blurSigma,
-      tint: surface,
-      borderColor: AppConstants.border,
-      boxShadow: const [
+      tint: cc.glassCardTint,
+      borderColor: cc.glassCardBorder,
+      boxShadow: [
         BoxShadow(
-          color: Color(0x100B1220),
-          blurRadius: 28,
-          offset: Offset(0, 14),
+          color: cc.isDark
+              ? Colors.black.withValues(alpha: 0.45)
+              : const Color(0x0C0B1220),
+          blurRadius: 32,
+          offset: const Offset(0, 16),
         ),
       ],
       child: child,
@@ -98,10 +101,10 @@ class GlassCard extends StatelessWidget {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: tint.withValues(alpha: 0.72),
+            color: tint.withValues(alpha: 0.58),
             borderRadius: resolvedRadius,
             border: Border.all(
-              color: borderColor.withValues(alpha: 0.55),
+              color: borderColor.withValues(alpha: 0.42),
               width: 1,
             ),
             boxShadow: boxShadow,

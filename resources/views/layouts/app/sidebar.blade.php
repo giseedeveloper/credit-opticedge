@@ -38,7 +38,7 @@
             }
         </style>
     </head>
-    <body class="min-h-screen bg-page text-slate-800 antialiased font-sans selection:bg-[#F58220]/25 selection:text-[#2D3748]">
+    <body class="min-h-screen bg-page text-slate-800 antialiased font-sans selection:bg-[#F58220]/25 selection:text-[#2D3748] lg:h-screen lg:overflow-hidden lg:flex">
 
         {{-- Sidebar: stashable mobile + custom Alpine icon-only collapse desktop --}}
         <flux:sidebar stashable sticky

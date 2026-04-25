@@ -97,13 +97,20 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
       if (!mounted) return;
 
       if (result?.imei != null && result!.imei.isNotEmpty) {
-        ref.read(kycProvider.notifier).update(
-              (state) => state.copyWith(imeiNumber: result.imei),
-            );
+        ref.read(kycProvider.notifier).update((state) {
+          return state.copyWith(
+            imeiNumber: result.imei,
+            imei2: state.imei2.trim().isEmpty && (result.imei2 ?? '').isNotEmpty
+                ? result.imei2
+                : state.imei2,
+          );
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'IMEI 1 auto-filled (${result.source}).',
+              (result.imei2 ?? '').isNotEmpty
+                  ? 'IMEI 1 & IMEI 2 auto-filled (${result.source}).'
+                  : 'IMEI 1 auto-filled (${result.source}).',
             ),
             backgroundColor: AppConstants.success,
           ),

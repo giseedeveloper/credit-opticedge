@@ -5,9 +5,10 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 
 class ImeiScanResult {
   final String imei;
+  final String? imei2;
   final String source; // 'barcode' | 'ocr'
 
-  const ImeiScanResult({required this.imei, required this.source});
+  const ImeiScanResult({required this.imei, this.imei2, required this.source});
 }
 
 class ImeiScan {
@@ -24,9 +25,13 @@ class ImeiScan {
       final barcodes = await barcodeScanner.processImage(input);
       for (final code in barcodes) {
         final raw = code.rawValue ?? '';
-        final imei = _pickBestImeiFromText(raw);
-        if (imei != null) {
-          return ImeiScanResult(imei: imei, source: 'barcode');
+        final imeis = _pickImeisFromText(raw);
+        if (imeis != null) {
+          return ImeiScanResult(
+            imei: imeis.$1,
+            imei2: imeis.$2,
+            source: 'barcode',
+          );
         }
       }
     } finally {
@@ -37,9 +42,13 @@ class ImeiScan {
     final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
     try {
       final recognized = await textRecognizer.processImage(input);
-      final imei = _pickBestImeiFromText(recognized.text);
-      if (imei != null) {
-        return ImeiScanResult(imei: imei, source: 'ocr');
+      final imeis = _pickImeisFromText(recognized.text);
+      if (imeis != null) {
+        return ImeiScanResult(
+          imei: imeis.$1,
+          imei2: imeis.$2,
+          source: 'ocr',
+        );
       }
     } finally {
       await textRecognizer.close();
@@ -48,17 +57,23 @@ class ImeiScan {
     return null;
   }
 
-  static String? _pickBestImeiFromText(String text) {
-    // Extract candidates and return the first valid IMEI (Luhn).
+  static (String, String?)? _pickImeisFromText(String text) {
+    // Extract all IMEI candidates (Luhn-valid), return IMEI1 + optional IMEI2.
     final matches = _imeiRegex.allMatches(text.replaceAll(' ', ''));
+    final valid = <String>[];
     for (final m in matches) {
       final candidate = m.group(1);
       if (candidate == null) continue;
-      if (_isValidImei(candidate)) {
-        return candidate;
+      if (_isValidImei(candidate) && !valid.contains(candidate)) {
+        valid.add(candidate);
       }
     }
-    return null;
+
+    if (valid.isEmpty) {
+      return null;
+    }
+
+    return (valid.first, valid.length >= 2 ? valid[1] : null);
   }
 
   static bool _isValidImei(String imei) {

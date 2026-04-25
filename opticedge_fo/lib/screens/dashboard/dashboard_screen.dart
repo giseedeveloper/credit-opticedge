@@ -298,6 +298,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                         icon: Icons.location_on_outlined,
                                         label: user!.branch!.name,
                                       ),
+                                    if (user?.dealer != null)
+                                      _heroChip(
+                                        icon: Icons.storefront_outlined,
+                                        label: user!.dealer!.name,
+                                      ),
                                     _heroChip(
                                       icon: Icons.circle,
                                       label: isOnline ? 'Online' : 'Offline',

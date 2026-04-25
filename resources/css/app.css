@@ -94,6 +94,28 @@
     }
 }
 
+/* Desktop app-shell scrolling:
+   - Prevent full-page scroll (keeps sidebar visually fixed)
+   - Scroll only the main column; sidebar nav scrolls internally */
+@media (min-width: 1024px) {
+    html,
+    body {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    #app-shell-main {
+        height: 100vh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    [data-flux-sidebar] {
+        height: 100vh;
+        overscroll-behavior: contain;
+    }
+}
+
 [data-flux-field]:not(ui-radio, ui-checkbox) {
     @apply grid gap-2;
 }

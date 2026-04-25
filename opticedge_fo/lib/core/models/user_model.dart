@@ -5,6 +5,7 @@ class UserModel {
   final String? phone;
   final String? role;
   final BranchInfo? branch;
+  final DealerInfo? dealer;
   final String? avatarUrl;
   final bool isActive;
   final bool canRegisterCustomers;
@@ -17,6 +18,7 @@ class UserModel {
     this.phone,
     this.role,
     this.branch,
+    this.dealer,
     this.avatarUrl,
     this.isActive = true,
     this.canRegisterCustomers = false,
@@ -33,6 +35,9 @@ class UserModel {
       role: json['role']?.toString(),
       branch: json['branch'] != null
           ? BranchInfo.fromJson(json['branch'] as Map<String, dynamic>)
+          : null,
+      dealer: json['dealer'] != null
+          ? DealerInfo.fromJson(json['dealer'] as Map<String, dynamic>)
           : null,
       avatarUrl: json['avatar_url']?.toString(),
       isActive: json['is_active'] == true,
@@ -56,6 +61,7 @@ class UserModel {
         'phone': phone,
         'role': role,
         'branch': branch?.toJson(),
+        'dealer': dealer?.toJson(),
         'avatar_url': avatarUrl,
         'is_active': isActive,
         'permissions': {
@@ -72,6 +78,20 @@ class BranchInfo {
   const BranchInfo({required this.id, required this.name});
 
   factory BranchInfo.fromJson(Map<String, dynamic> json) => BranchInfo(
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {'id': id, 'name': name};
+}
+
+class DealerInfo {
+  final String id;
+  final String name;
+
+  const DealerInfo({required this.id, required this.name});
+
+  factory DealerInfo.fromJson(Map<String, dynamic> json) => DealerInfo(
         id: json['id']?.toString() ?? '',
         name: json['name']?.toString() ?? '',
       );

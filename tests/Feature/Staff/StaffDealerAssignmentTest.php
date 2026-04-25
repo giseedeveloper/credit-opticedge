@@ -1,7 +1,7 @@
 <?php
 
 use App\Livewire\Staff\StaffManager;
-use App\Models\Branch;
+use App\Models\Dealer;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
@@ -23,19 +23,21 @@ beforeEach(function () {
     }
 });
 
-test('branch operational roles require a branch during staff creation', function () {
+test('front-office roles require a dealer during staff creation', function () {
+    Dealer::factory()->create(['status' => 'active']);
+
     Livewire::actingAs($this->admin)
         ->test(StaffManager::class)
-        ->set('newName', 'Branch Officer')
+        ->set('newName', 'Front Officer')
         ->set('newEmail', 'fo@example.com')
         ->set('newPassword', 'password123')
         ->set('newRole', 'front-officer')
         ->set('newJoinedAt', '2026-01-10')
         ->call('createStaff')
-        ->assertHasErrors(['newBranchId' => 'required']);
+        ->assertHasErrors(['newDealerId' => 'required']);
 });
 
-test('global roles can be created without branch assignment', function () {
+test('global roles can be created without dealer assignment', function () {
     Livewire::actingAs($this->admin)
         ->test(StaffManager::class)
         ->set('newName', 'Global Owner')
@@ -48,17 +50,17 @@ test('global roles can be created without branch assignment', function () {
 
     $user = User::where('email', 'owner@example.com')->firstOrFail();
 
-    expect($user->branch_id)->toBeNull();
+    expect($user->dealer_id)->toBeNull();
     expect($user->role)->toBe('owner');
     expect($user->hasRole('owner'))->toBeTrue();
 });
 
-test('editing a branch operational user keeps joined date and branch accountable', function () {
-    $firstBranch = Branch::factory()->create(['code' => 'BR-200']);
-    $secondBranch = Branch::factory()->create(['code' => 'BR-201']);
+test('editing a front-officer can move them to another dealer counter', function () {
+    $dealer1 = Dealer::factory()->create(['status' => 'active', 'code' => 'DLR-A']);
+    $dealer2 = Dealer::factory()->create(['status' => 'active', 'code' => 'DLR-B']);
 
     $staff = User::factory()->create([
-        'branch_id' => $firstBranch->id,
+        'dealer_id' => $dealer1->id,
         'joined_at' => '2025-05-01',
         'role' => 'front-officer',
     ]);
@@ -69,12 +71,12 @@ test('editing a branch operational user keeps joined date and branch accountable
         ->test(StaffManager::class)
         ->call('startEdit', $staff->id)
         ->set('editRole', 'front-officer')
-        ->set('editBranchId', $secondBranch->id)
+        ->set('editDealerId', $dealer2->id)
         ->set('editJoinedAt', '2025-06-15')
         ->call('saveEdit')
         ->assertDispatched('toast');
 
-    expect($staff->fresh()->branch_id)->toBe($secondBranch->id);
+    expect($staff->fresh()->dealer_id)->toBe($dealer2->id);
     expect($staff->fresh()->joined_at?->toDateString())->toBe('2025-06-15');
     expect($staff->fresh()->role)->toBe('front-officer');
 });

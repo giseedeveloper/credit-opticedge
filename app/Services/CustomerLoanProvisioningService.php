@@ -126,8 +126,7 @@ class CustomerLoanProvisioningService
             return Loan::create([
                 'customer_id' => $customer->id,
                 'inventory_unit_id' => $customer->inventory_unit_id,
-                'vendor_id' => $customer->vendor_id ?? $customer->inventoryUnit?->vendor_id,
-                'branch_id' => $customer->branch_id ?? $customer->inventoryUnit?->branch_id,
+                'dealer_id' => $customer->dealer_id ?? $customer->inventoryUnit?->dealer_id,
                 'disbursed_by' => $actor?->id ?? $customer->asset_released_by ?? $customer->registered_by,
                 'approved_by' => $actor?->id ?? $customer->asset_released_by ?? $customer->registered_by,
                 'loan_number' => $this->loanCalculator->generateLoanNumber(),
@@ -191,7 +190,7 @@ class CustomerLoanProvisioningService
     private function activeLoan(Customer $customer): ?Loan
     {
         return $customer->loans()
-            ->with(['branch', 'vendor', 'repaymentSchedules'])
+            ->with(['dealer', 'repaymentSchedules'])
             ->where('status', 'active')
             ->latest('disbursed_at')
             ->latest()

@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Branch;
 use App\Models\Customer;
+use App\Models\Dealer;
 use App\Models\InventoryUnit;
 use App\Models\Loan;
 use App\Models\PhoneModel;
@@ -10,16 +10,16 @@ use App\Models\SelcomPaymentRequest;
 use App\Services\SelcomCheckoutService;
 
 beforeEach(function () {
-    $this->branch = Branch::factory()->create();
+    $this->dealer = Dealer::factory()->create();
     $this->phoneModel = PhoneModel::factory()->create();
     $this->inventoryUnit = InventoryUnit::factory()->create([
         'phone_model_id' => $this->phoneModel->id,
-        'branch_id' => $this->branch->id,
+        'dealer_id' => $this->dealer->id,
         'status' => 'assigned',
     ]);
 
     $this->customer = Customer::factory()->create([
-        'branch_id' => $this->branch->id,
+        'dealer_id' => $this->dealer->id,
         'phone_model_id' => $this->phoneModel->id,
         'inventory_unit_id' => $this->inventoryUnit->id,
         'phone' => '255712345678',

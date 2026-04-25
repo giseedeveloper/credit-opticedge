@@ -3,9 +3,9 @@
 use App\Exports\CollectionsExport;
 use App\Exports\InventoryExport;
 use App\Jobs\SendSmsJob;
-use App\Models\Branch;
 use App\Models\Brand;
 use App\Models\Customer;
+use App\Models\Dealer;
 use App\Models\InventoryUnit;
 use App\Models\Loan;
 use App\Models\Permission;
@@ -13,7 +13,6 @@ use App\Models\PhoneModel;
 use App\Models\RepaymentSchedule;
 use App\Models\Transaction;
 use App\Models\User;
-use App\Models\Vendor;
 use App\Services\DeviceLockingService;
 use App\Services\DocumentService;
 use App\Services\FinancialComplianceService;
@@ -77,24 +76,22 @@ it('exports collections from posted repayment transactions', function () {
         ->and($mapped)->toContain('mpesa', 'RPT-COLL-001');
 });
 
-it('exports inventory valuation through phone model and vendor relations', function () {
-    $branch = Branch::factory()->create(['name' => 'HQ Vault']);
+it('exports inventory valuation through phone model and dealer relations', function () {
     $brand = Brand::factory()->create(['name' => 'Tecno', 'slug' => 'tecno']);
     $model = PhoneModel::factory()->create([
         'brand_id' => $brand->id,
         'name' => 'Spark 20',
         'slug' => 'spark-20',
     ]);
-    $vendor = Vendor::factory()->create(['branch_id' => $branch->id, 'name' => 'Kariakoo Partner']);
+    $dealer = Dealer::factory()->create(['name' => 'Kariakoo Partner']);
     $unit = InventoryUnit::factory()->create([
         'phone_model_id' => $model->id,
-        'branch_id' => $branch->id,
-        'vendor_id' => $vendor->id,
+        'dealer_id' => $dealer->id,
         'purchase_price' => 420_000,
         'grading' => 'Grade A',
     ]);
 
-    $mapped = (new InventoryExport)->map($unit->fresh(['phoneModel.brand', 'vendor', 'branch']));
+    $mapped = (new InventoryExport)->map($unit->fresh(['phoneModel.brand', 'dealer']));
 
     expect($mapped[1])->toBe('Tecno')
         ->and($mapped[2])->toBe('Spark 20')
@@ -183,8 +180,8 @@ it('records daily digest command output without pretending to send email', funct
         ->assertExitCode(0);
 });
 
-it('generates vendor cashier reports from loan-linked repayment transactions', function () {
-    ['vendor' => $vendor, 'loan' => $loan, 'customer' => $customer] = createReportingLoanFixture();
+it('generates dealer cashier reports from loan-linked repayment transactions', function () {
+    ['dealer' => $dealer, 'loan' => $loan, 'customer' => $customer] = createReportingLoanFixture();
     ['loan' => $otherLoan, 'customer' => $otherCustomer] = createReportingLoanFixture();
 
     Transaction::factory()->create([
@@ -206,7 +203,7 @@ it('generates vendor cashier reports from loan-linked repayment transactions', f
         'transacted_at' => now(),
     ]);
 
-    $report = app(TaxService::class)->generateDailyCashierReport($vendor->id);
+    $report = app(TaxService::class)->generateDailyCashierReport($dealer->id);
 
     expect((float) $report['total_collections'])->toBe(90_000.0)
         ->and((float) $report['methods']['cash'])->toBe(90_000.0);
@@ -284,31 +281,26 @@ it('fails fast when a non-log sms driver is configured without an implementation
 
 function createReportingLoanFixture(array $loanOverrides = [], array $unitOverrides = []): array
 {
-    $branch = Branch::factory()->create();
     $brand = Brand::factory()->create();
     $model = PhoneModel::factory()->create(['brand_id' => $brand->id]);
-    $vendor = Vendor::factory()->create(['branch_id' => $branch->id]);
+    $dealer = Dealer::factory()->create();
     $customer = Customer::factory()->create([
-        'branch_id' => $branch->id,
-        'vendor_id' => $vendor->id,
+        'dealer_id' => $dealer->id,
     ]);
     $unit = InventoryUnit::factory()->create(array_merge([
         'phone_model_id' => $model->id,
-        'branch_id' => $branch->id,
-        'vendor_id' => $vendor->id,
+        'dealer_id' => $dealer->id,
     ], $unitOverrides));
     $loan = Loan::factory()->create(array_merge([
         'customer_id' => $customer->id,
         'inventory_unit_id' => $unit->id,
-        'vendor_id' => $vendor->id,
-        'branch_id' => $branch->id,
+        'dealer_id' => $dealer->id,
     ], $loanOverrides));
 
     return [
-        'branch' => $branch,
         'brand' => $brand,
         'model' => $model,
-        'vendor' => $vendor,
+        'dealer' => $dealer,
         'customer' => $customer,
         'unit' => $unit,
         'loan' => $loan,

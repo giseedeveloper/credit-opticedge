@@ -189,7 +189,7 @@ class CustomerLoanController extends Controller
         $customer->loadMissing(['assetReleasedBy', 'inventoryUnit']);
 
         $loan = $customer->loans()
-            ->with(['branch', 'vendor'])
+            ->with(['dealer'])
             ->where('status', 'active')
             ->latest('disbursed_at')
             ->latest()

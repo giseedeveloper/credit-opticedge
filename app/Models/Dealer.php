@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use Database\Factories\VendorFactory;
+use Database\Factories\DealerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -15,12 +15,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 #[Fillable([
-    'branch_id', 'owner_user_id', 'name', 'code', 'phone', 'email',
+    'owner_user_id', 'name', 'code', 'phone', 'email',
     'address', 'tin_number', 'commission_rate', 'status',
 ])]
-class Vendor extends Model
+class Dealer extends Model
 {
-    /** @use HasFactory<VendorFactory> */
+    /** @use HasFactory<DealerFactory> */
     use HasFactory, HasUuids, SoftDeletes;
 
     protected function casts(): array
@@ -31,9 +31,7 @@ class Vendor extends Model
     }
 
     /**
-     * Apply a portable case-insensitive LIKE filter for SQL drivers that do not support ILIKE.
-     *
-     * @param  Builder<Vendor>  $query
+     * @param  Builder<Dealer>  $query
      */
     public function scopeWhereInsensitiveLike(Builder $query, string $column, string $pattern): Builder
     {
@@ -41,9 +39,7 @@ class Vendor extends Model
     }
 
     /**
-     * Apply a portable case-insensitive OR LIKE filter for SQL drivers that do not support ILIKE.
-     *
-     * @param  Builder<Vendor>  $query
+     * @param  Builder<Dealer>  $query
      */
     public function scopeOrWhereInsensitiveLike(Builder $query, string $column, string $pattern): Builder
     {
@@ -51,7 +47,7 @@ class Vendor extends Model
     }
 
     /**
-     * @param  Builder<Vendor>  $query
+     * @param  Builder<Dealer>  $query
      */
     protected function applyInsensitiveLike(Builder $query, string $column, string $pattern, string $boolean = 'and'): Builder
     {
@@ -64,9 +60,14 @@ class Vendor extends Model
         );
     }
 
-    public function branch(): BelongsTo
+    /**
+     * Staff users (e.g. front-officer, back-officer) assigned to this dealer counter.
+     *
+     * @return HasMany<User, Dealer>
+     */
+    public function staff(): HasMany
     {
-        return $this->belongsTo(Branch::class);
+        return $this->hasMany(User::class, 'dealer_id');
     }
 
     public function ownerUser(): BelongsTo
@@ -76,26 +77,26 @@ class Vendor extends Model
 
     public function wallet(): HasOne
     {
-        return $this->hasOne(VendorWallet::class);
+        return $this->hasOne(DealerWallet::class, 'dealer_id');
     }
 
     public function inventoryUnits(): HasMany
     {
-        return $this->hasMany(InventoryUnit::class);
+        return $this->hasMany(InventoryUnit::class, 'dealer_id');
     }
 
     public function customers(): HasMany
     {
-        return $this->hasMany(Customer::class);
+        return $this->hasMany(Customer::class, 'dealer_id');
     }
 
     public function loans(): HasMany
     {
-        return $this->hasMany(Loan::class);
+        return $this->hasMany(Loan::class, 'dealer_id');
     }
 
     public function commissionLedgers(): HasMany
     {
-        return $this->hasMany(CommissionLedger::class);
+        return $this->hasMany(CommissionLedger::class, 'dealer_id');
     }
 }

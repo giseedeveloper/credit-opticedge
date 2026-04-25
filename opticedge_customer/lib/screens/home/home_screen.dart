@@ -222,19 +222,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   ),
                                 ],
                               ),
-                              child: Center(
-                                child: Text(
-                                  _initials(
-                                    ref.read(authProvider).customer?.firstName ??
-                                        '',
-                                    ref.read(authProvider).customer?.lastName ??
-                                        '',
-                                  ),
-                                  style: const TextStyle(
-                                    color: AppConstants.primaryDark,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(18),
+                                child: Builder(
+                                  builder: (context) {
+                                    final c = ref.read(authProvider).customer;
+                                    final url = c?.headshotUrl;
+                                    final initials = _initials(
+                                      c?.firstName ?? '',
+                                      c?.lastName ?? '',
+                                    );
+
+                                    if (url != null && url.trim().isNotEmpty) {
+                                      return Image.network(
+                                        url,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Center(
+                                          child: Text(
+                                            initials,
+                                            style: const TextStyle(
+                                              color: AppConstants.primaryDark,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    return Center(
+                                      child: Text(
+                                        initials,
+                                        style: const TextStyle(
+                                          color: AppConstants.primaryDark,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
@@ -977,7 +1003,6 @@ class _NextPaymentCard extends StatelessWidget {
           const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,
-            height: 48,
             child: ElevatedButton.icon(
               onPressed: () => context.go('/pay'),
               icon: const Icon(Icons.payments_rounded, size: 20),
@@ -988,6 +1013,8 @@ class _NextPaymentCard extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                minimumSize: const Size(double.infinity, 52),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),

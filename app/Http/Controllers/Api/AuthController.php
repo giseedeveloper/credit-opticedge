@@ -108,12 +108,12 @@ class AuthController extends Controller
     /**
      * Get Authenticated FO Profile
      *
-     * Returns the current user's profile, role, branch, and key permissions
+     * Returns the current user's profile, role, dealer context, and key permissions
      * so the mobile app can gate features at login time.
      */
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load('branch');
+        $user = $request->user()->load('dealer');
         $primaryRole = $user->primaryRoleName() ?? $user->role;
 
         $canRegister = $user->canAccess('loans.create');
@@ -125,10 +125,11 @@ class AuthController extends Controller
             'phone' => $user->phone,
             'role' => $primaryRole,
             'roles' => $user->getRoleNames(),
-            'branch' => $user->branch ? [
-                'id' => $user->branch->id,
-                'name' => $user->branch->name,
+            'dealer' => $user->dealer ? [
+                'id' => $user->dealer->id,
+                'name' => $user->dealer->name,
             ] : null,
+            'branch' => null,
             'avatar_url' => $user->avatar_url,
             'is_active' => $user->is_active,
             'permissions' => [

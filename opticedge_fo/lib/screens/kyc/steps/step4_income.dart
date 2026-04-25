@@ -14,13 +14,9 @@ class Step4IncomeScreen extends ConsumerStatefulWidget {
 class _Step4State extends ConsumerState<Step4IncomeScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _occupation,
-      _employer,
-      _workLoc,
       _income,
-      _expenses,
       _duration;
 
-  final _cycles = ['daily', 'weekly', 'monthly'];
   final _occupationChips = [
     'Salaried',
     'Self Employed',
@@ -35,10 +31,7 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
     super.initState();
     final s = ref.read(kycProvider);
     _occupation = TextEditingController(text: s.occupation);
-    _employer = TextEditingController(text: s.employer);
-    _workLoc = TextEditingController(text: s.workLocation);
     _income = TextEditingController(text: s.monthlyIncome);
-    _expenses = TextEditingController(text: s.monthlyExpenses);
     _duration = TextEditingController(text: s.durationAtWork);
   }
 
@@ -46,10 +39,7 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
   void dispose() {
     for (final c in [
       _occupation,
-      _employer,
-      _workLoc,
       _income,
-      _expenses,
       _duration
     ]) {
       c.dispose();
@@ -60,10 +50,7 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
   void _save() {
     ref.read(kycProvider.notifier).update((s) => s.copyWith(
           occupation: _occupation.text.trim(),
-          employer: _employer.text.trim(),
-          workLocation: _workLoc.text.trim(),
           monthlyIncome: _income.text.trim(),
-          monthlyExpenses: _expenses.text.trim(),
           durationAtWork: _duration.text.trim(),
         ));
   }
@@ -123,46 +110,8 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
             const SizedBox(height: 12),
             _field(_occupation, 'Or type occupation manually', optional: true),
             const SizedBox(height: 14),
-            _field(_employer, 'Employer / Business Name', optional: true),
-            const SizedBox(height: 14),
-            _field(_workLoc, 'Work Location', optional: true),
-            const SizedBox(height: 14),
             _field(_income, 'Monthly Income (TZS)',
                 required: true, keyboard: TextInputType.number),
-            const SizedBox(height: 14),
-            _field(_expenses, 'Monthly Expenses (TZS)',
-                optional: true, keyboard: TextInputType.number),
-            const SizedBox(height: 14),
-            _label('Income Payment Cycle'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: _cycles.map((c) {
-                final selected = state.incomePaymentCycle == c;
-                return ChoiceChip(
-                  label: Text(c[0].toUpperCase() + c.substring(1)),
-                  selected: selected,
-                  onSelected: (_) => ref
-                      .read(kycProvider.notifier)
-                      .update((s) => s.copyWith(incomePaymentCycle: c)),
-                  selectedColor: AppConstants.primarySurface,
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    color: selected
-                        ? AppConstants.primary
-                        : AppConstants.textSecondary,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: BorderSide(
-                        color: selected
-                            ? AppConstants.primary
-                            : AppConstants.border),
-                  ),
-                );
-              }).toList(),
-            ),
             const SizedBox(height: 14),
             Container(
               padding: const EdgeInsets.all(14),

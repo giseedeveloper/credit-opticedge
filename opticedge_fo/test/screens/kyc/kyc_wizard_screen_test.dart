@@ -128,7 +128,7 @@ void main() {
     await tester.pumpAndSettle(const Duration(milliseconds: 800));
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Understand repayment ability'), findsOneWidget);
+    expect(find.text('Kazi na kipato'), findsWidgets);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle(const Duration(milliseconds: 400));

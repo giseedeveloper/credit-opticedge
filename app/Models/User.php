@@ -22,7 +22,7 @@ use Spatie\Permission\Exceptions\PermissionDoesNotExist;
 use Spatie\Permission\Traits\HasPermissions;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'phone', 'role', 'branch_id', 'joined_at', 'employee_code', 'is_active', 'avatar_url'])]
+#[Fillable(['name', 'email', 'password', 'phone', 'role', 'dealer_id', 'joined_at', 'employee_code', 'is_active', 'avatar_url'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -33,10 +33,9 @@ class User extends Authenticatable
         'dashboard.view' => 'dashboard',
         'loans.view' => 'credit.panel',
         'loans.create' => 'kyc.wizard',
-        'devices.view' => 'stock.index',
+        'devices.view' => 'stock.imei',
         'products.view' => 'stock.brands',
         'accounting.view' => 'financials.collections',
-        'vendors.view' => 'partners.vendors',
         'staff.view' => 'staff.index',
         'reports.view' => 'audits.logs',
         'sms_campaign.view' => 'comms.sms',
@@ -64,14 +63,20 @@ class User extends Authenticatable
         return LogOptions::defaults()->logFillable()->logOnlyDirty();
     }
 
-    public function branch(): BelongsTo
+    /**
+     * Dealer counter / shop this user works under (front-officer, back-officer, etc.).
+     */
+    public function dealer(): BelongsTo
     {
-        return $this->belongsTo(Branch::class);
+        return $this->belongsTo(Dealer::class);
     }
 
-    public function managedVendors(): HasMany
+    /**
+     * Dealers where this user is the designated owner account.
+     */
+    public function managedDealers(): HasMany
     {
-        return $this->hasMany(Vendor::class, 'owner_user_id');
+        return $this->hasMany(Dealer::class, 'owner_user_id');
     }
 
     public function registeredCustomers(): HasMany
@@ -104,9 +109,15 @@ class User extends Authenticatable
         return $this->hasRole('supervisor');
     }
 
+    public function isDealer(): bool
+    {
+        return $this->hasRole('dealer');
+    }
+
+    /** @deprecated Use {@see isDealer()}. */
     public function isVendor(): bool
     {
-        return $this->hasRole('vendor');
+        return $this->isDealer();
     }
 
     public function isAccountant(): bool

@@ -21,12 +21,30 @@ class PayScreen extends ConsumerStatefulWidget {
 class _PayScreenState extends ConsumerState<PayScreen> {
   final _amountCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  double? _sliderAmount;
+  bool _syncingAmount = false;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() {
       ref.read(loanProvider.notifier).load();
+    });
+
+    _amountCtrl.addListener(() {
+      if (_syncingAmount) {
+        return;
+      }
+
+      final raw = _amountCtrl.text.trim();
+      final parsed = double.tryParse(raw);
+      if (parsed == null) {
+        return;
+      }
+
+      setState(() {
+        _sliderAmount = parsed;
+      });
     });
   }
 
@@ -110,6 +128,26 @@ class _PayScreenState extends ConsumerState<PayScreen> {
             else if (loan.loan == null)
               _buildUnavailableState(loan.statusMessage)
             else ...[
+              Builder(builder: (context) {
+                final remaining = loan.loan!.remainingBalance;
+                final minPay = 1000.0;
+                final maxPay = remaining >= minPay ? remaining : minPay;
+
+                _sliderAmount ??= (nextAmount != null && nextAmount >= minPay)
+                    ? nextAmount.clamp(minPay, maxPay).toDouble()
+                    : minPay;
+
+                final fraction = maxPay <= 0 ? 0.0 : (_sliderAmount! / maxPay);
+                final accent = Color.lerp(
+                      AppConstants.warning,
+                      AppConstants.success,
+                      fraction.clamp(0.0, 1.0),
+                    ) ??
+                    AppConstants.primary;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
               GlassCard.tinted(
                 surfaceTint: CustomerColors.of(context).primarySurface,
                 accent: AppConstants.primary,
@@ -173,10 +211,75 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                         ),
                       ),
                     ],
+                    const SizedBox(height: 18),
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                      decoration: BoxDecoration(
+                        color: CustomerColors.of(context).glassInputFill,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: AppConstants.border.withValues(alpha: 0.55),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Chagua kiasi cha kulipa',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: CustomerColors.of(context).textSecondary,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                'TZS ${_currencyFmt.format(_sliderAmount)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                  color: accent,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              activeTrackColor: accent,
+                              inactiveTrackColor: accent.withValues(alpha: 0.18),
+                              thumbColor: accent,
+                              overlayColor: accent.withValues(alpha: 0.12),
+                              trackHeight: 4,
+                            ),
+                            child: Slider(
+                              min: minPay,
+                              max: maxPay,
+                              value: _sliderAmount!.clamp(minPay, maxPay),
+                              divisions: 20,
+                              onChanged: (v) {
+                                setState(() {
+                                  _sliderAmount = v;
+                                });
+                                _syncingAmount = true;
+                                _amountCtrl.text = v.round().toString();
+                                _syncingAmount = false;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
+                  ],
+                );
+              }),
 
               Text(
                 'Kiasi cha Kulipa (TZS)',
@@ -191,6 +294,15 @@ class _PayScreenState extends ConsumerState<PayScreen> {
                 controller: _amountCtrl,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: (value) {
+                  final parsed = double.tryParse(value.trim());
+                  if (parsed == null) {
+                    return;
+                  }
+                  setState(() {
+                    _sliderAmount = parsed;
+                  });
+                },
                 decoration: InputDecoration(
                   hintText: 'Mfano: 15000',
                   prefixIcon: const Icon(

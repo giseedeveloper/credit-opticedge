@@ -23,7 +23,7 @@ beforeEach(function () {
         'settings.view',
         'sms_campaign.view',
         'staff.view',
-        'vendors.view',
+        'dealers.view',
     ] as $permission) {
         Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
     }

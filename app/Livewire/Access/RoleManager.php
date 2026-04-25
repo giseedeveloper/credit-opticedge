@@ -45,7 +45,7 @@ class RoleManager extends Component
     public $modules = [
         'Dashboard', 'Accounting', 'SMS Campaign', 'Payment analytics', 'Loans',
         'Products', 'Calculator', 'Devices', 'Returned devices', 'Financial plans',
-        'Staff', 'Vendors', 'Branches', 'Expenses', 'Reports', 'Sales',
+        'Staff', 'Dealers', 'Expenses', 'Reports', 'Sales',
         'Reconciliation', 'Access', 'Account', 'Settings',
     ];
 
@@ -80,7 +80,7 @@ class RoleManager extends Component
             return null;
         }
 
-        return User::with(['roles', 'branch'])->find($this->detailUserId);
+        return User::with(['roles', 'dealer'])->find($this->detailUserId);
     }
 
     public function loadRoles(): void

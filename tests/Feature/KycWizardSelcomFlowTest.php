@@ -2,9 +2,9 @@
 
 use App\Livewire\Kyc\CustomerProfiles;
 use App\Livewire\Kyc\VerificationWizard;
-use App\Models\Branch;
 use App\Models\Brand;
 use App\Models\Customer;
+use App\Models\Dealer;
 use App\Models\InventoryUnit;
 use App\Models\Permission;
 use App\Models\PhoneModel;
@@ -26,8 +26,8 @@ beforeEach(function () {
 
     Storage::fake('public');
 
-    $this->branch = Branch::factory()->create();
-    $this->fo = User::factory()->create(['branch_id' => $this->branch->id]);
+    $this->dealer = Dealer::factory()->create();
+    $this->fo = User::factory()->create(['dealer_id' => $this->dealer->id]);
     $this->fo->givePermissionTo(['loans.create', 'loans.view']);
 
     $this->brand = Brand::factory()->create(['name' => 'Samsung']);
@@ -39,7 +39,7 @@ beforeEach(function () {
     ]);
     $this->inventoryUnit = InventoryUnit::factory()->create([
         'phone_model_id' => $this->phoneModel->id,
-        'branch_id' => $this->branch->id,
+        'dealer_id' => $this->dealer->id,
         'status' => 'hq_stock',
         'imei_1' => '353456789012345',
         'serial_number' => 'SAM-A55-0001',
@@ -57,10 +57,18 @@ it('blocks application submission until a successful payment exists', function (
         'uploaded_by' => $this->fo->id,
     ]);
 
+    $nida = str_pad((string) random_int(10000000, 99999999), 20, '0', STR_PAD_LEFT);
+    $idFront = UploadedFile::fake()->image('id-front.jpg');
+    $idBack = UploadedFile::fake()->image('id-back.jpg');
+    $headshot = UploadedFile::fake()->image('headshot.jpg');
+
     Livewire::test(VerificationWizard::class)
         ->set('brandId', $this->brand->id)
         ->set('phoneModelId', $this->phoneModel->id)
         ->set('inventoryUnitId', $this->inventoryUnit->id)
+        ->set('imeiNumber', $this->inventoryUnit->imei_1)
+        ->set('deviceSpecs', 'Samsung Galaxy A55 — 8GB/256GB/Blue')
+        ->set('cashPrice', (string) $this->phoneModel->retail_price)
         ->set('depositAmount', '85000')
         ->set('preferredRepayment', 'monthly')
         ->set('loanInterestRate', '4.75')
@@ -70,22 +78,33 @@ it('blocks application submission until a successful payment exists', function (
         ->set('firstName', 'Neema')
         ->set('lastName', 'Paul')
         ->set('gender', 'female')
-        ->set('nidaNumber', '98765432109876543210')
+        ->set('nidaNumber', $nida)
         ->set('idType', 'nida')
+        ->set('idFrontPhoto', $idFront)
+        ->set('idBackPhoto', $idBack)
+        ->set('headshotPhoto', $headshot)
         ->set('phone', '0712555000')
         ->set('phoneCountry', 'TZ')
-        ->set('branchId', $this->branch->id)
+        ->set('altPhoneCountry', 'TZ')
+        ->set('region', 'Dar es Salaam')
+        ->set('district', 'Kinondoni')
+        ->set('occupation', 'Trader')
+        ->set('incomePaymentCycle', 'monthly')
+        ->set('isPep', false)
         ->set('monthlyIncome', '700000')
         ->set('nokName', 'Rehema Paul')
         ->set('nokPhone', '0755444333')
         ->set('nokPhoneCountry', 'TZ')
         ->set('nokRelationship', 'sibling')
+        ->set('nok2PhoneCountry', 'TZ')
         ->set('termsAccepted', true)
         ->set('dataConsentAccepted', true)
         ->set('callConsentAccepted', true)
+        ->set('paymentPhone', '0712555000')
         ->set('agreementDecision', 'yes')
         ->set('customerSignatureData', kycWizardFlowSignatureDataUrl())
         ->set('foSignatureData', kycWizardFlowSignatureDataUrl())
+        ->set('etrReceiptPhoto', UploadedFile::fake()->image('etr.jpg', 900, 600))
         ->set('assetHandoverList', UploadedFile::fake()->create('handover.pdf', 80, 'application/pdf'))
         ->call('processApplication')
         ->assertHasErrors(['depositAmount']);
@@ -109,7 +128,7 @@ it('releases the asset after approved payment and agreement checks are complete'
     Storage::disk('public')->put('kyc/handover/release.pdf', 'handover-checklist');
 
     $customer = Customer::factory()->create([
-        'branch_id' => $this->branch->id,
+        'dealer_id' => $this->dealer->id,
         'registered_by' => $this->fo->id,
         'phone_model_id' => $this->phoneModel->id,
         'inventory_unit_id' => $this->inventoryUnit->id,

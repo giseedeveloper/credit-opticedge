@@ -2,16 +2,13 @@
 
 namespace App\Livewire;
 
-use App\Models\Branch;
 use App\Models\Customer;
-use App\Models\InventoryUnit;
 use App\Models\Loan;
 use App\Models\RepaymentSchedule;
 use App\Models\Transaction;
 use App\Services\AnalyticsService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class ExecutiveDashboard extends Component
@@ -21,8 +18,6 @@ class ExecutiveDashboard extends Component
     public float $collectionEfficiency = 0;
 
     public float $parPercentage = 0;
-
-    public int $activeDevices = 0;
 
     public int $totalActiveLoans = 0;
 
@@ -38,15 +33,11 @@ class ExecutiveDashboard extends Component
 
     public int $pendingKycCount = 0;
 
-    public int $availableStockCount = 0;
-
     public array $weeklyCollections = [];
 
     public array $weeklyDisbursements = [];
 
     public array $weeklyLabels = [];
-
-    public array $inventoryDistribution = [];
 
     public array $riskMeterData = [];
 
@@ -56,9 +47,12 @@ class ExecutiveDashboard extends Component
 
     public array $recentTransactions = [];
 
-    public array $branchStats = [];
-
     public array $overdueLoansList = [];
+
+    /**
+     * @var list<array{name: string, active_loans: int, collections: float}>
+     */
+    public array $dealerStats = [];
 
     public bool $readyToLoad = false;
 
@@ -81,7 +75,6 @@ class ExecutiveDashboard extends Component
             return $par['par_30'];
         });
 
-        $this->activeDevices = Cache::remember('dash.active_devices', 300, fn () => InventoryUnit::whereIn('status', ['sold', 'active'])->count());
         $this->totalActiveLoans = Cache::remember('dash.active_loans', 300, fn () => Loan::where('status', 'active')->count());
         $this->totalCustomers = Cache::remember('dash.total_customers', 300, fn () => Customer::count());
 
@@ -103,11 +96,8 @@ class ExecutiveDashboard extends Component
         $this->pendingKycCount = Cache::remember('dash.pending_kyc', 120, fn () => Customer::query()->kycNotApproved()->count()
         );
 
-        $this->availableStockCount = Cache::remember('dash.available_stock', 120, fn () => InventoryUnit::whereIn('status', ['available', 'hq_stock'])->count()
-        );
-
         // Top overdue loans for alert panel
-        $this->overdueLoansList = Loan::with(['customer', 'inventoryUnit.phoneModel'])
+        $this->overdueLoansList = Loan::with(['customer'])
             ->whereIn('status', ['overdue', 'defaulted'])
             ->orderByDesc('outstanding_balance')
             ->take(5)
@@ -118,7 +108,7 @@ class ExecutiveDashboard extends Component
                 'outstanding_balance' => (float) $l->outstanding_balance,
                 'customer_name' => trim(($l->customer?->first_name ?? '').' '.($l->customer?->last_name ?? '')),
                 'phone' => $l->customer?->phone ?? '—',
-                'device' => ($l->inventoryUnit?->phoneModel?->name ?? 'Device'),
+                'device' => ($l->customer?->phoneModel?->name ?? 'Device'),
                 'days_overdue' => $l->disbursed_at
                     ? (int) now()->diffInDays($l->disbursed_at->addDays((int) $l->loan_term_weeks * 7))
                     : 0,
@@ -158,23 +148,9 @@ class ExecutiveDashboard extends Component
                 'transacted_at' => $t->transacted_at?->diffForHumans() ?? '—',
             ])->toArray();
 
-        // Branch performance
-        $this->branchStats = Branch::withCount(['loans as active_loans' => fn ($q) => $q->where('status', 'active')])
-            ->get()
-            ->map(fn ($b) => [
-                'name' => $b->name,
-                'active_loans' => $b->active_loans,
-                'collections' => (float) Transaction::whereHas('loan', fn ($q) => $q->where('branch_id', $b->id))
-                    ->where('type', 'repayment')
-                    ->whereMonth('transacted_at', now()->month)
-                    ->sum('amount'),
-            ])
-            ->sortByDesc('active_loans')
-            ->values()
-            ->toArray();
-
         $this->generateLiveSalesFeed();
         $this->loadChartData();
+        $this->loadDealerStats();
 
         $this->readyToLoad = true;
 
@@ -183,13 +159,13 @@ class ExecutiveDashboard extends Component
             disbursements: $this->weeklyDisbursements,
             labels: $this->weeklyLabels,
             risk: $this->riskMeterData[0] ?? 0,
-            inventory: $this->inventoryDistribution,
+            inventory: $this->hardwareBrandShareForChart(),
         );
     }
 
     private function generateLiveSalesFeed(): void
     {
-        $this->liveSalesFeed = Loan::with(['customer', 'inventoryUnit.phoneModel.brand'])
+        $this->liveSalesFeed = Loan::with(['customer'])
             ->latest()
             ->take(8)
             ->get()
@@ -203,11 +179,36 @@ class ExecutiveDashboard extends Component
                     'last_name' => $loan->customer?->last_name,
                 ],
                 'device' => [
-                    'brand' => $loan->inventoryUnit?->phoneModel?->brand?->name ?? 'OEM',
-                    'model' => $loan->inventoryUnit?->phoneModel?->name ?? 'Device',
+                    'brand' => $loan->customer?->phoneModel?->brand?->name ?? 'OEM',
+                    'model' => $loan->customer?->phoneModel?->name ?? 'Device',
                 ],
             ])
             ->toArray();
+    }
+
+    private function loadDealerStats(): void
+    {
+        $this->dealerStats = [];
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function hardwareBrandShareForChart(): array
+    {
+        return Cache::remember('dash.hardware_brand_share', 300, function () {
+            return Loan::query()
+                ->where('status', 'active')
+                ->whereHas('customer.phoneModel.brand')
+                ->join('customers', 'loans.customer_id', '=', 'customers.id')
+                ->join('phone_models', 'customers.phone_model_id', '=', 'phone_models.id')
+                ->join('brands', 'phone_models.brand_id', '=', 'brands.id')
+                ->selectRaw('brands.name as brand_name, count(*) as c')
+                ->groupBy('brands.name', 'brands.id')
+                ->pluck('c', 'brand_name')
+                ->map(fn ($c) => (int) $c)
+                ->all();
+        });
     }
 
     private function loadChartData(): void
@@ -234,16 +235,6 @@ class ExecutiveDashboard extends Component
         $atRisk = $total > 0 ? Loan::whereIn('ifrs_stage', [2, 3])->count() : 0;
         $this->riskMeterData = [$total > 0 ? round(($atRisk / $total) * 100, 1) : 0];
 
-        $brands = DB::table('inventory_units')
-            ->join('phone_models', 'inventory_units.phone_model_id', '=', 'phone_models.id')
-            ->join('brands', 'phone_models.brand_id', '=', 'brands.id')
-            ->select('brands.name as brand_name', DB::raw('count(*) as total'))
-            ->whereNull('inventory_units.deleted_at')
-            ->groupBy('brands.name')
-            ->pluck('total', 'brand_name')
-            ->toArray();
-
-        $this->inventoryDistribution = ! empty($brands) ? $brands : ['No Stock' => 1];
     }
 
     public function refreshFeeds(): void

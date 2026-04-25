@@ -1,7 +1,6 @@
 <?php
 
 use App\Livewire\Credit\LendingPanel;
-use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\Permission;
 use App\Models\User;
@@ -23,14 +22,12 @@ beforeEach(function () {
     $this->user->givePermissionTo('loans.create');
     $this->user->givePermissionTo('loans.view');
 
-    $this->branch = Branch::factory()->create();
 });
 
 it('treats approved and verified kyc statuses as lending-eligible customers', function () {
     actingAs($this->user);
 
     Customer::factory()->create([
-        'branch_id' => $this->branch->id,
         'first_name' => 'Amina',
         'last_name' => 'Approved',
         'phone' => '0712000101',
@@ -38,7 +35,6 @@ it('treats approved and verified kyc statuses as lending-eligible customers', fu
     ]);
 
     Customer::factory()->create([
-        'branch_id' => $this->branch->id,
         'first_name' => 'Legacy',
         'last_name' => 'Verified',
         'phone' => '0712000102',
@@ -46,7 +42,6 @@ it('treats approved and verified kyc statuses as lending-eligible customers', fu
     ]);
 
     Customer::factory()->create([
-        'branch_id' => $this->branch->id,
         'first_name' => 'Pending',
         'last_name' => 'Review',
         'phone' => '0712000103',
@@ -65,7 +60,6 @@ it('accepts the verified status alias when listing kyc customers through the api
 
     $approved = Customer::factory()->create([
         'registered_by' => $this->user->id,
-        'branch_id' => $this->branch->id,
         'first_name' => 'Amina',
         'last_name' => 'Approved',
         'phone' => '0712000201',
@@ -74,7 +68,6 @@ it('accepts the verified status alias when listing kyc customers through the api
 
     $legacyVerified = Customer::factory()->create([
         'registered_by' => $this->user->id,
-        'branch_id' => $this->branch->id,
         'first_name' => 'Legacy',
         'last_name' => 'Verified',
         'phone' => '0712000202',
@@ -83,7 +76,6 @@ it('accepts the verified status alias when listing kyc customers through the api
 
     Customer::factory()->create([
         'registered_by' => $this->user->id,
-        'branch_id' => $this->branch->id,
         'first_name' => 'Pending',
         'last_name' => 'Review',
         'phone' => '0712000203',
@@ -108,14 +100,12 @@ it('gives the same kyc score uplift to approved and verified customers', functio
     $service = app(RiskAssessmentService::class);
 
     $approved = Customer::factory()->create([
-        'branch_id' => $this->branch->id,
         'kyc_status' => 'approved',
         'nida_number' => '11111111111111111111',
         'monthly_income' => 600000,
     ]);
 
     $legacyVerified = Customer::factory()->create([
-        'branch_id' => $this->branch->id,
         'kyc_status' => 'verified',
         'nida_number' => '22222222222222222222',
         'monthly_income' => 600000,

@@ -72,12 +72,6 @@
             <flux:select.option value="rejected">Rejected</flux:select.option>
             <flux:select.option value="not_started">Not Started</flux:select.option>
         </flux:select>
-        <flux:select wire:model.live="branchFilter" class="w-48">
-            <flux:select.option value="">All Branches</flux:select.option>
-            @foreach($branches as $b)
-            <flux:select.option :value="$b->id">{{ $b->name }}</flux:select.option>
-            @endforeach
-        </flux:select>
     </div>
 
     {{-- Table --}}
@@ -88,7 +82,7 @@
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">NIDA</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Branch</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Dealer</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">KYC</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Loans</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Joined</th>
@@ -139,7 +133,7 @@
                         {{ $customer->nida_number ? substr($customer->nida_number, 0, 8).'…' : '—' }}
                     </td>
                     <td class="px-4 py-3.5 text-xs text-gray-500 hidden lg:table-cell">
-                        {{ $customer->branch?->name ?? '—' }}
+                        {{ $customer->dealer?->name ?? '—' }}
                     </td>
                     <td class="px-4 py-3.5">
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold {{ $kycBadge }}">
@@ -184,7 +178,7 @@
                         <flux:icon name="users" class="size-12 mx-auto mb-3 text-gray-300 dark:text-zinc-600" />
                         <p class="text-gray-500 font-medium">No customers found</p>
                         <p class="text-gray-400 text-xs mt-1">
-                            @if($search || $kycFilter || $branchFilter) Try clearing your filters @endif
+                            @if($search || $kycFilter) Try clearing your filters @endif
                         </p>
                     </td>
                 </tr>
@@ -466,8 +460,8 @@
                             <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->formattedPhone('alt_phone') ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Branch</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->branch?->name ?? '—' }}</p>
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Dealer</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->dealer?->name ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Region</p>
@@ -630,8 +624,8 @@
                             </p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Branch</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->branch?->name ?? '—' }}</p>
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Dealer</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->dealer?->name ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Submitted</p>

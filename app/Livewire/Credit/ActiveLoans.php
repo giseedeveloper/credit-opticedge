@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Credit;
 
-use App\Models\Branch;
 use App\Models\Loan;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -14,8 +13,6 @@ class ActiveLoans extends Component
     public string $search = '';
 
     public string $statusFilter = 'active';
-
-    public string $branchFilter = '';
 
     public bool $showDetail = false;
 
@@ -32,11 +29,6 @@ class ActiveLoans extends Component
     }
 
     public function updatedStatusFilter(): void
-    {
-        $this->resetPage();
-    }
-
-    public function updatedBranchFilter(): void
     {
         $this->resetPage();
     }
@@ -60,10 +52,9 @@ class ActiveLoans extends Component
         }
 
         return Loan::with([
-            'customer.branch',
+            'customer.dealer',
             'inventoryUnit.phoneModel.brand',
-            'vendor',
-            'branch',
+            'dealer',
             'disbursedBy',
             'approvedBy',
             'repaymentSchedules',
@@ -73,7 +64,7 @@ class ActiveLoans extends Component
 
     public function render()
     {
-        $loans = Loan::with(['customer', 'inventoryUnit.phoneModel.brand', 'branch'])
+        $loans = Loan::with(['customer.dealer', 'inventoryUnit.phoneModel.brand', 'dealer'])
             ->when($this->search, fn ($q) => $q->where(function ($q) {
                 $q->whereInsensitiveLike('loan_number', "%{$this->search}%")
                     ->orWhereHas('customer', fn ($q) => $q
@@ -82,7 +73,6 @@ class ActiveLoans extends Component
                         ->orWhereInsensitiveLike('phone', "%{$this->search}%"));
             }))
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
-            ->when($this->branchFilter, fn ($q) => $q->where('branch_id', $this->branchFilter))
             ->latest()
             ->paginate(20);
 
@@ -100,9 +90,7 @@ class ActiveLoans extends Component
             'overdue_amt' => Loan::where('status', 'overdue')->sum('outstanding_balance'),
         ];
 
-        $branches = Branch::orderBy('name')->get();
-
-        return view('livewire.credit.active-loans', compact('loans', 'counts', 'stats', 'branches'))
+        return view('livewire.credit.active-loans', compact('loans', 'counts', 'stats'))
             ->layout('layouts.app', ['title' => 'Active Loans']);
     }
 }

@@ -3,7 +3,6 @@
 namespace App\Livewire\Stock;
 
 use App\Models\Brand;
-use App\Models\InventoryUnit;
 use App\Models\PhoneModel;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -38,10 +37,6 @@ class BrandModelIndex extends Component
 
     public string $selectedBrandId = '';
 
-    public string $retailPrice = '';
-
-    public string $costPrice = '';
-
     public string $specRam = '';
 
     public string $specStorage = '';
@@ -57,10 +52,6 @@ class BrandModelIndex extends Component
     public string $editModelName = '';
 
     public string $editSelectedBrandId = '';
-
-    public string $editRetailPrice = '';
-
-    public string $editCostPrice = '';
 
     public string $editSpecRam = '';
 
@@ -158,21 +149,17 @@ class BrandModelIndex extends Component
         $this->validate([
             'modelName' => 'required|string|max:150',
             'selectedBrandId' => 'required|exists:brands,id',
-            'retailPrice' => 'nullable|numeric|min:0',
-            'costPrice' => 'nullable|numeric|min:0',
         ]);
 
         PhoneModel::create([
             'brand_id' => $this->selectedBrandId,
             'name' => $this->modelName,
             'slug' => Str::slug($this->modelName.'-'.$this->selectedBrandId),
-            'retail_price' => $this->retailPrice ?: 0,
-            'cost_price' => $this->costPrice ?: 0,
             'is_active' => true,
             'specifications' => $this->buildSpecs($this->specRam, $this->specStorage, $this->specColor, $this->specDisplay, $this->specBattery),
         ]);
 
-        $this->reset(['modelName', 'selectedBrandId', 'retailPrice', 'costPrice', 'specRam', 'specStorage', 'specColor', 'specDisplay', 'specBattery', 'showCreateModel']);
+        $this->reset(['modelName', 'selectedBrandId', 'specRam', 'specStorage', 'specColor', 'specDisplay', 'specBattery', 'showCreateModel']);
         $this->dispatch('toast', message: 'Model created successfully.', type: 'success');
     }
 
@@ -186,8 +173,6 @@ class BrandModelIndex extends Component
         $this->editModelId = $modelId;
         $this->editModelName = $model->name;
         $this->editSelectedBrandId = (string) $model->brand_id;
-        $this->editRetailPrice = (string) $model->retail_price;
-        $this->editCostPrice = (string) $model->cost_price;
         $this->editSpecRam = $specs['ram'] ?? '';
         $this->editSpecStorage = $specs['storage'] ?? '';
         $this->editSpecColor = $specs['color'] ?? '';
@@ -202,19 +187,15 @@ class BrandModelIndex extends Component
         $this->validate([
             'editModelName' => 'required|string|max:150',
             'editSelectedBrandId' => 'required|exists:brands,id',
-            'editRetailPrice' => 'nullable|numeric|min:0',
-            'editCostPrice' => 'nullable|numeric|min:0',
         ]);
 
         PhoneModel::findOrFail($this->editModelId)->update([
             'brand_id' => $this->editSelectedBrandId,
             'name' => $this->editModelName,
-            'retail_price' => $this->editRetailPrice ?: 0,
-            'cost_price' => $this->editCostPrice ?: 0,
             'specifications' => $this->buildSpecs($this->editSpecRam, $this->editSpecStorage, $this->editSpecColor, $this->editSpecDisplay, $this->editSpecBattery),
         ]);
 
-        $this->reset(['editModelId', 'editModelName', 'editSelectedBrandId', 'editRetailPrice', 'editCostPrice', 'editSpecRam', 'editSpecStorage', 'editSpecColor', 'editSpecDisplay', 'editSpecBattery', 'showEditModel']);
+        $this->reset(['editModelId', 'editModelName', 'editSelectedBrandId', 'editSpecRam', 'editSpecStorage', 'editSpecColor', 'editSpecDisplay', 'editSpecBattery', 'showEditModel']);
         $this->showModelDetail = false;
         $this->dispatch('toast', message: 'Model updated.', type: 'success');
     }
@@ -242,45 +223,27 @@ class BrandModelIndex extends Component
     public function render()
     {
         $brands = Brand::withCount('phoneModels')
-            ->withCount(['inventoryUnits as stock_count'])
             ->when($this->search, fn ($q) => $q->whereInsensitiveLike('name', "%{$this->search}%"))
             ->orderBy('name')
             ->paginate(15);
 
         $models = PhoneModel::with('brand')
-            ->withCount(['inventoryUnits as stock_total'])
-            ->withCount(['inventoryUnits as stock_available' => fn ($q) => $q->whereIn('status', ['available', 'hq_stock'])])
-            ->withCount(['inventoryUnits as stock_sold' => fn ($q) => $q->where('status', 'sold')])
             ->when($this->search, fn ($q) => $q->whereInsensitiveLike('name', "%{$this->search}%"))
             ->orderBy('name')
             ->paginate(15);
 
         $detailBrand = $this->detailBrandId
-            ? Brand::with(['phoneModels' => fn ($q) => $q->withCount([
-                'inventoryUnits as stock_total',
-                'inventoryUnits as stock_available' => fn ($q) => $q->whereIn('status', ['available', 'hq_stock']),
-                'inventoryUnits as stock_sold' => fn ($q) => $q->where('status', 'sold'),
-            ])])->withCount('phoneModels')->find($this->detailBrandId)
+            ? Brand::with(['phoneModels'])->withCount('phoneModels')->find($this->detailBrandId)
             : null;
 
         $detailModel = $this->detailModelId
-            ? PhoneModel::with('brand')
-                ->withCount([
-                    'inventoryUnits as stock_total',
-                    'inventoryUnits as stock_available' => fn ($q) => $q->whereIn('status', ['available', 'hq_stock']),
-                    'inventoryUnits as stock_vendor' => fn ($q) => $q->where('status', 'vendor_stock'),
-                    'inventoryUnits as stock_in_transit' => fn ($q) => $q->where('status', 'in_transit'),
-                    'inventoryUnits as stock_sold' => fn ($q) => $q->where('status', 'sold'),
-                    'inventoryUnits as stock_returned' => fn ($q) => $q->where('status', 'returned'),
-                ])
-                ->find($this->detailModelId)
+            ? PhoneModel::with('brand')->find($this->detailModelId)
             : null;
 
         $stats = [
             'total_brands' => Brand::count(),
             'total_models' => PhoneModel::count(),
             'active_models' => PhoneModel::where('is_active', true)->count(),
-            'total_units' => InventoryUnit::count(),
         ];
 
         $allBrands = Brand::orderBy('name')->get();

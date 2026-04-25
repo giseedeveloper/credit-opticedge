@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'customer_id', 'reviewed_by', 'fo_id', 'type', 'status', 'stage',
     'notes', 'rejection_reason', 'reviewed_at',
     'auto_check_status', 'auto_check_results', 'auto_check_ran_at',
+    'face_match_status', 'face_match_score', 'face_match_reason', 'face_match_ran_at',
+    'face_match_manual_verified_by', 'face_match_manual_verified_at',
     'stage1_status', 'stage1_reviewed_by', 'stage1_reviewed_at', 'stage1_notes', 'stage1_rejection_reason',
     'stage2_status', 'stage2_reviewed_by', 'stage2_reviewed_at', 'stage2_notes', 'stage2_rejection_reason',
     'stage3_status', 'stage4_status',
@@ -34,6 +36,8 @@ class Verification extends Model
             'nok_called_at' => 'datetime',
             'auto_check_ran_at' => 'datetime',
             'auto_check_results' => 'array',
+            'face_match_ran_at' => 'datetime',
+            'face_match_manual_verified_at' => 'datetime',
             'stage' => 'integer',
         ];
     }
@@ -61,6 +65,11 @@ class Verification extends Model
     public function stage2ReviewedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'stage2_reviewed_by');
+    }
+
+    public function faceMatchManualVerifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'face_match_manual_verified_by');
     }
 
     public function confirmationCalledBy(): BelongsTo

@@ -1,49 +1,46 @@
 <?php
 
-use App\Models\Branch;
 use App\Models\Brand;
 use App\Models\Customer;
+use App\Models\Dealer;
 use App\Models\InventoryUnit;
 use App\Models\Loan;
 use App\Models\PhoneModel;
-use App\Models\RepaymentSchedule;
 use App\Models\Transaction;
-use App\Models\Vendor;
 use App\Services\AccountingService;
 use App\Services\LoanCalculatorService;
 use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->service = app(AccountingService::class);
     $this->calculator = app(LoanCalculatorService::class);
 
-    $branch = Branch::factory()->create();
     $brand = Brand::factory()->create();
     $model = PhoneModel::factory()->create(['brand_id' => $brand->id]);
-    $this->vendor = Vendor::factory()->create(['branch_id' => $branch->id, 'commission_rate' => 5]);
-    $customer = Customer::factory()->create(['branch_id' => $branch->id]);
+    $this->vendor = Dealer::factory()->create(['commission_rate' => 5]);
+    $customer = Customer::factory()->create(['dealer_id' => $this->vendor->id]);
     $unit = InventoryUnit::factory()->create(['phone_model_id' => $model->id]);
 
     $computed = $this->calculator->computeFlat(500_000, 20, 4);
 
     $this->loan = Loan::factory()->create([
-        'customer_id'         => $customer->id,
-        'inventory_unit_id'   => $unit->id,
-        'vendor_id'           => $this->vendor->id,
-        'branch_id'           => $branch->id,
-        'loan_number'         => $this->calculator->generateLoanNumber(),
-        'principal_amount'    => 500_000,
-        'interest_rate'       => 20,
-        'interest_type'       => 'flat',
-        'total_payable'       => $computed['total_payable'],
+        'customer_id' => $customer->id,
+        'inventory_unit_id' => $unit->id,
+        'dealer_id' => $this->vendor->id,
+        'loan_number' => $this->calculator->generateLoanNumber(),
+        'principal_amount' => 500_000,
+        'interest_rate' => 20,
+        'interest_type' => 'flat',
+        'total_payable' => $computed['total_payable'],
         'outstanding_balance' => $computed['total_payable'],
-        'duration_weeks'      => 4,
+        'duration_weeks' => 4,
         'repayment_frequency' => 'weekly',
-        'status'              => 'active',
-        'disbursed_at'        => Carbon::today()->toDateString(),
-        'due_date'            => Carbon::today()->addWeeks(4)->toDateString(),
+        'status' => 'active',
+        'disbursed_at' => Carbon::today()->toDateString(),
+        'due_date' => Carbon::today()->addWeeks(4)->toDateString(),
     ]);
 
     $this->calculator->createSchedule($this->loan);

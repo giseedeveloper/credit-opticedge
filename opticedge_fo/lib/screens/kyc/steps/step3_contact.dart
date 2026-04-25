@@ -22,7 +22,6 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
   late TextEditingController _phone;
   late TextEditingController _altPhone;
   late TextEditingController _email;
-  late TextEditingController _address;
   late TextEditingController _landmark;
 
   String? _selectedBranch;
@@ -61,7 +60,6 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
     _phone = TextEditingController(text: state.phone);
     _altPhone = TextEditingController(text: state.altPhone);
     _email = TextEditingController(text: state.email);
-    _address = TextEditingController(text: state.address);
     _landmark = TextEditingController(text: state.landmark);
     final signedInBranchId = ref.read(authProvider).user?.branch?.id;
     _selectedBranch = state.branchId.isNotEmpty
@@ -75,7 +73,7 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
 
   @override
   void dispose() {
-    for (final controller in [_phone, _altPhone, _email, _address, _landmark]) {
+    for (final controller in [_phone, _altPhone, _email, _landmark]) {
       controller.dispose();
     }
     super.dispose();
@@ -90,7 +88,6 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
             altPhoneCountry: _altPhoneCountry,
             email: _email.text.trim(),
             branchId: _selectedBranch ?? '',
-            address: _address.text.trim(),
             landmark: _landmark.text.trim(),
             region: _selectedRegion ?? '',
             district: _selectedDistrict ?? '',
@@ -128,7 +125,6 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
       state.branchId.isNotEmpty,
       state.region.isNotEmpty,
       state.district.isNotEmpty,
-      state.address.isNotEmpty,
     ].where((item) => item).length;
 
     return SingleChildScrollView(
@@ -309,16 +305,6 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
-                    controller: _address,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Address',
-                      hintText: 'Street, plot number, or area details',
-                      prefixIcon: Icon(Icons.home_work_outlined, size: 18),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
                     controller: _landmark,
                     decoration: const InputDecoration(
                       labelText: 'Landmark',
@@ -331,7 +317,7 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
                     branchLabel: _selectedBranch,
                     region: _selectedRegion,
                     district: _selectedDistrict,
-                    address: _address.text.trim(),
+                    address: '',
                     landmark: _landmark.text.trim(),
                   ),
                 ],

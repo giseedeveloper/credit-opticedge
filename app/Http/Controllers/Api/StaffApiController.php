@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\CommissionLedger;
 use App\Models\Customer;
 use App\Models\Loan;
-use App\Models\Vendor;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -46,22 +45,18 @@ class StaffApiController extends Controller
     /**
      * Commission History
      *
-     * View history if this user is a Vendor Owner mapped to a Ledger.
+     * View history if this user is a dealer owner mapped to a ledger.
      */
     public function commissions(Request $request): JsonResponse
     {
         $user = $request->user();
-        $vendorId = $user->managedVendors()->value('id');
+        $dealerId = $user->dealer_id ?: $user->managedDealers()->value('id');
 
-        if (! $vendorId && $user->branch_id) {
-            $vendorId = Vendor::where('branch_id', $user->branch_id)->value('id');
+        if (! $dealerId) {
+            return $this->errorResponse('You do not have a mapped dealer to earn commissions.', 403);
         }
 
-        if (! $vendorId) {
-            return $this->errorResponse('You do not have a mapped Vendor structure to earn commissions.', 403);
-        }
-
-        $ledgers = CommissionLedger::where('vendor_id', $vendorId)
+        $ledgers = CommissionLedger::where('dealer_id', $dealerId)
             ->orderBy('posted_at', 'desc')
             ->paginate(15);
 

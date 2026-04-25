@@ -144,7 +144,7 @@ class KycStageFlowService
             2 => [
                 $this->checklistItem('identity', 'Identity details captured', $this->identityCaptured($customer)),
                 $this->checklistItem('identity_photos', 'ID and headshot photos captured', $this->identityPhotosCaptured($customer)),
-                $this->checklistItem('contact_branch', 'Phone and serving branch captured', $this->contactCaptured($customer)),
+                $this->checklistItem('contact_details', 'Phone and contact details captured', $this->contactCaptured($customer)),
                 $this->checklistItem('income', 'Income profile captured', ! is_null($customer->monthly_income)),
                 $this->checklistItem('next_of_kin', 'Next of kin captured', $this->nextOfKinCaptured($customer)),
                 $this->checklistItem('consent', 'Customer consent accepted', $this->consentCaptured($customer)),
@@ -268,7 +268,7 @@ class KycStageFlowService
     {
         return filled($customer->phone)
             && ! str_starts_with((string) $customer->phone, '_draft_')
-            && filled($customer->branch_id);
+            && filled($customer->dealer_id);
     }
 
     private function nextOfKinCaptured(Customer $customer): bool

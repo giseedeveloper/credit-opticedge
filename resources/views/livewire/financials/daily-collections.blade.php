@@ -318,8 +318,8 @@
                                         'defaulted' => 'bg-rose-100 text-rose-700',
                                         default     => 'bg-zinc-100 text-zinc-600',
                                     } }}">{{ ucfirst($dt->loan->status) }}</span>
-                                @if($dt->loan->branch)
-                                <span class="text-[10px] text-oe-hover font-semibold">{{ $dt->loan->branch->name }}</span>
+                                @if($dt->loan->dealer)
+                                <span class="text-[10px] text-oe-hover font-semibold">{{ $dt->loan->dealer->name }}</span>
                                 @endif
                             </div>
                             @if($dt->loan->inventoryUnit?->phoneModel)

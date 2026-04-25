@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'config/constants.dart';
+import 'config/design_tokens.dart';
 import 'config/theme.dart';
 import 'config/routes.dart';
 import 'core/api/api_client.dart';
@@ -15,12 +17,7 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ),
-  );
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   // Initialize API client with base URL and interceptors
   ApiClient.instance.init();
@@ -47,6 +44,29 @@ class OpticedgeFOApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: settings.themeMode,
       routerConfig: router,
+      builder: (context, child) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+        final overlay = isDark
+            ? const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.light,
+                systemNavigationBarColor: DesignTokens.darkBackground,
+                systemNavigationBarIconBrightness: Brightness.light,
+                systemNavigationBarContrastEnforced: false,
+              )
+            : const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.dark,
+                systemNavigationBarColor: AppConstants.background,
+                systemNavigationBarIconBrightness: Brightness.dark,
+                systemNavigationBarContrastEnforced: false,
+              );
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: overlay,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

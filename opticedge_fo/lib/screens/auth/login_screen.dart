@@ -133,7 +133,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 child: Container(
                   height: 56,
                   decoration: BoxDecoration(
-                    color: theme.scaffoldBackgroundColor,
+                    color: isDark
+                        ? DesignTokens.darkBackground
+                        : AppConstants.background,
                     borderRadius:
                         const BorderRadius.vertical(top: Radius.circular(36)),
                     boxShadow: [

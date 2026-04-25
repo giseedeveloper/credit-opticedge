@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Kyc;
 
-use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\Verification;
 use Illuminate\Validation\ValidationException;
@@ -14,8 +13,6 @@ class PendingVerifications extends Component
     use WithPagination;
 
     public string $search = '';
-
-    public string $branchFilter = '';
 
     public int $activeTab = 1;
 
@@ -64,11 +61,6 @@ class PendingVerifications extends Component
     }
 
     public function updatedSearch(): void
-    {
-        $this->resetPage();
-    }
-
-    public function updatedBranchFilter(): void
     {
         $this->resetPage();
     }
@@ -294,7 +286,7 @@ class PendingVerifications extends Component
 
     public function render()
     {
-        $customers = Customer::with(['latestKycVerification', 'branch', 'registeredBy'])
+        $customers = Customer::with(['latestKycVerification', 'dealer', 'registeredBy'])
             ->whereHas('latestKycVerification', fn ($q) => $q->where('stage', $this->activeTab)->where('status', 'pending'))
             ->when($this->search, fn ($q) => $q->where(function ($q) {
                 $q->where('first_name', 'like', "%{$this->search}%")
@@ -303,23 +295,20 @@ class PendingVerifications extends Component
                     ->orWhere('nida_number', 'like', "%{$this->search}%")
                     ->orWhere('imei_number', 'like', "%{$this->search}%");
             }))
-            ->when($this->branchFilter, fn ($q) => $q->where('branch_id', $this->branchFilter))
             ->latest()
             ->paginate(15);
 
         $detailCustomer = $this->detailCustomerId
             ? Customer::with([
                 'latestKycVerification',
-                'branch',
+                'dealer',
                 'registeredBy',
                 'loans' => fn ($q) => $q->latest()->take(3),
             ])->find($this->detailCustomerId)
             : null;
 
-        $branches = Branch::orderBy('name')->get();
-
         return view('livewire.kyc.pending-verifications', compact(
-            'customers', 'detailCustomer', 'branches'
+            'customers', 'detailCustomer'
         ))->layout('layouts.app', ['title' => 'KYC Verifications']);
     }
 

@@ -21,7 +21,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $modules = [
             'Dashboard', 'Accounting', 'SMS Campaign', 'Payment analytics', 'Loans',
             'Products', 'Calculator', 'Devices', 'Returned devices', 'Financial plans',
-            'Staff', 'Vendors', 'Branches', 'Expenses', 'Reports', 'Sales',
+            'Staff', 'Dealers', 'Expenses', 'Reports', 'Sales',
             'Reconciliation', 'Access', 'Account', 'Settings',
         ];
 
@@ -47,7 +47,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'back-officer' => 'BO Privileges',
             'front-officer' => 'Front-officer privileges',
             'supervisor' => 'Supervisor privileges',
-            'vendor' => 'Vendor privilege',
+            'dealer' => 'Dealer privilege',
             'manager' => 'Manager privileges',
             'owner' => 'Owner privileges',
             'admin' => 'Admin privileges',

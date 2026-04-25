@@ -76,12 +76,6 @@
             <div class="w-64">
                 <flux:input wire:model.live.debounce.300ms="search" placeholder="Loan #, name, phone…" icon="magnifying-glass" />
             </div>
-            <flux:select wire:model.live="branchFilter" class="w-44">
-                <flux:select.option value="">All Branches</flux:select.option>
-                @foreach($branches as $b)
-                <flux:select.option :value="$b->id">{{ $b->name }}</flux:select.option>
-                @endforeach
-            </flux:select>
         </div>
     </div>
 
@@ -134,8 +128,8 @@
                     wire:click="openDetail('{{ $loan->id }}')">
                     <td class="px-4 py-3.5">
                         <p class="font-mono text-xs font-bold text-oe dark:text-oe">{{ $loan->loan_number }}</p>
-                        @if($loan->branch)
-                        <p class="text-[10px] text-gray-400 mt-0.5">{{ $loan->branch->name }}</p>
+                        @if($loan->dealer)
+                        <p class="text-[10px] text-gray-400 mt-0.5">{{ $loan->dealer->name }}</p>
                         @endif
                     </td>
                     <td class="px-4 py-3.5">
@@ -209,7 +203,7 @@
                         <flux:icon name="document-text" class="size-12 mx-auto mb-3 text-gray-300 dark:text-zinc-600" />
                         <p class="text-gray-500 font-medium">No loans found</p>
                         <p class="text-gray-400 text-xs mt-1">
-                            @if($search || $branchFilter) Try clearing your filters @endif
+                            @if($search) Try clearing your filters @endif
                         </p>
                     </td>
                 </tr>
@@ -300,8 +294,8 @@
                             <p class="text-xs text-gray-400">{{ $dl->customer?->phone }}</p>
                         </div>
                         <div class="text-right flex-shrink-0">
-                            <p class="text-[10px] text-gray-400">Branch</p>
-                            <p class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ $dl->customer?->branch?->name ?? '—' }}</p>
+                            <p class="text-[10px] text-gray-400">Dealer</p>
+                            <p class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ $dl->customer?->dealer?->name ?? '—' }}</p>
                         </div>
                     </div>
                 </div>
@@ -374,12 +368,8 @@
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Administration</h3>
                     <div class="grid grid-cols-2 gap-2">
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase font-semibold">Branch</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dl->branch?->name ?? '—' }}</p>
-                        </div>
-                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase font-semibold">Vendor</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dl->vendor?->name ?? '—' }}</p>
+                            <p class="text-[10px] text-gray-400 uppercase font-semibold">Dealer</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dl->dealer?->name ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase font-semibold">Disbursed By</p>

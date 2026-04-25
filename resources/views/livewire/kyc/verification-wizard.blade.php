@@ -345,11 +345,6 @@
                                         <flux:error name="imei2" />
                                     </flux:field>
                                 </div>
-                                <flux:field>
-                                    <flux:label>Serial Number <span class="text-gray-400 font-normal">(optional)</span></flux:label>
-                                    <flux:input wire:model="serialNumber" placeholder="S/N" class="font-mono" />
-                                    <flux:error name="serialNumber" />
-                                </flux:field>
                             </div>
 
                             <div class="rounded-2xl border border-gray-100 bg-white/80 p-4 shadow-sm space-y-4">
@@ -500,36 +495,14 @@
                                     <flux:label>Email <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
                                     <flux:input wire:model="email" type="email" placeholder="amina@example.com" />
                                 </flux:field>
-                                @php
-                                    $u = auth()->user();
-                                    $canPickBranch = $u?->isAdmin() || $u?->isOwner() || $u?->isManager() || $u?->isSupervisor();
-                                @endphp
-                                @if($canPickBranch)
-                                    <flux:field>
-                                        <flux:label>Branch <span class="text-red-500">*</span></flux:label>
-                                        <flux:select wire:model="branchId">
-                                            <flux:select.option value="">— Select branch —</flux:select.option>
-                                            @foreach($branches as $b)
-                                            <flux:select.option :value="$b->id">{{ $b->name }}</flux:select.option>
-                                            @endforeach
-                                        </flux:select>
-                                        <flux:error name="branchId" />
-                                    </flux:field>
-                                @else
-                                    <flux:field>
-                                        <flux:label>Branch</flux:label>
-                                        <div class="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-                                            {{ $selectedBranch?->name ?? '—' }}
-                                        </div>
-                                        <flux:error name="branchId" />
-                                        <flux:description>Branch inajazwa automatically kulingana na account yako.</flux:description>
-                                    </flux:field>
-                                @endif
+                                <flux:field>
+                                    <flux:label>Dealer counter</flux:label>
+                                    <div class="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-200">
+                                        {{ auth()->user()?->dealer?->name ?? '—' }}
+                                    </div>
+                                    <flux:description>KYC hii inasajiliwa chini ya dealer counter ya akaunti yako.</flux:description>
+                                </flux:field>
                             </div>
-                            <flux:field>
-                                <flux:label>Physical Address <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
-                                <flux:input wire:model="address" placeholder="Street, plot, ward…" />
-                            </flux:field>
                             <div class="grid grid-cols-2 gap-4">
                                 <flux:field>
                                     <flux:label>Region (Mkoa) <span class="text-red-500">*</span></flux:label>
@@ -596,47 +569,18 @@
                                 <flux:error name="occupation" />
                             </div>
 
-                            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                                <flux:field>
-                                    <flux:label>Employer/Business Name <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
-                                    <flux:input wire:model="employer" placeholder="Mfano: Duka la Juma / Serikali" />
-                                    <flux:error name="employer" />
-                                </flux:field>
-                                <flux:field>
-                                    <flux:label>Work Location <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
-                                    <flux:input wire:model="workLocation" placeholder="Mfano: Kariakoo" />
-                                    <flux:error name="workLocation" />
-                                </flux:field>
-                            </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <flux:field>
                                     <flux:label>Duration at Work <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
                                     <flux:input wire:model="durationAtWork" placeholder="Mfano: Miaka 2" />
                                     <flux:error name="durationAtWork" />
                                 </flux:field>
-                                <flux:field>
-                                    <flux:label>Income Cycle <span class="text-red-500">*</span></flux:label>
-                                    <flux:select wire:model="incomePaymentCycle">
-                                        <flux:select.option value="">— Chagua —</flux:select.option>
-                                        <flux:select.option value="daily">Daily</flux:select.option>
-                                        <flux:select.option value="weekly">Weekly</flux:select.option>
-                                        <flux:select.option value="biweekly">Bi-weekly</flux:select.option>
-                                        <flux:select.option value="monthly">Monthly</flux:select.option>
-                                        <flux:select.option value="irregular">Irregular</flux:select.option>
-                                    </flux:select>
-                                    <flux:error name="incomePaymentCycle" />
-                                </flux:field>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 gap-4">
                                 <flux:field>
                                     <flux:label>Monthly Income (TZS) <span class="text-red-500">*</span></flux:label>
                                     <flux:input wire:model="monthlyIncome" type="number" min="0" placeholder="e.g. 500000" />
                                     <flux:error name="monthlyIncome" />
-                                </flux:field>
-                                <flux:field>
-                                    <flux:label>Monthly Expenses (TZS) <span class="text-gray-400 font-normal text-xs">(optional)</span></flux:label>
-                                    <flux:input wire:model="monthlyExpenses" type="number" min="0" placeholder="e.g. 200000" />
-                                    <flux:error name="monthlyExpenses" />
                                 </flux:field>
                             </div>
                             <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4">
@@ -1000,7 +944,7 @@
                                     <flux:select.option value="">— How did customer come in? —</flux:select.option>
                                     <flux:select.option value="walk_in">Walk-in</flux:select.option>
                                     <flux:select.option value="referral">Referral</flux:select.option>
-                                    <flux:select.option value="vendor">Vendor Referral</flux:select.option>
+                                    <flux:select.option value="vendor">Dealer referral</flux:select.option>
                                     <flux:select.option value="social_media">Social Media</flux:select.option>
                                     <flux:select.option value="agent">Field Agent</flux:select.option>
                                 </flux:select>

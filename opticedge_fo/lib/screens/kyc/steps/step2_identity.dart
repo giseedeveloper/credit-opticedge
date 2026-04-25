@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/constants.dart';
 import '../../../config/design_tokens.dart';
+import '../../../core/providers/customer_provider.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
 import '../../../widgets/common/glass_card.dart';
@@ -128,6 +129,10 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
               capturedPhotos: capturedPhotos,
               selectedIdType: state.idType,
             ).animate().fadeIn(duration: 260.ms).slideY(begin: 0.08, end: 0),
+            if (state.customerId != null && state.customerId!.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _faceMatchCard(state.customerId!),
+            ],
             const SizedBox(height: 16),
             _card(
               title: '1. Taarifa binafsi',
@@ -325,6 +330,121 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _faceMatchCard(String customerId) {
+    final asyncDetail = ref.watch(customerDetailProvider(customerId));
+
+    return asyncDetail.when(
+      loading: () => const GlassCard(
+        tint: AppConstants.borderLight,
+        borderColor: AppConstants.border,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Face match: inasubiri...',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      ),
+      error: (_, __) => const GlassCard(
+        tint: AppConstants.warningSurface,
+        borderColor: AppConstants.warning,
+        child: Text(
+          'Face match haijapatikana kwa sasa.',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppConstants.warning,
+          ),
+        ),
+      ),
+      data: (detail) {
+        final verification = detail.verification ?? {};
+        final faceMatch = (verification['face_match'] is Map)
+            ? Map<String, dynamic>.from(verification['face_match'] as Map)
+            : <String, dynamic>{};
+
+        final status = faceMatch['status']?.toString();
+        final scoreRaw = faceMatch['score'];
+        final score = scoreRaw is num ? scoreRaw.toDouble() : double.tryParse(scoreRaw?.toString() ?? '');
+        final alert = faceMatch['alert'] == true;
+
+        final badge = switch (status) {
+          'passed' => ('Passed', AppConstants.success, AppConstants.successSurface),
+          'failed' => ('Failed', AppConstants.error, AppConstants.errorSurface),
+          'review' => ('Needs review', AppConstants.warning, AppConstants.warningSurface),
+          'manual_verified' => ('Manual verified', AppConstants.info, AppConstants.infoSurface),
+          'pending' => ('Pending', AppConstants.border, AppConstants.borderLight),
+          _ => ('Not started', AppConstants.border, AppConstants.borderLight),
+        };
+
+        final percent = score != null ? (score * 100).round() : null;
+
+        return GlassCard(
+          tint: badge.$3,
+          borderColor: badge.$2,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                alert ? Icons.warning_amber_rounded : Icons.verified_user_outlined,
+                color: badge.$2,
+                size: 18,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Face match',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      percent != null
+                          ? '${badge.$1} · Score $percent%'
+                          : badge.$1,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: badge.$2,
+                      ),
+                    ),
+                    if (faceMatch['reason'] != null &&
+                        faceMatch['reason'].toString().trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        faceMatch['reason'].toString(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          height: 1.4,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

@@ -73,12 +73,6 @@
             <div class="w-56">
                 <flux:input wire:model.live.debounce.300ms="loanSearch" placeholder="Loan #, name, phone…" icon="magnifying-glass" />
             </div>
-            <flux:select wire:model.live="branchFilter" class="w-40">
-                <flux:select.option value="">All Branches</flux:select.option>
-                @foreach($branches as $b)
-                <flux:select.option :value="$b->id">{{ $b->name }}</flux:select.option>
-                @endforeach
-            </flux:select>
         </div>
     </div>
 
@@ -134,8 +128,8 @@
                     </div>
                     <div class="flex items-center justify-between mt-1">
                         <span class="text-[10px] text-gray-400">Balance: TZS {{ number_format($loan->outstanding_balance ?? 0, 0) }}</span>
-                        @if($loan->branch)
-                        <span class="text-[10px] text-gray-400">{{ $loan->branch->name }}</span>
+                        @if($loan->dealer)
+                        <span class="text-[10px] text-gray-400">{{ $loan->dealer->name }}</span>
                         @endif
                     </div>
                 </button>
@@ -341,7 +335,7 @@
                         <span>Interest: <strong class="text-gray-600 dark:text-gray-300">{{ $dl->interest_rate ?? 0 }}% {{ $dl->interest_type }}</strong></span>
                         <span>Duration: <strong class="text-gray-600 dark:text-gray-300">{{ $dl->duration_weeks ?? '—' }} weeks</strong></span>
                         <span>Frequency: <strong class="text-gray-600 dark:text-gray-300">{{ ucfirst($dl->repayment_frequency ?? '—') }}</strong></span>
-                        <span>Branch: <strong class="text-gray-600 dark:text-gray-300">{{ $dl->branch?->name ?? '—' }}</strong></span>
+                        <span>Dealer: <strong class="text-gray-600 dark:text-gray-300">{{ $dl->dealer?->name ?? '—' }}</strong></span>
                         <span>Disbursed by: <strong class="text-gray-600 dark:text-gray-300">{{ $dl->disbursedBy?->name ?? '—' }}</strong></span>
                     </div>
                 </div>

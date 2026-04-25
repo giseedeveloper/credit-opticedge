@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'customer_id', 'inventory_unit_id', 'vendor_id', 'branch_id', 'disbursed_by', 'approved_by',
+    'customer_id', 'inventory_unit_id', 'dealer_id', 'disbursed_by', 'approved_by',
     'loan_number', 'principal_amount', 'deposit_paid', 'interest_rate', 'interest_type',
     'total_debt', 'total_payable', 'amount_paid', 'remaining_balance', 'outstanding_balance',
     'penalty_amount', 'duration_weeks', 'grace_period_days', 'repayment_frequency',
@@ -26,39 +26,24 @@ class Loan extends Model
     protected function casts(): array
     {
         return [
-            'principal_amount'   => 'decimal:2',
-            'deposit_paid'       => 'decimal:2',
-            'total_debt'         => 'decimal:2',
-            'total_payable'      => 'decimal:2',
-            'amount_paid'        => 'decimal:2',
-            'remaining_balance'  => 'decimal:2',
-            'outstanding_balance'=> 'decimal:2',
-            'penalty_amount'     => 'decimal:2',
-            'interest_rate'      => 'decimal:2',
-            'disbursed_at'       => 'date',
-            'due_date'           => 'date',
-            'completed_at'       => 'date',
+            'principal_amount' => 'decimal:2',
+            'deposit_paid' => 'decimal:2',
+            'total_debt' => 'decimal:2',
+            'total_payable' => 'decimal:2',
+            'amount_paid' => 'decimal:2',
+            'remaining_balance' => 'decimal:2',
+            'outstanding_balance' => 'decimal:2',
+            'penalty_amount' => 'decimal:2',
+            'interest_rate' => 'decimal:2',
+            'disbursed_at' => 'date',
+            'due_date' => 'date',
+            'completed_at' => 'date',
         ];
     }
 
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
-    }
-
-    public function inventoryUnit(): BelongsTo
-    {
-        return $this->belongsTo(InventoryUnit::class);
-    }
-
-    public function vendor(): BelongsTo
-    {
-        return $this->belongsTo(Vendor::class);
-    }
-
-    public function branch(): BelongsTo
-    {
-        return $this->belongsTo(Branch::class);
     }
 
     public function disbursedBy(): BelongsTo
@@ -71,6 +56,16 @@ class Loan extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    public function inventoryUnit(): BelongsTo
+    {
+        return $this->belongsTo(InventoryUnit::class);
+    }
+
+    public function dealer(): BelongsTo
+    {
+        return $this->belongsTo(Dealer::class);
+    }
+
     public function repaymentSchedules(): HasMany
     {
         return $this->hasMany(RepaymentSchedule::class)->orderBy('installment_number');
@@ -79,11 +74,6 @@ class Loan extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
-    }
-
-    public function commissionLedgers(): HasMany
-    {
-        return $this->hasMany(CommissionLedger::class);
     }
 
     public function recoveryTickets(): HasMany

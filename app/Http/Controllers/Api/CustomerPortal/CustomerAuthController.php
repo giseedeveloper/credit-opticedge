@@ -79,7 +79,7 @@ class CustomerAuthController extends Controller
         $token = $customer->createToken('customer-app', ['customer-portal'])->plainTextToken;
 
         return $this->successResponse([
-            'customer' => $this->serializeProfile($customer->load('branch', 'vendor')),
+            'customer' => $this->serializeProfile($customer->load('dealer')),
             'token' => $token,
         ], 'PIN imewekwa. Karibu!');
     }
@@ -127,7 +127,7 @@ class CustomerAuthController extends Controller
         $token = $customer->createToken('customer-app', ['customer-portal'])->plainTextToken;
 
         return $this->successResponse([
-            'customer' => $this->serializeProfile($customer->load('branch', 'vendor')),
+            'customer' => $this->serializeProfile($customer->load('dealer')),
             'token' => $token,
         ], 'Login successful.');
     }
@@ -137,7 +137,7 @@ class CustomerAuthController extends Controller
      */
     public function profile(Request $request): JsonResponse
     {
-        $customer = $this->resolveCustomer($request)->load('branch', 'vendor', 'phoneModel.brand');
+        $customer = $this->resolveCustomer($request)->load('dealer', 'phoneModel.brand');
 
         return $this->successResponse(
             $this->serializeProfile($customer),
@@ -223,6 +223,13 @@ class CustomerAuthController extends Controller
      */
     private function serializeProfile(Customer $customer): array
     {
+        $dealerPayload = $customer->dealer ? [
+            'id' => $customer->dealer->id,
+            'name' => $customer->dealer->name,
+            'phone' => $customer->dealer->phone,
+            'address' => $customer->dealer->address,
+        ] : null;
+
         return [
             'id' => $customer->id,
             'full_name' => $customer->full_name,
@@ -236,19 +243,9 @@ class CustomerAuthController extends Controller
             'headshot_url' => $customer->headshot_photo_path
                 ? $this->mediaUrl($customer->headshot_photo_path)
                 : null,
-            'branch' => $customer->branch ? [
-                'id' => $customer->branch->id,
-                'name' => $customer->branch->name,
-                'phone' => $customer->branch->phone,
-                'region' => $customer->branch->region,
-                'address' => $customer->branch->address,
-            ] : null,
-            'vendor' => $customer->vendor ? [
-                'id' => $customer->vendor->id,
-                'name' => $customer->vendor->name,
-                'phone' => $customer->vendor->phone,
-                'address' => $customer->vendor->address,
-            ] : null,
+            'branch' => null,
+            'dealer' => $dealerPayload,
+            'vendor' => $dealerPayload,
         ];
     }
 

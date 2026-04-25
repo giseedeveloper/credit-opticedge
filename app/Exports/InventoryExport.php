@@ -12,7 +12,7 @@ class InventoryExport implements FromCollection, WithHeadings, WithMapping
 {
     public function collection(): Collection
     {
-        return InventoryUnit::with(['phoneModel.brand', 'vendor', 'branch'])->get();
+        return InventoryUnit::with(['phoneModel.brand', 'dealer'])->get();
     }
 
     public function headings(): array
@@ -25,7 +25,7 @@ class InventoryExport implements FromCollection, WithHeadings, WithMapping
             'IMEI 2',
             'Acquisition Base Cost',
             'Asset Status',
-            'Branch / Vendor Assignment',
+            'Dealer assignment',
             'Physical Grading',
         ];
     }
@@ -40,7 +40,7 @@ class InventoryExport implements FromCollection, WithHeadings, WithMapping
             $unit->imei_2,
             $unit->purchase_price,
             $unit->status,
-            $unit->vendor->name ?? $unit->branch->name ?? 'Central HQ Vault',
+            $unit->dealer->name ?? 'Unassigned',
             $unit->grading ?? 'Brand New',
         ];
     }

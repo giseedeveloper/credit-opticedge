@@ -28,7 +28,7 @@
     </div>
 
     {{-- Summary Stats --}}
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
 
         {{-- Total Brands — gradient hero card --}}
         <div class="bg-gradient-to-br from-oe to-oe-hover rounded-2xl p-5 text-white relative overflow-hidden shadow-lg shadow-oe/20">
@@ -61,16 +61,6 @@
             <p class="text-xs text-teal-500 mt-1 font-semibold">Available for lending</p>
         </div>
 
-        {{-- Total Units --}}
-        <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm">
-            <div class="flex items-center gap-2 mb-3">
-                <x-fluent-icon name="device-phone-mobile" size="sm" palette="sky" />
-                <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Units</span>
-            </div>
-            <p class="text-3xl font-black text-gray-900 dark:text-white">{{ number_format($stats['total_units']) }}</p>
-            <p class="text-xs text-gray-400 mt-1">Physical inventory</p>
-        </div>
-
     </div>
 
     {{-- Tab + Search row --}}
@@ -100,7 +90,6 @@
                 <tr>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Brand</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Models</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider hidden md:table-cell">Total Units</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider hidden lg:table-cell">Created</th>
                     <th class="px-4 py-3 text-right text-xs font-semibold text-zinc-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -118,9 +107,6 @@
                     </td>
                     <td class="px-4 py-3">
                         <flux:badge color="purple" size="sm">{{ $brand->phone_models_count }} {{ Str::plural('model', $brand->phone_models_count) }}</flux:badge>
-                    </td>
-                    <td class="px-4 py-3 hidden md:table-cell">
-                        <flux:badge color="blue" size="sm">{{ number_format($brand->stock_count) }} units</flux:badge>
                     </td>
                     <td class="px-4 py-3 text-zinc-400 text-xs hidden lg:table-cell">{{ $brand->created_at->format('d M Y') }}</td>
                     <td class="px-4 py-3 text-right">
@@ -142,7 +128,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="px-4 py-16 text-center">
+                    <td colspan="4" class="px-4 py-16 text-center">
                         <flux:icon name="building-storefront" class="size-12 mx-auto mb-3 text-zinc-300 dark:text-zinc-600" />
                         <p class="text-zinc-500 font-medium">No brands yet</p>
                         <p class="text-zinc-400 text-xs mt-1">Add your first brand above</p>
@@ -164,19 +150,12 @@
                 <tr>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Model</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider hidden md:table-cell">Brand</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Retail / Cost</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider hidden lg:table-cell">Stock</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Status</th>
                     <th class="px-4 py-3 text-right text-xs font-semibold text-zinc-500 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-zinc-50 dark:divide-zinc-700/50">
                 @forelse($models as $model)
-                @php
-                    $margin = ($model->retail_price > 0 && $model->cost_price > 0)
-                        ? round(((float)$model->retail_price - (float)$model->cost_price) / (float)$model->retail_price * 100, 1)
-                        : null;
-                @endphp
                 <tr wire:key="model-{{ $model->id }}" class="hover:bg-zinc-50 dark:hover:bg-zinc-700/30 transition-colors">
                     <td class="px-4 py-3">
                         <div class="font-semibold text-zinc-900 dark:text-white">{{ $model->name }}</div>
@@ -188,24 +167,6 @@
                         @endif
                     </td>
                     <td class="px-4 py-3 text-zinc-600 dark:text-zinc-300 hidden md:table-cell">{{ $model->brand?->name }}</td>
-                    <td class="px-4 py-3">
-                        <div class="text-xs font-semibold text-zinc-800 dark:text-zinc-100">
-                            TZS {{ number_format((float)$model->retail_price) }}
-                        </div>
-                        <div class="text-[10px] text-zinc-400">
-                            Cost: TZS {{ number_format((float)$model->cost_price) }}
-                            @if($margin !== null)
-                            · <span class="text-teal-600">{{ $margin }}%</span>
-                            @endif
-                        </div>
-                    </td>
-                    <td class="px-4 py-3 hidden lg:table-cell">
-                        <div class="flex items-center gap-1.5 text-xs">
-                            <span class="px-1.5 py-0.5 rounded-md bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300 font-semibold">{{ $model->stock_available }} avail</span>
-                            <span class="px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 font-semibold">{{ $model->stock_sold }} sold</span>
-                            <span class="text-zinc-400">/ {{ $model->stock_total }}</span>
-                        </div>
-                    </td>
                     <td class="px-4 py-3">
                         <flux:badge :color="$model->is_active ? 'green' : 'zinc'" size="sm">
                             {{ $model->is_active ? 'Active' : 'Inactive' }}
@@ -234,7 +195,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="px-4 py-16 text-center">
+                    <td colspan="4" class="px-4 py-16 text-center">
                         <flux:icon name="device-phone-mobile" class="size-12 mx-auto mb-3 text-zinc-300 dark:text-zinc-600" />
                         <p class="text-zinc-500 font-medium">No models yet</p>
                         <p class="text-zinc-400 text-xs mt-1">Add your first model above</p>
@@ -277,35 +238,19 @@
             <div class="flex-1 px-6 py-5 space-y-5">
                 <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Models Under This Brand</h3>
                 @forelse($detailBrand->phoneModels as $pm)
-                @php
-                    $pm_margin = ($pm->retail_price > 0 && $pm->cost_price > 0)
-                        ? round(((float)$pm->retail_price - (float)$pm->cost_price) / (float)$pm->retail_price * 100, 1) : null;
-                @endphp
                 <div class="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-4 space-y-3">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="font-semibold text-zinc-900 dark:text-white text-sm">{{ $pm->name }}</p>
-                            <p class="text-xs text-zinc-400 mt-0.5">
-                                Retail: TZS {{ number_format((float)$pm->retail_price) }}
-                                @if($pm_margin !== null)· <span class="text-teal-600">{{ $pm_margin }}% margin</span>@endif
-                            </p>
                         </div>
                         <flux:badge :color="$pm->is_active ? 'green' : 'zinc'" size="sm">{{ $pm->is_active ? 'Active' : 'Inactive' }}</flux:badge>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                        <div class="bg-white dark:bg-zinc-700 rounded-lg py-2">
-                            <p class="font-bold text-teal-600">{{ $pm->stock_available }}</p>
-                            <p class="text-zinc-400 text-[10px]">Available</p>
-                        </div>
-                        <div class="bg-white dark:bg-zinc-700 rounded-lg py-2">
-                            <p class="font-bold text-emerald-600">{{ $pm->stock_sold }}</p>
-                            <p class="text-zinc-400 text-[10px]">Sold</p>
-                        </div>
-                        <div class="bg-white dark:bg-zinc-700 rounded-lg py-2">
-                            <p class="font-bold text-zinc-700 dark:text-zinc-200">{{ $pm->stock_total }}</p>
-                            <p class="text-zinc-400 text-[10px]">Total</p>
-                        </div>
+                    @php $pmSpecs = $pm->specifications ?? []; @endphp
+                    @if(!empty($pmSpecs))
+                    <div class="text-[10px] text-zinc-400">
+                        {{ collect($pmSpecs)->map(fn($v,$k) => $v)->implode(' · ') }}
                     </div>
+                    @endif
                     <button wire:click="openModelDetail('{{ $pm->id }}')"
                             class="w-full text-xs font-semibold text-oe dark:text-oe hover:underline text-left">
                         View full details →
@@ -345,8 +290,6 @@
             @php
                 $dm     = $detailModel;
                 $dspecs = $dm->specifications ?? [];
-                $dm_margin = ($dm->retail_price > 0 && $dm->cost_price > 0)
-                    ? round(((float)$dm->retail_price - (float)$dm->cost_price) / (float)$dm->retail_price * 100, 1) : null;
             @endphp
             <div class="flex items-start justify-between px-6 py-5 bg-gradient-to-r from-oe to-oe-hover text-white">
                 <div>
@@ -364,27 +307,6 @@
             </div>
             <div class="flex-1 px-6 py-5 space-y-6">
 
-                {{-- Pricing --}}
-                <div>
-                    <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Pricing</h3>
-                    <div class="grid grid-cols-3 gap-3">
-                        <div class="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-zinc-400 uppercase tracking-wider">Retail Price</p>
-                            <p class="text-sm font-bold text-zinc-800 dark:text-zinc-100 mt-0.5">TZS {{ number_format((float)$dm->retail_price) }}</p>
-                        </div>
-                        <div class="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-zinc-400 uppercase tracking-wider">Cost Price</p>
-                            <p class="text-sm font-bold text-zinc-800 dark:text-zinc-100 mt-0.5">TZS {{ number_format((float)$dm->cost_price) }}</p>
-                        </div>
-                        <div class="bg-{{ $dm_margin > 0 ? 'teal' : 'zinc' }}-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-zinc-400 uppercase tracking-wider">Margin</p>
-                            <p class="text-sm font-bold {{ $dm_margin > 0 ? 'text-teal-600' : 'text-zinc-500' }} mt-0.5">
-                                {{ $dm_margin !== null ? $dm_margin.'%' : '—' }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
                 {{-- Specifications --}}
                 @if(!empty($dspecs))
                 <div>
@@ -399,26 +321,6 @@
                     </div>
                 </div>
                 @endif
-
-                {{-- Stock Breakdown --}}
-                <div>
-                    <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Stock Breakdown</h3>
-                    <div class="grid grid-cols-3 gap-3">
-                        @foreach([
-                            ['Available (HQ)', $dm->stock_available,  'teal'],
-                            ['Vendor Stock',   $dm->stock_vendor,     'blue'],
-                            ['In Transit',     $dm->stock_in_transit, 'amber'],
-                            ['Sold',           $dm->stock_sold,       'green'],
-                            ['Returned',       $dm->stock_returned,   'red'],
-                            ['Total',          $dm->stock_total,      'zinc'],
-                        ] as [$label, $count, $col])
-                        <div class="bg-{{ $col }}-50 dark:bg-{{ $col }}-900/20 rounded-xl p-3 text-center">
-                            <p class="text-[10px] text-{{ $col }}-500 uppercase tracking-wider">{{ $label }}</p>
-                            <p class="text-xl font-black text-{{ $col }}-700 dark:text-{{ $col }}-300 mt-0.5">{{ $count }}</p>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
             </div>
             <div class="px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 flex gap-2">
                 @can('products.edit')
@@ -498,18 +400,6 @@
                     <flux:error name="modelName" />
                 </flux:field>
             </div>
-            <div class="grid grid-cols-2 gap-4">
-                <flux:field>
-                    <flux:label>Retail Price (TZS)</flux:label>
-                    <flux:input wire:model="retailPrice" type="number" placeholder="0" min="0" />
-                    <flux:error name="retailPrice" />
-                </flux:field>
-                <flux:field>
-                    <flux:label>Cost Price (TZS)</flux:label>
-                    <flux:input wire:model="costPrice" type="number" placeholder="0" min="0" />
-                    <flux:error name="costPrice" />
-                </flux:field>
-            </div>
             <p class="text-xs font-bold text-zinc-500 uppercase tracking-wider pt-2">Specifications <span class="text-zinc-400 normal-case font-normal">(optional)</span></p>
             <div class="grid grid-cols-3 gap-3">
                 <flux:field><flux:label>RAM</flux:label><flux:input wire:model="specRam" placeholder="e.g. 6GB" /></flux:field>
@@ -548,18 +438,6 @@
                     <flux:label>Model Name</flux:label>
                     <flux:input wire:model="editModelName" placeholder="Model name…" />
                     <flux:error name="editModelName" />
-                </flux:field>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <flux:field>
-                    <flux:label>Retail Price (TZS)</flux:label>
-                    <flux:input wire:model="editRetailPrice" type="number" placeholder="0" min="0" />
-                    <flux:error name="editRetailPrice" />
-                </flux:field>
-                <flux:field>
-                    <flux:label>Cost Price (TZS)</flux:label>
-                    <flux:input wire:model="editCostPrice" type="number" placeholder="0" min="0" />
-                    <flux:error name="editCostPrice" />
                 </flux:field>
             </div>
             <p class="text-xs font-bold text-zinc-500 uppercase tracking-wider pt-2">Specifications <span class="text-zinc-400 normal-case font-normal">(optional)</span></p>

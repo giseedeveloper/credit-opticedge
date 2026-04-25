@@ -66,7 +66,7 @@
         </div>
     </div>
 
-    {{-- Risk Filter Tabs + Search + Branch --}}
+    {{-- Risk Filter Tabs + Search --}}
     <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div class="flex gap-1 rounded-xl bg-gray-100 dark:bg-zinc-800 p-1 flex-wrap">
             @foreach(['' => 'All Risk', 'moderate' => 'Moderate', 'high' => 'High', 'critical' => 'Critical'] as $key => $label)
@@ -90,12 +90,6 @@
             <div class="w-64">
                 <flux:input wire:model.live.debounce.300ms="search" placeholder="Loan #, name, phone…" icon="magnifying-glass" />
             </div>
-            <flux:select wire:model.live="branchFilter" class="w-44">
-                <flux:select.option value="">All Branches</flux:select.option>
-                @foreach($branches as $b)
-                <flux:select.option :value="$b->id">{{ $b->name }}</flux:select.option>
-                @endforeach
-            </flux:select>
         </div>
     </div>
 
@@ -154,8 +148,8 @@
 
                     <td class="px-4 py-3.5">
                         <p class="font-mono text-xs font-bold text-red-600 dark:text-red-400">{{ $loan->loan_number }}</p>
-                        @if($loan->branch)
-                        <p class="text-[10px] text-gray-400 mt-0.5">{{ $loan->branch->name }}</p>
+                        @if($loan->dealer)
+                        <p class="text-[10px] text-gray-400 mt-0.5">{{ $loan->dealer->name }}</p>
                         @endif
                     </td>
 
@@ -177,6 +171,11 @@
                             {{ $loan->inventoryUnit->phoneModel->brand?->name }} {{ $loan->inventoryUnit->phoneModel->name }}
                         </p>
                         <p class="text-[10px] text-gray-400 font-mono mt-0.5">{{ $loan->inventoryUnit->serial_number ?? '' }}</p>
+                        @elseif($loan->customer?->phoneModel)
+                        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {{ $loan->customer->phoneModel->brand?->name }} {{ $loan->customer->phoneModel->name }}
+                        </p>
+                        <p class="text-[10px] text-gray-400 font-mono mt-0.5">{{ $loan->customer->imei_number ?? $loan->customer->serial_number ?? '' }}</p>
                         @else
                         <span class="text-gray-400">—</span>
                         @endif
@@ -237,7 +236,7 @@
                         <flux:icon name="check-circle" class="size-14 mx-auto mb-3 text-emerald-400" />
                         <p class="text-gray-600 dark:text-gray-300 font-semibold">No defaulters found</p>
                         <p class="text-gray-400 text-xs mt-1">
-                            @if($search || $branchFilter || $riskFilter)
+                            @if($search || $riskFilter)
                                 Try clearing your filters
                             @else
                                 All loan accounts are in good standing
@@ -351,27 +350,36 @@
                             @endif
                         </div>
                         <div class="text-right flex-shrink-0">
-                            <p class="text-[10px] text-gray-400">Branch</p>
-                            <p class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ $dl->customer?->branch?->name ?? '—' }}</p>
+                            <p class="text-[10px] text-gray-400">Dealer</p>
+                            <p class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ $dl->customer?->dealer?->name ?? '—' }}</p>
                         </div>
                     </div>
                 </div>
 
-                {{-- Device --}}
-                @if($dl->inventoryUnit)
+                {{-- Device (inventory unit when linked, otherwise KYC / customer device) --}}
+                @if($dl->inventoryUnit || $dl->customer?->phoneModel)
                 <div>
-                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Device (Collateral)</h3>
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Device</h3>
                     <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3 flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center flex-shrink-0">
                             <flux:icon name="device-phone-mobile" class="size-5 text-white" />
                         </div>
                         <div>
+                            @if($dl->inventoryUnit?->phoneModel)
                             <p class="font-semibold text-gray-900 dark:text-white">
-                                {{ $dl->inventoryUnit->phoneModel?->brand?->name }} {{ $dl->inventoryUnit->phoneModel?->name }}
+                                {{ $dl->inventoryUnit->phoneModel->brand?->name }} {{ $dl->inventoryUnit->phoneModel->name }}
                             </p>
                             <p class="text-xs text-gray-400 font-mono mt-0.5">
-                                IMEI: {{ $dl->inventoryUnit->imei ?? $dl->inventoryUnit->serial_number ?? '—' }}
+                                IMEI: {{ $dl->inventoryUnit->imei_1 ?? $dl->inventoryUnit->serial_number ?? '—' }}
                             </p>
+                            @else
+                            <p class="font-semibold text-gray-900 dark:text-white">
+                                {{ $dl->customer->phoneModel->brand?->name }} {{ $dl->customer->phoneModel->name }}
+                            </p>
+                            <p class="text-xs text-gray-400 font-mono mt-0.5">
+                                IMEI: {{ $dl->customer->imei_number ?? $dl->customer->serial_number ?? '—' }}
+                            </p>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -413,12 +421,8 @@
                     <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Administration</h3>
                     <div class="grid grid-cols-2 gap-2">
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase font-semibold">Branch</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dl->branch?->name ?? '—' }}</p>
-                        </div>
-                        <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase font-semibold">Vendor</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dl->vendor?->name ?? '—' }}</p>
+                            <p class="text-[10px] text-gray-400 uppercase font-semibold">Dealer</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dl->dealer?->name ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase font-semibold">Disbursed By</p>

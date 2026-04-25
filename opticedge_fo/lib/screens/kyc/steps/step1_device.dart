@@ -26,7 +26,6 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _imei1;
   late final TextEditingController _imei2;
-  late final TextEditingController _serial;
   late final TextEditingController _cash;
   late final TextEditingController _deposit;
   bool _scanningImei = false;
@@ -39,7 +38,6 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
     final state = ref.read(kycProvider);
     _imei1 = TextEditingController(text: state.imeiNumber);
     _imei2 = TextEditingController(text: state.imei2);
-    _serial = TextEditingController(text: state.serialNumber);
     _cash = TextEditingController(text: state.cashPrice);
     _deposit = TextEditingController(text: state.depositAmount);
   }
@@ -49,7 +47,6 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
     for (final controller in [
       _imei1,
       _imei2,
-      _serial,
       _cash,
       _deposit,
     ]) {
@@ -62,7 +59,6 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
     final values = <TextEditingController, String>{
       _imei1: state.imeiNumber,
       _imei2: state.imei2,
-      _serial: state.serialNumber,
       _cash: state.cashPrice,
       _deposit: state.depositAmount,
     };
@@ -82,7 +78,6 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
           (state) => state.copyWith(
             imeiNumber: _imei1.text.trim(),
             imei2: _imei2.text.trim(),
-            serialNumber: _serial.text.trim(),
             cashPrice: _cash.text.trim(),
             depositAmount: _deposit.text.trim(),
           ),
@@ -515,25 +510,11 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                     keyboard: TextInputType.number,
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _field(
-                          _imei2,
-                          'IMEI 2',
-                          hint: '15 digits (dual SIM)',
-                          keyboard: TextInputType.number,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _field(
-                          _serial,
-                          'Serial Number',
-                          hint: 'S/N',
-                        ),
-                      ),
-                    ],
+                  _field(
+                    _imei2,
+                    'IMEI 2',
+                    hint: '15 digits (dual SIM)',
+                    keyboard: TextInputType.number,
                   ),
                   const SizedBox(height: 12),
                   Row(

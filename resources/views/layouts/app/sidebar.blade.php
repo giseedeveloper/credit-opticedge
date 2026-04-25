@@ -20,6 +20,22 @@
             }
             .sb-nav::-webkit-scrollbar { display: none; }  /* Chrome / Safari */
 
+            /* wire:navigate — loading dim only on main column (see layouts/app.blade.php #app-shell-main) */
+            #app-shell-main.is-livewire-navigating {
+                position: relative;
+                transition: opacity 0.15s ease;
+            }
+            #app-shell-main.is-livewire-navigating::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                z-index: 20;
+                pointer-events: none;
+                background: color-mix(in srgb, var(--color-page, #f8fafc) 22%, transparent);
+            }
+            .dark #app-shell-main.is-livewire-navigating::before {
+                background: color-mix(in srgb, #09090b 18%, transparent);
+            }
         </style>
     </head>
     <body class="min-h-screen bg-page text-slate-800 antialiased font-sans selection:bg-[#F58220]/25 selection:text-[#2D3748]">
@@ -49,19 +65,16 @@
             </div>
 
             {{-- Navigation --}}
-            <nav class="sb-nav flex-1 overflow-y-auto px-2.5 py-3 space-y-2">
+            <nav id="app-sidebar-nav" class="sb-nav flex-1 overflow-y-auto px-2.5 py-3 space-y-2">
                 @php
                 $user = auth()->user();
                 $navGroups = [
                     ['icon'=>'chart-bar-square','label'=>'Business Insights','active'=>request()->routeIs('dashboard'),'links'=>[
                         ['href'=>route('dashboard'),'label'=>'Dashboard','icon'=>'home','ability'=>'dashboard.view','active'=>request()->routeIs('dashboard')],
                     ]],
-                    ['icon'=>'archive-box','label'=>'Inventory Vault','active'=>request()->routeIs('stock.*','inventory.grid'),'links'=>[
-                        ['href'=>route('stock.index'),'label'=>'Stock Overview','icon'=>'clipboard-document-list','ability'=>'devices.view','active'=>request()->routeIs('stock.index')],
+                    ['icon'=>'device-phone-mobile','label'=>'Device Catalog','active'=>request()->routeIs('stock.brands','stock.imei'),'links'=>[
                         ['href'=>route('stock.brands'),'label'=>'Brands & Models','icon'=>'tag','ability'=>'products.view','active'=>request()->routeIs('stock.brands')],
                         ['href'=>route('stock.imei'),'label'=>'IMEI Search','icon'=>'magnifying-glass','ability'=>'devices.view','active'=>request()->routeIs('stock.imei')],
-                        ['href'=>route('stock.transfers'),'label'=>'Stock Transfers','icon'=>'arrows-right-left','ability'=>'devices.view','active'=>request()->routeIs('stock.transfers')],
-                        ['href'=>route('inventory.grid'),'label'=>'Master Stock (IMEI)','icon'=>'server-stack','ability'=>'devices.view','active'=>request()->routeIs('inventory.grid')],
                     ]],
                     ['icon'=>'shield-check','label'=>'KYC & Trust','active'=>request()->routeIs('kyc.*'),'links'=>[
                         ['href'=>route('kyc.pending'),'label'=>'Pending Verifications','icon'=>'clock','ability'=>'loans.view','active'=>request()->routeIs('kyc.pending')],
@@ -74,18 +87,16 @@
                         ['href'=>route('credit.schedules'),'label'=>'Repayment Schedules','icon'=>'calendar-days','ability'=>'loans.view','active'=>request()->routeIs('credit.schedules')],
                         ['href'=>route('credit.calculator'),'label'=>'Loan Calculator','icon'=>'calculator','ability'=>'calculator.view','active'=>request()->routeIs('credit.calculator')],
                     ]],
-                    ['icon'=>'building-storefront','label'=>'Partner Network','active'=>request()->routeIs('partners.*'),'links'=>[
-                        ['href'=>route('partners.vendors'),'label'=>'Dealer Shops','icon'=>'building-storefront','ability'=>'vendors.view','active'=>request()->routeIs('partners.vendors')],
-                        ['href'=>route('partners.commissions'),'label'=>'Commission Ledger','icon'=>'chart-bar','ability'=>'accounting.view','active'=>request()->routeIs('partners.commissions')],
-                    ]],
+
                     ['icon'=>'banknotes','label'=>'Financial Hub','active'=>request()->routeIs('financials.*'),'links'=>[
                         ['href'=>route('financials.collections'),'label'=>'Collections','icon'=>'currency-dollar','ability'=>'accounting.view','active'=>request()->routeIs('financials.collections')],
                         ['href'=>route('financials.accounting'),'label'=>'Accounting Workspace','icon'=>'calculator','ability'=>'accounting.view','active'=>request()->routeIs('financials.accounting')],
                     ]],
-                    ['icon'=>'cog-6-tooth','label'=>'System Control','active'=>request()->routeIs('comms.*','audits.*','access','settings.*','staff.*'),'links'=>[
+                    ['icon'=>'cog-6-tooth','label'=>'System Control','active'=>request()->routeIs('comms.*','audits.*','access','settings.*','staff.*','dealers.*'),'links'=>[
                         ['href'=>route('comms.sms'),'label'=>'SMS Center','icon'=>'chat-bubble-left-right','ability'=>'sms_campaign.view','active'=>request()->routeIs('comms.sms')],
                         ['href'=>route('comms.audit'),'label'=>'Audit Trail','icon'=>'eye','ability'=>'reports.view','active'=>request()->routeIs('comms.audit')],
                         ['href'=>route('audits.logs'),'label'=>'Forensic Logs','icon'=>'shield-exclamation','ability'=>'reports.view','active'=>request()->routeIs('audits.logs')],
+                        ['href'=>route('dealers.index'),'label'=>'Dealers','icon'=>'building-office-2','ability'=>'dealers.view','active'=>request()->routeIs('dealers.*')],
                         ['href'=>route('staff.index'),'label'=>'Staff Management','icon'=>'users','ability'=>'staff.view','active'=>request()->routeIs('staff.*')],
                         ['href'=>route('access'),'label'=>'Roles & Permissions','icon'=>'key','ability'=>'access.view','active'=>request()->routeIs('access')],
                         ['href'=>route('settings.health'),'label'=>'System Health','icon'=>'heart','ability'=>'settings.view','active'=>request()->routeIs('settings.health')],
@@ -273,6 +284,57 @@
                 const collapsed = localStorage.getItem('sb-collapsed') === 'true';
                 document.documentElement.classList.toggle('sidebar-collapsed', collapsed);
             });
+        </script>
+        <script data-navigate-once>
+            (function () {
+                const SCROLL_KEY = 'oe_sidebar_nav_scroll';
+                const NAV_ID = 'app-sidebar-nav';
+                const MAIN_ID = 'app-shell-main';
+
+                function sidebarEl() {
+                    return document.getElementById(NAV_ID);
+                }
+
+                function mainEl() {
+                    return document.getElementById(MAIN_ID);
+                }
+
+                function saveSidebarScroll() {
+                    const el = sidebarEl();
+                    if (el) {
+                        sessionStorage.setItem(SCROLL_KEY, String(el.scrollTop));
+                    }
+                }
+
+                function restoreSidebarScroll() {
+                    const y = parseInt(sessionStorage.getItem(SCROLL_KEY) || '0', 10);
+                    const el = sidebarEl();
+                    if (! el) {
+                        return;
+                    }
+                    const apply = () => {
+                        el.scrollTop = y;
+                    };
+                    requestAnimationFrame(apply);
+                    requestAnimationFrame(() => requestAnimationFrame(apply));
+                }
+
+                function setMainNavigating(on) {
+                    const main = mainEl();
+                    if (main) {
+                        main.classList.toggle('is-livewire-navigating', on);
+                    }
+                }
+
+                document.addEventListener('livewire:navigating', () => {
+                    saveSidebarScroll();
+                    setMainNavigating(true);
+                });
+                document.addEventListener('livewire:navigated', () => {
+                    setMainNavigating(false);
+                    restoreSidebarScroll();
+                });
+            })();
         </script>
         @fluxScripts
     </body>

@@ -17,26 +17,8 @@ class PremiumGlassBackground extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final baseGradient = isDark
-        ? const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              DesignTokens.darkBackground,
-              Color(0xFF0C1930),
-              Color(0xFF0B1220),
-            ],
-            stops: [0.0, 0.55, 1.0],
-          )
-        : LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFFFFFFFF),
-              DesignTokens.primarySurface.withValues(alpha: 0.72),
-              const Color(0xFFFFFFFF),
-            ],
-            stops: const [0.0, 0.55, 1.0],
-          );
+        ? DesignTokens.appCanvasGradientDark
+        : DesignTokens.appCanvasGradientLight;
 
     return Stack(
       fit: StackFit.expand,

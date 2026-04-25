@@ -77,7 +77,7 @@ class AppTheme {
         error: AppConstants.error,
         onError: Colors.white,
       ),
-      scaffoldBackgroundColor: AppConstants.background,
+      scaffoldBackgroundColor: Colors.transparent,
       textTheme: textTheme,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -91,7 +91,14 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           color: AppConstants.textPrimary,
         ),
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+          systemNavigationBarColor: Colors.transparent,
+          systemNavigationBarIconBrightness: Brightness.dark,
+          systemNavigationBarContrastEnforced: false,
+        ),
       ),
       cardTheme: CardThemeData(
         color: AppConstants.surfaceRaised,
@@ -279,7 +286,7 @@ class AppTheme {
         error: AppConstants.error,
         onError: Colors.white,
       ),
-      scaffoldBackgroundColor: DesignTokens.darkBackground,
+      scaffoldBackgroundColor: Colors.transparent,
       textTheme: darkTextTheme,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -293,7 +300,13 @@ class AppTheme {
           fontWeight: FontWeight.w700,
           color: darkText,
         ),
-        systemOverlayStyle: SystemUiOverlayStyle.light,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarColor: Colors.transparent,
+          systemNavigationBarIconBrightness: Brightness.light,
+          systemNavigationBarContrastEnforced: false,
+        ),
       ),
       cardTheme: CardThemeData(
         color: DesignTokens.darkSurfaceElevated,

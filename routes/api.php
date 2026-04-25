@@ -2,7 +2,6 @@
 
 use App\Exports\CollectionsExport;
 use App\Exports\DelinquencyExport;
-use App\Exports\InventoryExport;
 use App\Http\Controllers\Api\AnalyticsApiController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CollectionApiController;
@@ -15,7 +14,6 @@ use App\Http\Controllers\Api\FinanceApiController;
 use App\Http\Controllers\Api\FraudApiController;
 use App\Http\Controllers\Api\KycApiController;
 use App\Http\Controllers\Api\RecoveryApiController;
-use App\Http\Controllers\Api\RefurbishmentApiController;
 use App\Http\Controllers\Api\RoleApiController;
 use App\Http\Controllers\Api\SecurityApiController;
 use App\Http\Controllers\Api\SelcomWebhookController;
@@ -71,9 +69,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
 
-        // KYC — FO Mobile App: dashboard, customers, branches
+        // KYC — FO Mobile App: dashboard, customers
         Route::prefix('kyc')->middleware('permission:loans.view')->group(function () {
-            Route::get('/branches', [KycApiController::class, 'branches']);
             Route::get('/dashboard', [KycApiController::class, 'dashboard']);
             Route::get('/customers', [KycApiController::class, 'myCustomers']);
             Route::get('/customers/{id}', [KycApiController::class, 'customerDetail']);
@@ -85,6 +82,9 @@ Route::prefix('v1')->group(function () {
                 Route::post('/{id}/release-asset', [KycApiController::class, 'releaseAsset']);
                 Route::post('/{id}/handover-checklist', [KycApiController::class, 'uploadHandoverChecklist']);
             });
+
+        Route::get('/kyc/branches', [KycApiController::class, 'branches'])
+            ->middleware('permission:loans.create');
 
         // KYC — Agent Registration Steps (requires loans.create permission)
         Route::prefix('kyc/application')
@@ -113,16 +113,15 @@ Route::prefix('v1')->group(function () {
                 Route::get('/{customer_id}/status', [KycApiController::class, 'applicationStatus']);
             });
 
-        // Stock Search (Vendor Shop Floor)
-        Route::prefix('stock')->middleware('permission:devices.view')->group(function () {
-            Route::get('/search', [StockApiController::class, 'search']);
-            Route::get('/vendor-list', [StockApiController::class, 'vendorStock']);
-        });
-
         // Staff / Sales Agent Tracking
         Route::prefix('staff')->middleware('permission:staff.view')->group(function () {
             Route::get('/metrics', [StaffApiController::class, 'metrics']);
             Route::get('/commissions', [StaffApiController::class, 'commissions']);
+        });
+
+        Route::prefix('stock')->middleware('permission:devices.view')->group(function () {
+            Route::get('/search', [StockApiController::class, 'search']);
+            Route::get('/vendor-list', [StockApiController::class, 'vendorStock']);
         });
 
         // HQ Admin Security & Risk Ops
@@ -130,10 +129,6 @@ Route::prefix('v1')->group(function () {
             Route::post('/mdm/lock/{unit}', [SecurityApiController::class, 'lockDevice']);
             Route::post('/mdm/unlock/{unit}', [SecurityApiController::class, 'unlockDevice']);
             Route::post('/reconcile/manual', [SecurityApiController::class, 'manualReconciliation']);
-        });
-
-        Route::prefix('inventory')->middleware('permission:devices.edit')->group(function () {
-            Route::post('/refurbish/{unit}', [RefurbishmentApiController::class, 'refurbishDevice']);
         });
 
         // Field Recovery API
@@ -159,9 +154,6 @@ Route::prefix('v1')->group(function () {
             Route::middleware('can:reports.export')->group(function () {
                 Route::get('/export/collections', function () {
                     return Excel::download(new CollectionsExport, 'Opticedge_Collections_Report.xlsx');
-                });
-                Route::get('/export/inventory', function () {
-                    return Excel::download(new InventoryExport, 'Opticedge_Inventory_Valuation.xlsx');
                 });
                 Route::get('/export/delinquency', function () {
                     return Excel::download(new DelinquencyExport, 'Opticedge_IFRS9_Defaults.xlsx');

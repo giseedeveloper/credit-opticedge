@@ -2,11 +2,10 @@
 
 namespace App\Livewire\Staff;
 
-use App\Models\Branch;
+use App\Models\Dealer;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -45,9 +44,9 @@ class StaffManager extends Component
 
     public string $newPhone = '';
 
-    public string $newBranchId = '';
-
     public string $newJoinedAt = '';
+
+    public string $newDealerId = '';
 
     public string $editName = '';
 
@@ -59,23 +58,16 @@ class StaffManager extends Component
 
     public string $editPassword = '';
 
-    public string $editBranchId = '';
-
     public string $editJoinedAt = '';
 
-    public $roles;
+    public string $editDealerId = '';
 
-    public $branches;
+    public $roles;
 
     public function mount(): void
     {
         abort_unless(auth()->user()->canAccess('staff.view'), 403);
         $this->roles = Role::orderBy('name')->get();
-        $this->branches = Branch::query()
-            ->where('is_active', true)
-            ->orderByDesc('is_headquarter')
-            ->orderBy('name')
-            ->get();
         $this->resetCreateForm();
     }
 
@@ -92,34 +84,6 @@ class StaffManager extends Component
     public function updatedFilterStatus(): void
     {
         $this->resetPage();
-    }
-
-    public function updatedNewRole(): void
-    {
-        $this->resetValidation('newBranchId');
-    }
-
-    public function updatedEditRole(): void
-    {
-        $this->resetValidation('editBranchId');
-    }
-
-    public function roleRequiresBranch(?string $role): bool
-    {
-        return filled($role) && ! in_array($role, self::GLOBAL_ROLES, true);
-    }
-
-    public function roleScopeDescription(?string $role): string
-    {
-        if (blank($role)) {
-            return 'Select a role to see whether branch assignment is mandatory.';
-        }
-
-        if ($this->roleRequiresBranch($role)) {
-            return 'Branch is required so customer registration, loans, and operational reporting stay tied to the correct branch.';
-        }
-
-        return 'This is a global role. Branch can still be selected for reporting, but it is optional.';
     }
 
     public function openCreateModal(): void
@@ -154,7 +118,7 @@ class StaffManager extends Component
             return null;
         }
 
-        return User::with(['roles', 'branch'])->find($this->detailUserId);
+        return User::with(['roles', 'dealer'])->find($this->detailUserId);
     }
 
     public function getTargetUserProperty(): ?User
@@ -177,7 +141,8 @@ class StaffManager extends Component
         abort_unless(auth()->user()->canAccess('staff.create'), 403);
 
         $validated = $this->validate($this->createRules());
-        $branchId = $validated['newBranchId'] ?: null;
+
+        $dealerId = $this->resolveDealerIdForCreate($validated);
 
         $user = User::create([
             'name' => $validated['newName'],
@@ -185,9 +150,9 @@ class StaffManager extends Component
             'password' => Hash::make($validated['newPassword']),
             'phone' => $validated['newPhone'],
             'role' => $validated['newRole'],
-            'branch_id' => $branchId,
+            'dealer_id' => $dealerId,
             'joined_at' => $validated['newJoinedAt'],
-            'employee_code' => $this->generateEmployeeCode($branchId),
+            'employee_code' => $this->generateEmployeeCode(),
             'is_active' => true,
         ]);
 
@@ -213,8 +178,9 @@ class StaffManager extends Component
         $this->editEmail = $user->email;
         $this->editRole = $user->roles->first()?->name ?? '';
         $this->editPhone = $user->phone ?? '';
-        $this->editBranchId = $user->branch_id ?? '';
+
         $this->editJoinedAt = ($user->joined_at ?? $user->created_at)?->toDateString() ?? now()->toDateString();
+        $this->editDealerId = (string) ($user->dealer_id ?? '');
         $this->editPassword = '';
         $this->showEditModal = true;
     }
@@ -224,17 +190,18 @@ class StaffManager extends Component
         abort_unless(auth()->user()->canAccess('staff.edit'), 403);
 
         $validated = $this->validate($this->editRules());
-        $branchId = $validated['editBranchId'] ?: null;
 
         $user = User::findOrFail($this->targetUserId);
+        $dealerId = $this->resolveDealerIdForEdit($validated, $user);
+
         $user->update([
             'name' => $validated['editName'],
             'email' => $validated['editEmail'],
             'phone' => $validated['editPhone'],
             'role' => $validated['editRole'],
-            'branch_id' => $branchId,
+            'dealer_id' => $dealerId,
             'joined_at' => $validated['editJoinedAt'],
-            'employee_code' => $user->employee_code ?: $this->generateEmployeeCode($branchId),
+            'employee_code' => $user->employee_code ?: $this->generateEmployeeCode(),
         ]);
 
         if ($this->editPassword) {
@@ -293,12 +260,12 @@ class StaffManager extends Component
             'newPassword' => 'required|string|min:8',
             'newRole' => 'required|exists:roles,name',
             'newPhone' => 'nullable|string|max:20',
-            'newBranchId' => [
-                Rule::requiredIf(fn (): bool => $this->roleRequiresBranch($this->newRole)),
+            'newDealerId' => [
+                Rule::requiredIf(fn () => $this->roleRequiresDealer($this->newRole)),
                 'nullable',
-                'string',
-                $this->activeBranchRule(),
+                'exists:dealers,id',
             ],
+
             'newJoinedAt' => 'required|date|before_or_equal:today',
         ];
     }
@@ -311,30 +278,19 @@ class StaffManager extends Component
             'editRole' => 'required|exists:roles,name',
             'editPhone' => 'nullable|string|max:20',
             'editPassword' => 'nullable|string|min:8',
-            'editBranchId' => [
-                Rule::requiredIf(fn (): bool => $this->roleRequiresBranch($this->editRole)),
+            'editDealerId' => [
+                Rule::requiredIf(fn () => $this->roleRequiresDealer($this->editRole)),
                 'nullable',
-                'string',
-                $this->activeBranchRule(),
+                'exists:dealers,id',
             ],
+
             'editJoinedAt' => 'required|date|before_or_equal:today',
         ];
     }
 
-    protected function activeBranchRule()
+    protected function generateEmployeeCode(): string
     {
-        return Rule::exists('branches', 'id')
-            ->where(fn ($query) => $query->where('is_active', true));
-    }
-
-    protected function generateEmployeeCode(?string $branchId = null): string
-    {
-        $branchCode = $this->branches?->firstWhere('id', $branchId)?->code;
-        $normalizedBranchCode = filled($branchCode)
-            ? '-'.Str::upper(Str::replace('-', '', $branchCode))
-            : '';
-
-        $prefix = "EMP{$normalizedBranchCode}";
+        $prefix = 'EMP';
         $sequence = User::where('employee_code', 'like', "{$prefix}-%")->count() + 1;
 
         do {
@@ -345,16 +301,14 @@ class StaffManager extends Component
         return $employeeCode;
     }
 
-    protected function resetCreateForm(): void
+    public function resetCreateForm(): void
     {
-        $this->resetValidation();
-
         $this->newName = '';
         $this->newEmail = '';
         $this->newPassword = '';
         $this->newRole = '';
         $this->newPhone = '';
-        $this->newBranchId = '';
+        $this->newDealerId = '';
         $this->newJoinedAt = now()->toDateString();
     }
 
@@ -368,13 +322,51 @@ class StaffManager extends Component
         $this->editRole = '';
         $this->editPhone = '';
         $this->editPassword = '';
-        $this->editBranchId = '';
+        $this->editDealerId = '';
         $this->editJoinedAt = '';
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function resolveDealerIdForCreate(array $validated): ?string
+    {
+        if ($this->roleRequiresDealer($this->newRole)) {
+            return $this->idOrNull($validated['newDealerId'] ?? '');
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function resolveDealerIdForEdit(array $validated, User $existing): ?string
+    {
+        $role = $validated['editRole'];
+
+        if ($this->roleRequiresDealer($role)) {
+            return $this->idOrNull($validated['editDealerId'] ?? '');
+        }
+
+        return null;
+    }
+
+    private function roleRequiresDealer(string $role): bool
+    {
+        return in_array($role, ['front-officer', 'back-officer'], true);
+    }
+
+    private function idOrNull(string $value): ?string
+    {
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
     }
 
     public function render()
     {
-        $staff = User::with(['roles', 'branch'])
+        $staff = User::with(['roles'])
             ->when($this->search, fn ($q) => $q->where(function ($q) {
                 $q->whereInsensitiveLike('name', "%{$this->search}%")
                     ->orWhereInsensitiveLike('email', "%{$this->search}%")
@@ -395,7 +387,12 @@ class StaffManager extends Component
 
         $roleCounts = Role::withCount(['users'])->orderByDesc('users_count')->get();
 
-        return view('livewire.staff.staff-manager', compact('staff', 'stats', 'roleCounts'))
+        $dealers = Dealer::query()
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
+
+        return view('livewire.staff.staff-manager', compact('staff', 'stats', 'roleCounts', 'dealers'))
             ->layout('layouts.app', ['title' => 'Staff Management']);
     }
 }

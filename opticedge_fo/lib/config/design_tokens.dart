@@ -74,6 +74,30 @@ abstract final class DesignTokens {
   static const Color darkNavBarBg = darkSurfaceElevated;
   static const Color darkNavBarBorder = darkBorder;
 
+  /// Soft app canvas (light) — aligned with customer app premium glass wash.
+  static const LinearGradient appCanvasGradientLight = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF5F7FB),
+      Color(0xFFFDF9F6),
+      Color(0xFFE9EEF5),
+    ],
+    stops: [0.0, 0.52, 1.0],
+  );
+
+  /// Shell / backdrop wash (dark) — subtle depth behind glass cards.
+  static const LinearGradient appCanvasGradientDark = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF0E1219),
+      Color(0xFF121A24),
+      Color(0xFF151D2A),
+    ],
+    stops: [0.0, 0.48, 1.0],
+  );
+
   /// Same gradient as dashboard hero — use for login header, splash, profile hero.
   static LinearGradient get heroGradient => const LinearGradient(
         begin: Alignment.topLeft,

@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Kyc;
 
-use App\Models\Branch;
 use App\Models\Customer;
 use App\Models\Verification;
 use App\Services\CustomerLoanProvisioningService;
@@ -17,8 +16,6 @@ class CustomerProfiles extends Component
     public string $search = '';
 
     public string $kycFilter = '';
-
-    public string $branchFilter = '';
 
     // ── Detail slide-over ──────────────────────────────────────────────────
     public bool $showDetail = false;
@@ -56,11 +53,6 @@ class CustomerProfiles extends Component
     }
 
     public function updatedKycFilter(): void
-    {
-        $this->resetPage();
-    }
-
-    public function updatedBranchFilter(): void
     {
         $this->resetPage();
     }
@@ -257,7 +249,7 @@ class CustomerProfiles extends Component
 
     public function render()
     {
-        $customers = Customer::with(['latestVerification', 'branch', 'registeredBy', 'loans'])
+        $customers = Customer::with(['latestVerification', 'dealer', 'registeredBy', 'loans'])
             ->searchDirectory($this->search)
             ->when($this->kycFilter === 'verified', fn ($q) => $q->kycApproved())
             ->when($this->kycFilter === 'pending', fn ($q) => $q->whereDoesntHave('verifications', fn ($v) => $v->where('status', 'approved'))
@@ -265,7 +257,6 @@ class CustomerProfiles extends Component
             ->when($this->kycFilter === 'rejected', fn ($q) => $q->whereHas('verifications', fn ($v) => $v->where('status', 'rejected'))
                 ->whereDoesntHave('verifications', fn ($v) => $v->where('status', 'approved')))
             ->when($this->kycFilter === 'not_started', fn ($q) => $q->whereDoesntHave('verifications'))
-            ->when($this->branchFilter, fn ($q) => $q->where('branch_id', $this->branchFilter))
             ->latest()
             ->paginate(20);
 
@@ -275,8 +266,7 @@ class CustomerProfiles extends Component
                 'verifications.fo',
                 'latestVerification.reviewedBy',
                 'latestVerification.fo',
-                'branch',
-                'vendor',
+                'dealer',
                 'agreementDocument',
                 'assetReleasedBy',
                 'inventoryUnit.phoneModel.brand',
@@ -286,10 +276,8 @@ class CustomerProfiles extends Component
             ])->find($this->detailCustomerId)
             : null;
 
-        $branches = Branch::orderBy('name')->get();
-
         return view('livewire.kyc.customer-profiles', compact(
-            'customers', 'detailCustomer', 'branches'
+            'customers', 'detailCustomer'
         ))->layout('layouts.app', ['title' => 'Customer Profiles']);
     }
 }

@@ -1,12 +1,11 @@
 <?php
 
-use App\Models\Branch;
 use App\Models\Brand;
 use App\Models\Customer;
+use App\Models\Dealer;
 use App\Models\InventoryUnit;
 use App\Models\Loan;
 use App\Models\PhoneModel;
-use App\Models\Vendor;
 use App\Services\LoanCalculatorService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -59,8 +58,10 @@ test('monthly schedules use installment count derived from weeks', function () {
 
     $this->service->createSchedule($loan);
 
+    $firstDue = $loan->repaymentSchedules()->orderBy('installment_number')->value('due_date');
+
     expect($loan->repaymentSchedules()->count())->toBe(13)
-        ->and($loan->repaymentSchedules()->first()?->due_date?->diffInDays($loan->disbursed_at))->toBeGreaterThanOrEqual(28);
+        ->and(Carbon::parse($loan->disbursed_at)->diffInDays(Carbon::parse($firstDue)))->toBeGreaterThanOrEqual(28);
 });
 
 test('biweekly schedules use half-week installment count', function () {
@@ -73,8 +74,10 @@ test('biweekly schedules use half-week installment count', function () {
 
     $this->service->createSchedule($loan);
 
+    $firstDue = $loan->repaymentSchedules()->orderBy('installment_number')->value('due_date');
+
     expect($loan->repaymentSchedules()->count())->toBe(6)
-        ->and($loan->repaymentSchedules()->first()?->due_date?->diffInDays($loan->disbursed_at))->toBe(14);
+        ->and(Carbon::parse($loan->disbursed_at)->diffInDays(Carbon::parse($firstDue)))->toEqual(14);
 });
 
 test('generate loan number is unique', function () {
@@ -110,12 +113,11 @@ function createTestLoan(
     string $type,
     string $repaymentFrequency = 'weekly'
 ): Loan {
-    $branch = Branch::factory()->create();
     $brand = Brand::factory()->create();
     $model = PhoneModel::factory()->create(['brand_id' => $brand->id]);
-    $vendor = Vendor::factory()->create(['branch_id' => $branch->id]);
-    $customer = Customer::factory()->create(['branch_id' => $branch->id, 'vendor_id' => $vendor->id]);
-    $unit = InventoryUnit::factory()->create(['phone_model_id' => $model->id, 'vendor_id' => $vendor->id]);
+    $vendor = Dealer::factory()->create();
+    $customer = Customer::factory()->create(['dealer_id' => $vendor->id]);
+    $unit = InventoryUnit::factory()->create(['phone_model_id' => $model->id, 'dealer_id' => $vendor->id]);
 
     $service = app(LoanCalculatorService::class);
     $computed = $type === 'flat'
@@ -125,8 +127,7 @@ function createTestLoan(
     return Loan::factory()->create([
         'customer_id' => $customer->id,
         'inventory_unit_id' => $unit->id,
-        'vendor_id' => $vendor->id,
-        'branch_id' => $branch->id,
+        'dealer_id' => $vendor->id,
         'loan_number' => $service->generateLoanNumber(),
         'principal_amount' => $principal,
         'interest_rate' => 20,

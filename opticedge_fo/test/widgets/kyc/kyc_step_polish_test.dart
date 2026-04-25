@@ -32,7 +32,6 @@ void main() {
                 inventoryUnitId: 'unit-1',
                 deviceSpecs: 'Samsung Galaxy A15 128GB',
                 imeiNumber: '123456789012345',
-                serialNumber: 'SN-001',
                 cashPrice: '420000',
                 depositAmount: '120000',
                 preferredRepayment: 'weekly',
@@ -100,11 +99,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Device Scan Experience'), findsOneWidget);
-    expect(find.text('Stock-linked handset is ready'), findsOneWidget);
-    expect(find.text('Scan lane'), findsOneWidget);
-    expect(find.text('Offer Terms Snapshot'), findsOneWidget);
-    expect(find.textContaining('Installment preview'), findsOneWidget);
+    expect(find.text('Serial Number'), findsNothing);
+    expect(find.text('Maendeleo'), findsWidgets);
+    expect(find.text('Picha (Scan)'), findsOneWidget);
+    expect(find.text('Stock duukani (pendekezwa)'), findsOneWidget);
+    expect(find.text('Manual (Mkono)'), findsOneWidget);
   });
 
   testWidgets('Step 2 renders identity confidence and evidence guidance',
@@ -120,9 +119,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Identity Confidence'), findsOneWidget);
-    expect(find.text('3. Capture verification evidence'), findsOneWidget);
-    expect(find.text('Use bright light'), findsOneWidget);
+    expect(find.text('Utambulisho'), findsOneWidget);
+    expect(find.text('First Name'), findsOneWidget);
+    expect(find.text('Save & Continue'), findsOneWidget);
   });
 
   testWidgets('Step 3 renders routing health and branch accountability copy',
@@ -155,9 +154,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Contact routing health'), findsOneWidget);
-    expect(find.text('2. Service branch and customer routing'), findsOneWidget);
-    expect(find.text('Location summary'), findsOneWidget);
+    expect(find.text('Mawasiliano'), findsOneWidget);
+    expect(find.text('Primary Phone Number'), findsOneWidget);
   });
 
   testWidgets('Step 7 renders final mile flow and agreement preview action',
@@ -210,8 +208,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Final Mile Flow'), findsOneWidget);
-    expect(find.text('Agreement preview'), findsWidgets);
-    expect(find.text('View Agreement Preview'), findsOneWidget);
+    expect(find.text('Malipo & tuma'), findsOneWidget);
+    expect(find.text('Submit Application'), findsOneWidget);
+    expect(find.text('1. Malipo'), findsOneWidget);
   });
 }

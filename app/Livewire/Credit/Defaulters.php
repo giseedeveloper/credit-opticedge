@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Credit;
 
-use App\Models\Branch;
 use App\Models\Loan;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -12,8 +11,6 @@ class Defaulters extends Component
     use WithPagination;
 
     public string $search = '';
-
-    public string $branchFilter = '';
 
     public string $riskFilter = '';
 
@@ -27,11 +24,6 @@ class Defaulters extends Component
     }
 
     public function updatedSearch(): void
-    {
-        $this->resetPage();
-    }
-
-    public function updatedBranchFilter(): void
     {
         $this->resetPage();
     }
@@ -60,10 +52,10 @@ class Defaulters extends Component
         }
 
         return Loan::with([
-            'customer.branch',
+            'customer.phoneModel.brand',
+            'customer.dealer',
             'inventoryUnit.phoneModel.brand',
-            'vendor',
-            'branch',
+            'dealer',
             'disbursedBy',
             'approvedBy',
             'repaymentSchedules',
@@ -74,7 +66,7 @@ class Defaulters extends Component
 
     public function render()
     {
-        $query = Loan::with(['customer', 'inventoryUnit.phoneModel.brand', 'branch'])
+        $query = Loan::with(['customer.phoneModel.brand', 'customer.dealer', 'dealer'])
             ->whereIn('status', ['overdue', 'defaulted'])
             ->when($this->search, fn ($q) => $q->where(function ($q) {
                 $q->where('loan_number', 'like', "%{$this->search}%")
@@ -83,7 +75,6 @@ class Defaulters extends Component
                         ->orWhere('last_name', 'like', "%{$this->search}%")
                         ->orWhere('phone', 'like', "%{$this->search}%"));
             }))
-            ->when($this->branchFilter, fn ($q) => $q->where('branch_id', $this->branchFilter))
             ->when($this->riskFilter === 'moderate', fn ($q) => $q->whereRaw('due_date >= NOW() - INTERVAL 30 DAY'))
             ->when($this->riskFilter === 'high', fn ($q) => $q->whereRaw('due_date BETWEEN NOW() - INTERVAL 60 DAY AND NOW() - INTERVAL 31 DAY'))
             ->when($this->riskFilter === 'critical', fn ($q) => $q->whereRaw('due_date < NOW() - INTERVAL 60 DAY'));
@@ -97,9 +88,7 @@ class Defaulters extends Component
             'exposure' => Loan::whereIn('status', ['overdue', 'defaulted'])->selectRaw('SUM(outstanding_balance + COALESCE(penalty_amount, 0))')->value('sum') ?? 0,
         ];
 
-        $branches = Branch::orderBy('name')->get();
-
-        return view('livewire.credit.defaulters', compact('defaulters', 'stats', 'branches'))
+        return view('livewire.credit.defaulters', compact('defaulters', 'stats'))
             ->layout('layouts.app', ['title' => 'Defaulters List']);
     }
 }

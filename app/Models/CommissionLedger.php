@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'vendor_id', 'loan_id', 'transaction_id',
+    'dealer_id', 'loan_id', 'transaction_id',
     'commission_rate', 'commission_amount', 'status', 'description', 'posted_at',
 ])]
 class CommissionLedger extends Model
@@ -25,9 +25,9 @@ class CommissionLedger extends Model
         ];
     }
 
-    public function vendor(): BelongsTo
+    public function dealer(): BelongsTo
     {
-        return $this->belongsTo(Vendor::class);
+        return $this->belongsTo(Dealer::class);
     }
 
     public function loan(): BelongsTo

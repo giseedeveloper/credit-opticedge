@@ -79,15 +79,34 @@ class ProfileScreen extends ConsumerWidget {
                                 color: AppConstants.primary.withValues(alpha: 0.2),
                               ),
                             ),
-                            child: Center(
-                              child: Text(
-                                _initials(c.firstName, c.lastName),
-                                style: const TextStyle(
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppConstants.primaryDark,
-                                ),
-                              ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(24),
+                              child: c.headshotUrl != null &&
+                                      c.headshotUrl!.trim().isNotEmpty
+                                  ? Image.network(
+                                      c.headshotUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Center(
+                                        child: Text(
+                                          _initials(c.firstName, c.lastName),
+                                          style: const TextStyle(
+                                            fontSize: 30,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppConstants.primaryDark,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : Center(
+                                      child: Text(
+                                        _initials(c.firstName, c.lastName),
+                                        style: const TextStyle(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppConstants.primaryDark,
+                                        ),
+                                      ),
+                                    ),
                             ),
                           ),
                           const SizedBox(height: 16),

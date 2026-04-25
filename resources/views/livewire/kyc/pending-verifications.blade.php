@@ -62,12 +62,6 @@
         <div class="flex-1 max-w-sm">
             <flux:input wire:model.live.debounce.300ms="search" placeholder="Name, phone, NIDA or IMEI…" icon="magnifying-glass" />
         </div>
-        <flux:select wire:model.live="branchFilter" class="w-48">
-            <flux:select.option value="">All Branches</flux:select.option>
-            @foreach($branches as $b)
-            <flux:select.option :value="$b->id">{{ $b->name }}</flux:select.option>
-            @endforeach
-        </flux:select>
     </div>
 
     {{-- Stage description banner --}}
@@ -99,7 +93,7 @@
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">NIDA</th>
                     @endif
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Branch</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Dealer</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Submitted</th>
                     <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -127,7 +121,7 @@
                         {{ $customer->nida_number ? substr($customer->nida_number, 0, 8).'…' : '—' }}
                     </td>
                     @endif
-                    <td class="px-4 py-3.5 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{{ $customer->branch?->name ?? '—' }}</td>
+                    <td class="px-4 py-3.5 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{{ $customer->dealer?->name ?? '—' }}</td>
                     <td class="px-4 py-3.5 text-xs text-gray-400 hidden lg:table-cell">{{ $customer->created_at->format('d M Y') }}</td>
                     <td class="px-4 py-3.5 text-right">
                         <div class="flex items-center justify-end gap-1">
@@ -284,8 +278,8 @@
                             </p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Branch</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->branch?->name ?? '—' }}</p>
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Dealer</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->dealer?->name ?? '—' }}</p>
                         </div>
                     </div>
                 </div>
@@ -303,8 +297,8 @@
                             <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->created_at->format('d M Y') }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Vendor/Agent</p>
-                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->vendor?->name ?? '—' }}</p>
+                            <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Dealer / agent</p>
+                            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $dc->dealer?->name ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Credit Status</p>

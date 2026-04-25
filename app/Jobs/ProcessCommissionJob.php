@@ -2,8 +2,12 @@
 
 namespace App\Jobs;
 
+use App\Models\Loan;
+use App\Models\Transaction;
+use App\Services\DealerHierarchyService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 
 class ProcessCommissionJob implements ShouldQueue
 {
@@ -18,20 +22,20 @@ class ProcessCommissionJob implements ShouldQueue
         $this->onQueue('commissions');
     }
 
-    public function handle(\App\Services\VendorHierarchyService $service): void
+    public function handle(DealerHierarchyService $service): void
     {
-        $loan = \App\Models\Loan::findOrFail($this->loanId);
-        $transaction = \App\Models\Transaction::findOrFail($this->transactionId);
+        $loan = Loan::findOrFail($this->loanId);
+        $transaction = Transaction::findOrFail($this->transactionId);
 
         $service->postCommission($loan, $transaction);
     }
 
     public function failed(\Throwable $exception): void
     {
-        \Illuminate\Support\Facades\Log::error('ProcessCommissionJob failed', [
-            'loan_id'        => $this->loanId,
+        Log::error('ProcessCommissionJob failed', [
+            'loan_id' => $this->loanId,
             'transaction_id' => $this->transactionId,
-            'exception'      => $exception->getMessage(),
+            'exception' => $exception->getMessage(),
         ]);
     }
 }

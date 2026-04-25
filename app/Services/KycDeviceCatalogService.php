@@ -6,7 +6,6 @@ use App\Models\Brand;
 use App\Models\InventoryUnit;
 use App\Models\PhoneModel;
 use App\Models\User;
-use App\Models\Vendor;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -63,7 +62,7 @@ class KycDeviceCatalogService
     public function unitsFor(User $user, ?string $phoneModelId = null, string $search = ''): Collection
     {
         return $this->scopedInventoryQuery($user)
-            ->with(['phoneModel.brand', 'branch', 'vendor'])
+            ->with(['phoneModel.brand', 'dealer'])
             ->when($phoneModelId, fn (Builder $query) => $query->where('phone_model_id', $phoneModelId))
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $searchQuery) use ($search): void {
@@ -95,7 +94,7 @@ class KycDeviceCatalogService
         }
 
         return $this->scopedInventoryQuery($user)
-            ->with(['phoneModel.brand', 'branch', 'vendor'])
+            ->with(['phoneModel.brand', 'dealer'])
             ->whereKey($inventoryUnitId)
             ->first();
     }
@@ -133,13 +132,12 @@ class KycDeviceCatalogService
     }
 
     /**
-     * @return array{branch_id: ?string, vendor_id: ?string}
+     * @return array{dealer_id: ?string}
      */
     public function scopeContextFor(User $user): array
     {
         return [
-            'branch_id' => $user->branch_id,
-            'vendor_id' => $this->resolveVendorId($user),
+            'dealer_id' => $this->resolveDealerId($user),
         ];
     }
 
@@ -153,40 +151,27 @@ class KycDeviceCatalogService
             return $query;
         }
 
-        $vendorId = $this->resolveVendorId($user);
+        $dealerId = $this->resolveDealerId($user);
 
-        if ($user->branch_id && $vendorId) {
-            return $query->where(function (Builder $scopeQuery) use ($user, $vendorId): void {
-                $scopeQuery->where('branch_id', $user->branch_id)
-                    ->orWhere('vendor_id', $vendorId);
-            });
-        }
-
-        if ($vendorId) {
-            return $query->where('vendor_id', $vendorId);
-        }
-
-        if ($user->branch_id) {
-            return $query->where('branch_id', $user->branch_id);
+        if ($dealerId) {
+            return $query->where('dealer_id', $dealerId);
         }
 
         return $query->whereRaw('1 = 0');
     }
 
-    private function resolveVendorId(User $user): ?string
+    private function resolveDealerId(User $user): ?string
     {
-        $managedVendorId = $user->managedVendors()->value('id');
-
-        if ($managedVendorId) {
-            return $managedVendorId;
+        if ($user->dealer_id) {
+            return (string) $user->dealer_id;
         }
 
-        if (! $user->branch_id) {
-            return null;
+        $managedDealerId = $user->managedDealers()->value('id');
+
+        if ($managedDealerId) {
+            return $managedDealerId;
         }
 
-        return Vendor::query()
-            ->where('branch_id', $user->branch_id)
-            ->value('id');
+        return null;
     }
 }

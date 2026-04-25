@@ -1,8 +1,8 @@
 <?php
 
-use App\Models\Branch;
 use App\Models\Brand;
 use App\Models\Customer;
+use App\Models\Dealer;
 use App\Models\InventoryUnit;
 use App\Models\Loan;
 use App\Models\Permission;
@@ -11,7 +11,6 @@ use App\Models\RepaymentSchedule;
 use App\Models\SelcomPaymentRequest;
 use App\Models\SystemDocument;
 use App\Models\User;
-use App\Models\Vendor;
 use App\Models\Verification;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
@@ -26,8 +25,8 @@ beforeEach(function () {
     Storage::fake('public');
     Permission::firstOrCreate(['name' => 'loans.create', 'guard_name' => 'web']);
     Permission::firstOrCreate(['name' => 'loans.view', 'guard_name' => 'web']);
-    $this->branch = Branch::factory()->create();
-    $this->agent = User::factory()->create(['branch_id' => $this->branch->id]);
+    $this->dealer = Dealer::factory()->create();
+    $this->agent = User::factory()->create(['dealer_id' => $this->dealer->id]);
     $this->agent->givePermissionTo(['loans.create', 'loans.view']);
     $this->brand = Brand::factory()->create(['name' => 'Samsung']);
     $this->phoneModel = PhoneModel::factory()->create([
@@ -38,7 +37,7 @@ beforeEach(function () {
     ]);
     $this->inventoryUnit = InventoryUnit::factory()->create([
         'phone_model_id' => $this->phoneModel->id,
-        'branch_id' => $this->branch->id,
+        'dealer_id' => $this->dealer->id,
         'status' => 'hq_stock',
         'imei_1' => '123456789012345',
         'serial_number' => 'SN-GALAXY-001',
@@ -178,15 +177,9 @@ it('step1 falls back to default loan terms when omitted', function () {
 });
 
 it('step1 auto-links vendor store context from the selected stock unit', function () {
-    $vendor = Vendor::factory()->create([
-        'branch_id' => $this->branch->id,
-        'name' => 'Mlimani Dealer Store',
-    ]);
-
     $vendorUnit = InventoryUnit::factory()->create([
         'phone_model_id' => $this->phoneModel->id,
-        'branch_id' => $this->branch->id,
-        'vendor_id' => $vendor->id,
+        'dealer_id' => $this->dealer->id,
         'status' => 'vendor_stock',
         'imei_1' => '223456789012345',
         'serial_number' => 'SN-VENDOR-001',
@@ -209,8 +202,7 @@ it('step1 auto-links vendor store context from the selected stock unit', functio
     )->first();
 
     expect($draft)->not->toBeNull()
-        ->and($draft?->vendor_id)->toBe($vendor->id)
-        ->and($draft?->branch_id)->toBe($this->branch->id);
+        ->and($draft?->dealer_id)->toBe($this->dealer->id);
 });
 
 it('step1 rejects invalid IMEI', function () {
@@ -353,7 +345,6 @@ it('step3 saves contact and location', function () {
     $this->postJson("/api/v1/kyc/application/{$draft->id}/step3", [
         'phone' => '0712345678',
         'phone_country' => 'TZ',
-        'branch_id' => $this->branch->id,
         'region' => 'Dar es Salaam',
         'district' => 'Kinondoni',
     ])->assertOk()->assertJsonPath('data.step', 3);
@@ -363,16 +354,14 @@ it('step3 saves contact and location', function () {
     expect($draft->fresh()->region)->toBe('Dar es Salaam');
 });
 
-it('step3 keeps the vendor branch context without forcing branch reselection', function () {
-    $vendor = Vendor::factory()->create([
-        'branch_id' => $this->branch->id,
+it('step3 keeps the dealer context without forcing branch reselection', function () {
+    $vendor = Dealer::factory()->create([
         'name' => 'Kijitonyama Vendor',
     ]);
 
     $draft = Customer::factory()->create([
         'registered_by' => $this->agent->id,
-        'vendor_id' => $vendor->id,
-        'branch_id' => $this->branch->id,
+        'dealer_id' => $vendor->id,
         'phone' => '_draft_'.uniqid(),
     ]);
 
@@ -383,20 +372,17 @@ it('step3 keeps the vendor branch context without forcing branch reselection', f
         'district' => 'Ilala',
     ])->assertOk()->assertJsonPath('data.step', 3);
 
-    expect($draft->fresh()->branch_id)->toBe($this->branch->id)
-        ->and($draft->fresh()->vendor_id)->toBe($vendor->id);
+    expect($draft->fresh()->dealer_id)->toBe($vendor->id);
 });
 
-it('stage2 captures customer verification in one request and keeps vendor branch locked', function () {
-    $vendor = Vendor::factory()->create([
-        'branch_id' => $this->branch->id,
+it('stage2 captures customer verification in one request and keeps dealer locked', function () {
+    $vendor = Dealer::factory()->create([
         'name' => 'Kariakoo Dealer',
     ]);
 
     $draft = Customer::factory()->create([
         'registered_by' => $this->agent->id,
-        'branch_id' => $this->branch->id,
-        'vendor_id' => $vendor->id,
+        'dealer_id' => $vendor->id,
         'phone_model_id' => $this->phoneModel->id,
         'inventory_unit_id' => $this->inventoryUnit->id,
         'device_specs' => 'Samsung Galaxy A15 6GB/128GB Blue',
@@ -461,8 +447,7 @@ it('stage2 captures customer verification in one request and keeps vendor branch
     $fresh = $draft->fresh();
 
     expect($fresh->first_name)->toBe('Asha')
-        ->and($fresh->branch_id)->toBe($this->branch->id)
-        ->and($fresh->vendor_id)->toBe($vendor->id)
+        ->and($fresh->dealer_id)->toBe($vendor->id)
         ->and($fresh->phone)->toBe('+255712345678')
         ->and($fresh->alt_phone)->toBe('+255712345679')
         ->and($fresh->nok_phone)->toBe('+255754111222')
@@ -615,7 +600,6 @@ it('step7 submits application with payment, agreement and signatures', function 
 
     $customer = Customer::factory()->create([
         'registered_by' => $this->agent->id,
-        'branch_id' => $this->branch->id,
         'application_draft_reference' => 'draft-api-002',
         'first_name' => 'Amina',
         'last_name' => 'Juma',
@@ -814,15 +798,13 @@ it('treats deposit as paid when Selcom completed row draft_reference differs fro
 });
 
 it('customer detail exposes resume metadata and vendor context for draft editing', function () {
-    $vendor = Vendor::factory()->create([
-        'branch_id' => $this->branch->id,
+    $vendor = Dealer::factory()->create([
         'name' => 'Sinza Dealer',
     ]);
 
     $customer = Customer::factory()->create([
         'registered_by' => $this->agent->id,
-        'branch_id' => $this->branch->id,
-        'vendor_id' => $vendor->id,
+        'dealer_id' => $vendor->id,
         'first_name' => 'Asha',
         'last_name' => 'Moshi',
         'nida_number' => '12345678901234567890',
@@ -836,13 +818,24 @@ it('customer detail exposes resume metadata and vendor context for draft editing
         ->assertJsonPath('data.can_resume_draft', true)
         ->assertJsonPath('data.resume_step', 5)
         ->assertJsonPath('data.resume_stage', 1)
+        ->assertJsonPath('data.dealer.name', 'Sinza Dealer')
         ->assertJsonPath('data.vendor.name', 'Sinza Dealer');
+});
+
+it('blocks fo from viewing customer detail after asset release', function () {
+    $released = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'kyc_status' => 'pending',
+        'asset_release_status' => 'released',
+    ]);
+
+    $this->getJson("/api/v1/kyc/customers/{$released->id}")
+        ->assertStatus(403);
 });
 
 it('allows fo to upload handover checklist when the customer record is missing the file', function () {
     $customer = Customer::factory()->create([
         'registered_by' => $this->agent->id,
-        'branch_id' => $this->branch->id,
         'inventory_unit_id' => $this->inventoryUnit->id,
         'kyc_status' => 'approved',
         'asset_release_status' => 'pending',
@@ -876,7 +869,6 @@ it('release asset marks the stock unit as assigned', function () {
 
     $customer = Customer::factory()->create([
         'registered_by' => $this->agent->id,
-        'branch_id' => $this->branch->id,
         'phone_model_id' => $this->phoneModel->id,
         'inventory_unit_id' => $this->inventoryUnit->id,
         'agreement_document_id' => $agreement->id,

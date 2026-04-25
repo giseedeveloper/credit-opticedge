@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Branch;
+use App\Jobs\ProcessFaceMatchJob;
 use App\Models\Customer;
 use App\Models\Loan;
 use App\Models\SelcomPaymentRequest;
@@ -142,8 +142,7 @@ class KycApiController extends Controller
             'imei_2' => $unit->imei_2,
             'serial_number' => $unit->serial_number,
             'status' => $unit->status,
-            'branch_id' => $unit->branch_id,
-            'vendor_id' => $unit->vendor_id,
+            'dealer_id' => $unit->dealer_id,
             'recommended_terms' => $recommendedTerms,
         ])->values();
 
@@ -244,8 +243,7 @@ class KycApiController extends Controller
             $metadata['loan_terms'] = $loanTerms;
 
             $draft->update([
-                'branch_id' => $deviceSelection['branch_id'] ?? $draft->branch_id ?? $scopeContext['branch_id'],
-                'vendor_id' => $deviceSelection['vendor_id'] ?? $draft->vendor_id ?? $scopeContext['vendor_id'],
+                'dealer_id' => $deviceSelection['dealer_id'] ?? $draft->dealer_id ?? $scopeContext['dealer_id'],
                 'phone_model_id' => $deviceSelection['phone_model_id'],
                 'inventory_unit_id' => $deviceSelection['inventory_unit_id'],
                 'device_specs' => $deviceSelection['device_specs'],
@@ -282,8 +280,7 @@ class KycApiController extends Controller
         $draft = Customer::create([
             'registered_by' => auth()->id(),
             'application_draft_reference' => (string) Str::uuid(),
-            'branch_id' => $deviceSelection['branch_id'] ?? $scopeContext['branch_id'],
-            'vendor_id' => $deviceSelection['vendor_id'] ?? $scopeContext['vendor_id'],
+            'dealer_id' => $deviceSelection['dealer_id'] ?? $scopeContext['dealer_id'],
             'phone_model_id' => $deviceSelection['phone_model_id'],
             'inventory_unit_id' => $deviceSelection['inventory_unit_id'],
             'device_specs' => $deviceSelection['device_specs'],
@@ -375,6 +372,20 @@ class KycApiController extends Controller
             'client_fo_photo_path' => $this->storeFile($request, 'client_fo_photo', 'client_fo') ?? $customer->client_fo_photo_path,
         ]);
 
+        $verification = Verification::firstOrCreate(
+            ['customer_id' => $customer->id, 'type' => 'kyc'],
+            ['status' => 'pending', 'stage' => 2],
+        );
+
+        if ($verification->face_match_status !== 'manual_verified') {
+            $verification->update([
+                'face_match_status' => 'pending',
+                'face_match_reason' => null,
+            ]);
+
+            ProcessFaceMatchJob::dispatch($verification->id);
+        }
+
         return $this->successResponse(['customer_id' => $customer->id, 'step' => 2], 'Step 2 (Identity) saved.');
     }
 
@@ -384,7 +395,7 @@ class KycApiController extends Controller
     // ──────────────────────────────────────────────────────────────
     public function step3Contact(Request $request, string $customerId, KycPhoneService $phoneService): JsonResponse
     {
-        $customer = $this->findAgentCustomerOrFail($customerId, ['vendor']);
+        $customer = $this->findAgentCustomerOrFail($customerId, ['dealer']);
 
         $validated = $request->validate([
             'phone' => ['required', 'string', 'min:7', 'max:20'],
@@ -392,7 +403,6 @@ class KycApiController extends Controller
             'alt_phone' => ['nullable', 'string', 'min:7', 'max:20'],
             'alt_phone_country' => ['nullable', 'string'],
             'email' => ['nullable', 'email'],
-            'branch_id' => ['nullable', 'exists:branches,id'],
             'address' => ['nullable', 'string', 'max:255'],
             'landmark' => ['nullable', 'string', 'max:255'],
             'region' => ['nullable', 'string', 'max:80'],
@@ -402,29 +412,12 @@ class KycApiController extends Controller
         ]);
 
         $contactPhones = $this->normalizeContactPhones($customer, $validated, $phoneService);
-        $lockedBranchId = $customer->vendor?->branch_id ?: $customer->branch_id ?: $request->user()->branch_id;
-        $requestedBranchId = $validated['branch_id'] ?? null;
-
-        if ($customer->vendor?->branch_id && $requestedBranchId && $requestedBranchId !== $customer->vendor->branch_id) {
-            throw ValidationException::withMessages([
-                'branch_id' => 'This application is already tied to the selected vendor store branch and cannot be moved to a different branch.',
-            ]);
-        }
-
-        $resolvedBranchId = $requestedBranchId ?: $lockedBranchId;
-
-        if (! $resolvedBranchId) {
-            throw ValidationException::withMessages([
-                'branch_id' => 'Select the branch that will serve this customer.',
-            ]);
-        }
 
         $customer->update([
             'phone' => $contactPhones['phone'],
             'alt_phone' => $contactPhones['alt_phone'],
             'phone_metadata' => $contactPhones['phone_metadata'],
             'email' => isset($validated['email']) ? strtolower(trim($validated['email'])) : null,
-            'branch_id' => $resolvedBranchId,
             'address' => $validated['address'] ?? null,
             'landmark' => $validated['landmark'] ?? null,
             'region' => $validated['region'] ?? null,
@@ -538,7 +531,7 @@ class KycApiController extends Controller
         KycPhoneService $phoneService,
         KycStageFlowService $stageFlow
     ): JsonResponse {
-        $customer = $this->findAgentCustomerOrFail($customerId, ['vendor']);
+        $customer = $this->findAgentCustomerOrFail($customerId, ['dealer']);
 
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'min:2', 'max:60'],
@@ -557,7 +550,6 @@ class KycApiController extends Controller
             'alt_phone' => ['nullable', 'string', 'min:7', 'max:20'],
             'alt_phone_country' => ['nullable', 'string'],
             'email' => ['nullable', 'email'],
-            'branch_id' => ['nullable', 'exists:branches,id'],
             'address' => ['nullable', 'string', 'max:255'],
             'landmark' => ['nullable', 'string', 'max:255'],
             'region' => ['nullable', 'string', 'max:80'],
@@ -604,22 +596,6 @@ class KycApiController extends Controller
         }
 
         $contactPhones = $this->normalizeContactPhones($customer, $validated, $phoneService);
-        $lockedBranchId = $customer->vendor?->branch_id ?: $customer->branch_id ?: $request->user()->branch_id;
-        $requestedBranchId = $validated['branch_id'] ?? null;
-
-        if ($customer->vendor?->branch_id && $requestedBranchId && $requestedBranchId !== $customer->vendor->branch_id) {
-            throw ValidationException::withMessages([
-                'branch_id' => 'This application is already tied to the selected vendor store branch and cannot be moved to a different branch.',
-            ]);
-        }
-
-        $resolvedBranchId = $requestedBranchId ?: $lockedBranchId;
-
-        if (! $resolvedBranchId) {
-            throw ValidationException::withMessages([
-                'branch_id' => 'Select the branch that will serve this customer.',
-            ]);
-        }
 
         $customer->forceFill([
             'phone' => $contactPhones['phone'],
@@ -639,7 +615,6 @@ class KycApiController extends Controller
             $validated,
             $contactPhones,
             $nokPhones,
-            $resolvedBranchId,
             $idFrontPhotoPath,
             $idBackPhotoPath,
             $headshotPhotoPath,
@@ -662,7 +637,6 @@ class KycApiController extends Controller
                 'alt_phone' => $contactPhones['alt_phone'],
                 'phone_metadata' => $nokPhones['phone_metadata'],
                 'email' => isset($validated['email']) ? strtolower(trim($validated['email'])) : null,
-                'branch_id' => $resolvedBranchId,
                 'address' => $validated['address'] ?? null,
                 'landmark' => $validated['landmark'] ?? null,
                 'region' => $validated['region'] ?? null,
@@ -692,6 +666,20 @@ class KycApiController extends Controller
         });
 
         $customer = $customer->fresh();
+
+        $verification = Verification::firstOrCreate(
+            ['customer_id' => $customer->id, 'type' => 'kyc'],
+            ['status' => 'pending', 'stage' => 2],
+        );
+
+        if ($verification->face_match_status !== 'manual_verified') {
+            $verification->update([
+                'face_match_status' => 'pending',
+                'face_match_reason' => null,
+            ]);
+
+            ProcessFaceMatchJob::dispatch($verification->id);
+        }
 
         return $this->successResponse([
             'customer_id' => $customer->id,
@@ -865,8 +853,8 @@ class KycApiController extends Controller
         if (! $customer->terms_accepted) {
             $missing[] = 'consent';
         }
-        if (! $customer->branch_id) {
-            $missing[] = 'branch_id';
+        if (! $customer->dealer_id) {
+            $missing[] = 'dealer_id';
         }
         if (! $customer->monthly_income) {
             $missing[] = 'monthly_income';
@@ -1052,7 +1040,7 @@ class KycApiController extends Controller
             'per_page' => ['nullable', 'integer', 'min:5', 'max:100'],
         ]);
 
-        $query = Customer::with(['latestKycVerification', 'latestVerification', 'branch'])
+        $query = Customer::with(['latestKycVerification', 'latestVerification', 'dealer'])
             ->withCount('verifications')
             ->where('registered_by', auth()->id())
             ->whereNot('first_name', '_draft_');
@@ -1091,7 +1079,13 @@ class KycApiController extends Controller
                 : ($c->kyc_status ?: ($c->latestKycVerification?->status ?? 'draft')),
             'auto_check' => $c->latestKycVerification?->auto_check_status
                 ?? $c->latestVerification?->auto_check_status,
-            'branch' => $c->branch?->name,
+            'face_match' => [
+                'status' => $c->latestKycVerification?->face_match_status
+                    ?? $c->latestVerification?->face_match_status,
+                'score' => $c->latestKycVerification?->face_match_score
+                    ?? $c->latestVerification?->face_match_score,
+            ],
+            'dealer' => $c->dealer?->name,
             'headshot_url' => $this->photoUrl($c->headshot_photo_path),
             'registered_at' => $c->created_at->toDateTimeString(),
         ]);
@@ -1110,20 +1104,20 @@ class KycApiController extends Controller
     // ──────────────────────────────────────────────────────────────
     public function customerDetail(string $customerId, KycStageFlowService $stageFlow): JsonResponse
     {
-        $customer = Customer::with([
+        $customer = $this->findAgentCustomerOrFail($customerId, [
             'latestKycVerification.fo',
             'latestKycVerification.reviewedBy',
+            'latestKycVerification.faceMatchManualVerifiedBy',
             'latestVerification.fo',
             'latestVerification.reviewedBy',
+            'latestVerification.faceMatchManualVerifiedBy',
             'verifications',
-            'branch',
-            'vendor',
+            'dealer',
             'phoneModel.brand',
             'inventoryUnit',
             'agreementDocument',
             'assetReleasedBy',
-        ])->where('registered_by', auth()->id())
-            ->findOrFail($customerId);
+        ]);
 
         $this->syncCustomerKycStatusFromVerification($customer);
 
@@ -1132,6 +1126,8 @@ class KycApiController extends Controller
         $latestPayment = $this->latestDraftPaymentFor($customer);
         $isDraftApplication = $customer->verifications->isEmpty();
         $resumeStep = $this->determineResumeStep($customer);
+
+        $dealerSummary = $customer->dealer ? ['id' => $customer->dealer->id, 'name' => $customer->dealer->name] : null;
 
         return $this->successResponse([
             'id' => $customer->id,
@@ -1154,8 +1150,8 @@ class KycApiController extends Controller
             'district' => $customer->district,
             'latitude' => $customer->latitude,
             'longitude' => $customer->longitude,
-            'branch' => $customer->branch ? ['id' => $customer->branch->id, 'name' => $customer->branch->name] : null,
-            'vendor' => $customer->vendor ? ['id' => $customer->vendor->id, 'name' => $customer->vendor->name] : null,
+            'dealer' => $dealerSummary,
+            'vendor' => $dealerSummary,
             'device' => [
                 'brand_id' => $customer->phoneModel?->brand?->id,
                 'brand_name' => $customer->phoneModel?->brand?->name,
@@ -1238,6 +1234,15 @@ class KycApiController extends Controller
                 'auto_check_status' => $v->auto_check_status,
                 'auto_check_results' => $v->auto_check_results,
                 'auto_check_ran_at' => $v->auto_check_ran_at?->toDateTimeString(),
+                'face_match' => [
+                    'status' => $v->face_match_status,
+                    'score' => $v->face_match_score,
+                    'reason' => $v->face_match_reason,
+                    'ran_at' => $v->face_match_ran_at?->toDateTimeString(),
+                    'manual_verified_by' => $v->faceMatchManualVerifiedBy?->name,
+                    'manual_verified_at' => $v->face_match_manual_verified_at?->toDateTimeString(),
+                    'alert' => in_array($v->face_match_status, ['review', 'failed'], true),
+                ],
                 'rejection_reason' => $v->rejection_reason,
                 'notes' => $v->notes,
                 'reviewed_by' => $v->reviewedBy?->name,
@@ -1361,15 +1366,12 @@ class KycApiController extends Controller
         ], 'Asset released successfully.');
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // BRANCHES LIST (for step 3 dropdown)
-    // GET /api/v1/kyc/branches
-    // ──────────────────────────────────────────────────────────────
+    /**
+     * @deprecated Branches removed; empty list for older mobile clients.
+     */
     public function branches(): JsonResponse
     {
-        $branches = Branch::orderBy('name')->get(['id', 'name']);
-
-        return $this->successResponse($branches, 'Branches retrieved.');
+        return $this->successResponse([], 'Branches are no longer used.');
     }
 
     /**
@@ -1810,7 +1812,17 @@ class KycApiController extends Controller
             $query->where('registered_by', auth()->id());
         }
 
-        return $query->findOrFail($customerId);
+        $customer = $query->findOrFail($customerId);
+
+        if (
+            ! auth()->user()?->isAdmin()
+            && $customer->registered_by === auth()->id()
+            && $customer->isAssetReleased()
+        ) {
+            abort(403, 'Customer details are locked after approval/release. View summary only.');
+        }
+
+        return $customer;
     }
 
     private function storeFile(Request $request, string $field, string $directory): ?string
@@ -1960,8 +1972,7 @@ class KycApiController extends Controller
         return [
             'phone_model_id' => $phoneModel?->id,
             'inventory_unit_id' => $inventoryUnit?->id,
-            'branch_id' => $inventoryUnit?->branch_id,
-            'vendor_id' => $inventoryUnit?->vendor_id,
+            'dealer_id' => $inventoryUnit?->dealer_id,
             'device_specs' => $phoneModel ? $catalog->buildDeviceSpecs($phoneModel) : trim((string) $validated['device_specs']),
             'imei_number' => $imeiNumber,
             'imei_2' => $imei2 ?: null,
@@ -1999,7 +2010,7 @@ class KycApiController extends Controller
         if (
             filled($customer->phone)
             && ! str_starts_with($customer->phone, '_draft_')
-            && filled($customer->branch_id)
+            && filled($customer->dealer_id)
         ) {
             return 4;
         }

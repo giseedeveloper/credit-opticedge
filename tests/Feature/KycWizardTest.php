@@ -1,9 +1,9 @@
 <?php
 
 use App\Livewire\Kyc\VerificationWizard;
-use App\Models\Branch;
 use App\Models\Brand;
 use App\Models\Customer;
+use App\Models\Dealer;
 use App\Models\InventoryUnit;
 use App\Models\Permission;
 use App\Models\PhoneModel;
@@ -23,8 +23,8 @@ beforeEach(function () {
     app()[PermissionRegistrar::class]->forgetCachedPermissions();
     Permission::firstOrCreate(['name' => 'loans.create', 'guard_name' => 'web']);
     Storage::fake('public');
-    $this->branch = Branch::factory()->create();
-    $this->fo = User::factory()->create(['branch_id' => $this->branch->id]);
+    $this->dealer = Dealer::factory()->create();
+    $this->fo = User::factory()->create(['dealer_id' => $this->dealer->id]);
     $this->fo->givePermissionTo('loans.create');
     $this->brand = Brand::factory()->create(['name' => 'Tecno']);
     $this->phoneModel = PhoneModel::factory()->create([
@@ -35,7 +35,7 @@ beforeEach(function () {
     ]);
     $this->inventoryUnit = InventoryUnit::factory()->create([
         'phone_model_id' => $this->phoneModel->id,
-        'branch_id' => $this->branch->id,
+        'dealer_id' => $this->dealer->id,
         'status' => 'hq_stock',
         'imei_1' => '123456789012345',
         'serial_number' => 'SN-CAMON30-0001',
@@ -59,22 +59,14 @@ it('validates step 1 device fields', function () {
 
     Livewire::test(VerificationWizard::class)
         ->set('preferredRepayment', '')
-        ->set('loanInterestRate', '')
-        ->set('loanInterestType', '')
-        ->set('loanDurationWeeks', '')
-        ->set('loanGracePeriodDays', '')
         ->call('nextStep')
         ->assertHasErrors([
             'brandId',
             'phoneModelId',
-            'deviceSpecs',
+            'imeiNumber',
             'cashPrice',
             'depositAmount',
             'preferredRepayment',
-            'loanInterestRate',
-            'loanInterestType',
-            'loanDurationWeeks',
-            'loanGracePeriodDays',
         ]);
 });
 
@@ -86,7 +78,6 @@ it('autofills device identifiers when a stock unit is selected', function () {
         ->set('phoneModelId', $this->phoneModel->id)
         ->set('inventoryUnitId', $this->inventoryUnit->id)
         ->assertSet('imeiNumber', $this->inventoryUnit->imei_1)
-        ->assertSet('serialNumber', $this->inventoryUnit->serial_number)
         ->assertSet('deviceSpecs', 'Tecno - Camon 30 - 8GB/256GB/Black');
 });
 
@@ -117,8 +108,37 @@ it('fills imei and serial from a scanned device image payload', function () {
             'detectors' => ['text'],
         ])
         ->assertSet('imeiNumber', '356789012345678')
-        ->assertSet('serialNumber', 'TECNO-C30-0009')
-        ->assertSet('scanFeedbackTone', 'emerald');
+        ->assertSet('scanFeedbackTone', 'emerald')
+        ->tap(function ($c): void {
+            expect($c->get('deviceScan')['selected_serial'] ?? null)->toBe('TECNO-C30-0009');
+        });
+});
+
+it('preserves typed imei values when brand or model selection changes', function () {
+    actingAs($this->fo);
+
+    $otherBrand = Brand::factory()->create(['name' => 'Infinix']);
+    $otherModel = PhoneModel::factory()->create([
+        'brand_id' => $otherBrand->id,
+        'name' => 'Hot 40',
+        'retail_price' => 380000,
+    ]);
+
+    Livewire::test(VerificationWizard::class)
+        ->set('imeiNumber', '111111111111111')
+        ->set('imei2', '222222222222222')
+        ->set('brandId', (string) $this->brand->id)
+        ->assertSet('imeiNumber', '111111111111111')
+        ->assertSet('imei2', '222222222222222')
+        ->set('phoneModelId', (string) $this->phoneModel->id)
+        ->assertSet('imeiNumber', '111111111111111')
+        ->assertSet('imei2', '222222222222222')
+        ->set('brandId', (string) $otherBrand->id)
+        ->assertSet('imeiNumber', '111111111111111')
+        ->assertSet('imei2', '222222222222222')
+        ->set('phoneModelId', (string) $otherModel->id)
+        ->assertSet('imeiNumber', '111111111111111')
+        ->assertSet('imei2', '222222222222222');
 });
 
 it('advances to step 2 after valid step 1', function () {
@@ -128,6 +148,8 @@ it('advances to step 2 after valid step 1', function () {
         ->set('brandId', $this->brand->id)
         ->set('phoneModelId', $this->phoneModel->id)
         ->set('inventoryUnitId', $this->inventoryUnit->id)
+        ->set('imeiNumber', $this->inventoryUnit->imei_1)
+        ->set('cashPrice', (string) $this->phoneModel->retail_price)
         ->set('depositAmount', '50000')
         ->set('preferredRepayment', 'weekly')
         ->set('loanInterestRate', '4.50')
@@ -146,7 +168,6 @@ it('validates step 2 identity fields', function () {
         ->set('step', 2)
         ->call('nextStep')
         ->assertHasErrors([
-            // Stage 2 (Customer & Verification) is validated as a full packet.
             'firstName',
             'lastName',
             'gender',
@@ -155,14 +176,6 @@ it('validates step 2 identity fields', function () {
             'idFrontPhoto',
             'idBackPhoto',
             'headshotPhoto',
-            'phone',
-            'monthlyIncome',
-            'nokName',
-            'nokPhone',
-            'nokRelationship',
-            'termsAccepted',
-            'dataConsentAccepted',
-            'callConsentAccepted',
         ]);
 });
 
@@ -180,17 +193,13 @@ it('validates step 3 phone uniqueness', function () {
         ->set('idFrontPhoto', UploadedFile::fake()->image('id-front.jpg'))
         ->set('idBackPhoto', UploadedFile::fake()->image('id-back.jpg'))
         ->set('headshotPhoto', UploadedFile::fake()->image('headshot.jpg'))
+        ->call('nextStep')
+        ->assertSet('step', 3)
         ->set('phone', '0712000001')
         ->set('phoneCountry', 'TZ')
-        ->set('branchId', $this->branch->id)
-        ->set('monthlyIncome', '450000')
-        ->set('nokName', 'John Mwangi')
-        ->set('nokPhone', '0754111222')
-        ->set('nokPhoneCountry', 'TZ')
-        ->set('nokRelationship', 'spouse')
-        ->set('termsAccepted', true)
-        ->set('dataConsentAccepted', true)
-        ->set('callConsentAccepted', true)
+        ->set('altPhoneCountry', 'TZ')
+        ->set('region', 'Dar es Salaam')
+        ->set('district', 'Kinondoni')
         ->call('nextStep')
         ->assertHasErrors(['phone']);
 });
@@ -199,23 +208,10 @@ it('validates step 6 consent required', function () {
     actingAs($this->fo);
 
     Livewire::test(VerificationWizard::class)
-        ->set('step', 2)
-        ->set('firstName', 'Amina')
-        ->set('lastName', 'Juma')
-        ->set('gender', 'female')
-        ->set('nidaNumber', str_pad('3', 20, '0'))
-        ->set('idType', 'nida')
-        ->set('idFrontPhoto', UploadedFile::fake()->image('id-front.jpg'))
-        ->set('idBackPhoto', UploadedFile::fake()->image('id-back.jpg'))
-        ->set('headshotPhoto', UploadedFile::fake()->image('headshot.jpg'))
-        ->set('phone', '0712999888')
-        ->set('phoneCountry', 'TZ')
-        ->set('branchId', $this->branch->id)
-        ->set('monthlyIncome', '500000')
-        ->set('nokName', 'John Mwangi')
-        ->set('nokPhone', '0754111222')
-        ->set('nokPhoneCountry', 'TZ')
-        ->set('nokRelationship', 'spouse')
+        ->set('step', 6)
+        ->set('termsAccepted', false)
+        ->set('dataConsentAccepted', false)
+        ->set('callConsentAccepted', false)
         ->call('nextStep')
         ->assertHasErrors(['termsAccepted', 'dataConsentAccepted', 'callConsentAccepted']);
 });
@@ -223,7 +219,7 @@ it('validates step 6 consent required', function () {
 it('creates customer and verification on submit and runs auto-checks', function () {
     actingAs($this->fo);
 
-    $nida = str_pad('1', 20, '0');
+    $nida = str_pad((string) random_int(10000000, 99999999), 20, '0', STR_PAD_LEFT);
     $agreement = SystemDocument::factory()->create([
         'key' => 'kyc_customer_agreement',
         'disk' => 'public',
@@ -248,11 +244,18 @@ it('creates customer and verification on submit and runs auto-checks', function 
         'paid_at' => now(),
     ]);
 
+    $idFront = UploadedFile::fake()->image('id-front.jpg');
+    $idBack = UploadedFile::fake()->image('id-back.jpg');
+    $headshot = UploadedFile::fake()->image('headshot.jpg');
+
     $component
         // Step 1
         ->set('brandId', $this->brand->id)
         ->set('phoneModelId', $this->phoneModel->id)
         ->set('inventoryUnitId', $this->inventoryUnit->id)
+        ->set('imeiNumber', $this->inventoryUnit->imei_1)
+        ->set('deviceSpecs', 'Tecno Camon 30 test specs')
+        ->set('cashPrice', (string) $this->phoneModel->retail_price)
         ->set('depositAmount', '35000')
         ->set('preferredRepayment', 'monthly')
         ->set('loanInterestRate', '5.25')
@@ -270,25 +273,36 @@ it('creates customer and verification on submit and runs auto-checks', function 
         ->set('gender', 'female')
         ->set('nidaNumber', $nida)
         ->set('idType', 'nida')
+        ->set('idFrontPhoto', $idFront)
+        ->set('idBackPhoto', $idBack)
+        ->set('headshotPhoto', $headshot)
         // Step 3
         ->set('phone', '0712999888')
         ->set('phoneCountry', 'TZ')
-        ->set('branchId', $this->branch->id)
+        ->set('altPhoneCountry', 'TZ')
+        ->set('region', 'Dar es Salaam')
+        ->set('district', 'Kinondoni')
         // Step 4
+        ->set('occupation', 'Trader')
+        ->set('incomePaymentCycle', 'monthly')
+        ->set('isPep', false)
         ->set('monthlyIncome', '500000')
         // Step 5
         ->set('nokName', 'John Mwangi')
         ->set('nokPhone', '0754111222')
         ->set('nokPhoneCountry', 'TZ')
         ->set('nokRelationship', 'spouse')
+        ->set('nok2PhoneCountry', 'TZ')
         // Step 6
         ->set('termsAccepted', true)
         ->set('dataConsentAccepted', true)
         ->set('callConsentAccepted', true)
         // Step 7 payment & agreement
+        ->set('paymentPhone', '0712999888')
         ->set('agreementDecision', 'yes')
         ->set('customerSignatureData', kycWizardSignatureDataUrl())
         ->set('foSignatureData', kycWizardSignatureDataUrl())
+        ->set('etrReceiptPhoto', UploadedFile::fake()->image('etr.jpg', 900, 600))
         ->set('assetHandoverList', UploadedFile::fake()->create('handover.pdf', 120, 'application/pdf'))
         ->set('assetHandoverNotes', 'Phone, charger, box, cover and protector issued to customer.')
         // Submit — service is DI-injected by Livewire automatically
@@ -302,6 +316,7 @@ it('creates customer and verification on submit and runs auto-checks', function 
         ->first();
 
     expect($customer)->not->toBeNull()
+        ->and($customer?->serial_number)->toBe($this->inventoryUnit->serial_number)
         ->and($customer?->phone_metadata['phone']['country_iso'])->toBe('TZ')
         ->and($customer?->nok_phone)->toBe('+255754111222')
         ->and($customer?->device_accessories)->toHaveCount(2)

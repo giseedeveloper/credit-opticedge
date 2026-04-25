@@ -2,8 +2,10 @@
 
 namespace App\Jobs;
 
+use App\Services\IMEITrackingService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 
 class BulkInventoryImportJob implements ShouldQueue
 {
@@ -20,26 +22,24 @@ class BulkInventoryImportJob implements ShouldQueue
     public function __construct(
         public readonly array $rows,
         public readonly int $uploadedBy,
-        public readonly ?int $vendorId = null,
-        public readonly ?int $branchId = null,
+        public readonly ?string $dealerId = null,
         public readonly ?int $phoneModelId = null
     ) {
         $this->onQueue('imports');
     }
 
-    public function handle(\App\Services\IMEITrackingService $service): void
+    public function handle(IMEITrackingService $service): void
     {
         $rows = collect($this->rows)->map(function (array $row) {
             return array_merge($row, [
-                'vendor_id'       => $this->vendorId,
-                'branch_id'       => $this->branchId,
-                'phone_model_id'  => $row['phone_model_id'] ?? $this->phoneModelId,
+                'dealer_id' => $this->dealerId,
+                'phone_model_id' => $row['phone_model_id'] ?? $this->phoneModelId,
             ]);
         });
 
         $report = $service->bulkRegister($rows);
 
-        \Illuminate\Support\Facades\Log::info('Bulk inventory import completed', array_merge(
+        Log::info('Bulk inventory import completed', array_merge(
             $report,
             ['uploaded_by' => $this->uploadedBy]
         ));
@@ -47,9 +47,9 @@ class BulkInventoryImportJob implements ShouldQueue
 
     public function failed(\Throwable $exception): void
     {
-        \Illuminate\Support\Facades\Log::error('BulkInventoryImportJob failed', [
+        Log::error('BulkInventoryImportJob failed', [
             'uploaded_by' => $this->uploadedBy,
-            'exception'   => $exception->getMessage(),
+            'exception' => $exception->getMessage(),
         ]);
     }
 }

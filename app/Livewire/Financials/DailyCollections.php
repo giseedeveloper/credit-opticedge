@@ -89,7 +89,7 @@ class DailyCollections extends Component
 
         return Transaction::with([
             'loan.customer',
-            'loan.branch',
+            'loan.dealer',
             'loan.inventoryUnit.phoneModel.brand',
             'recordedBy',
             'repaymentSchedule',

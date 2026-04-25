@@ -2,7 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Models\Dealer;
+use App\Models\InventoryUnit;
 use App\Models\StockTransfer;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,17 +21,17 @@ class StockTransferFactory extends Factory
     public function definition(): array
     {
         return [
-            'inventory_unit_id' => \App\Models\InventoryUnit::factory(),
-            'from_type'         => \App\Models\Branch::class,
-            'from_id'           => \App\Models\Branch::factory(),
-            'to_type'           => \App\Models\Vendor::class,
-            'to_id'             => \App\Models\Vendor::factory(),
-            'transferred_by'    => \App\Models\User::factory(),
-            'reference'         => 'TRF-' . strtoupper(fake()->unique()->bothify('######')),
-            'status'            => 'pending',
-            'notes'             => null,
-            'shipped_at'        => null,
-            'received_at'       => null,
+            'inventory_unit_id' => InventoryUnit::factory(),
+            'from_type' => Dealer::class,
+            'from_id' => Dealer::factory(),
+            'to_type' => Dealer::class,
+            'to_id' => Dealer::factory(),
+            'transferred_by' => User::factory(),
+            'reference' => 'TRF-'.strtoupper(fake()->unique()->bothify('######')),
+            'status' => 'pending',
+            'notes' => null,
+            'shipped_at' => null,
+            'received_at' => null,
         ];
     }
 }

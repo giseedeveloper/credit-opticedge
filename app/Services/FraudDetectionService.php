@@ -15,16 +15,16 @@ class FraudDetectionService
     {
         $metrics = [
             'risk_level' => 'low',
-            'flags' => []
+            'flags' => [],
         ];
 
         // 1. Velocity Checks: Ensure vendor hasn't sold suspiciously quickly
-        $vendorId = $customer->vendor_id;
+        $vendorId = $customer->dealer_id;
         if ($vendorId) {
-            $salesLastHour = Loan::where('vendor_id', $vendorId)
+            $salesLastHour = Loan::where('dealer_id', $vendorId)
                 ->where('created_at', '>=', now()->subHour())
                 ->count();
-            
+
             if ($salesLastHour > 10) {
                 $metrics['flags'][] = 'velocity_check_trigger';
                 $metrics['risk_level'] = 'high';
@@ -38,7 +38,7 @@ class FraudDetectionService
             $duplicateDevice = Customer::where('metadata->device_fingerprint', $metadata['device_fingerprint'])
                 ->where('id', '!=', $customer->id)
                 ->count();
-            
+
             if ($duplicateDevice > 1) {
                 $metrics['flags'][] = 'device_fingerprint_duplicated';
                 $metrics['risk_level'] = 'critical';
@@ -46,7 +46,7 @@ class FraudDetectionService
         }
 
         if ($metrics['risk_level'] !== 'low') {
-            Log::warning("Fraud Engine: Suspicious boarding intercepted.", $metrics);
+            Log::warning('Fraud Engine: Suspicious boarding intercepted.', $metrics);
         }
 
         return $metrics;

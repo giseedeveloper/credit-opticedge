@@ -2,24 +2,15 @@
 
 namespace Database\Seeders;
 
-use App\Models\Branch;
-use App\Models\Vendor;
+use App\Models\Dealer;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
-class VendorsSeeder extends Seeder
+class DealersSeeder extends Seeder
 {
     public function run(): void
     {
-        $branches = Branch::query()->orderBy('name')->get();
-
-        if ($branches->isEmpty()) {
-            $this->command?->warn('No branches found. Seed branches first, then rerun VendorsSeeder.');
-
-            return;
-        }
-
-        $vendorData = [
+        $dealerData = [
             ['name' => 'TechHub Kariakoo', 'commission' => 4.5],
             ['name' => 'MobiDeals Arusha', 'commission' => 3.5],
             ['name' => 'SmartPhone Palace', 'commission' => 5.0],
@@ -37,19 +28,17 @@ class VendorsSeeder extends Seeder
             ['name' => 'Zanzibar Phone Plaza', 'commission' => 3.5],
         ];
 
-        foreach ($vendorData as $idx => $v) {
+        foreach ($dealerData as $idx => $v) {
             $code = 'VND-'.str_pad((string) ($idx + 1), 3, '0', STR_PAD_LEFT);
-            $branch = $branches->get($idx % $branches->count());
             $name = (string) $v['name'];
 
-            Vendor::query()->updateOrCreate(
+            Dealer::query()->updateOrCreate(
                 ['code' => $code],
                 [
-                    'branch_id' => $branch->id,
                     'name' => $name,
                     'phone' => '+255 76'.fake()->numerify('#######'),
-                    'email' => Str::slug($name).'@vendor.co.tz',
-                    'address' => $branch->address,
+                    'email' => Str::slug($name).'@dealer.co.tz',
+                    'address' => 'Tanzania',
                     'tin_number' => fake()->numerify('###-###-###'),
                     'commission_rate' => (float) $v['commission'],
                     'status' => 'active',

@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'phone_model_id', 'branch_id', 'vendor_id', 'imei_1', 'imei_2',
+    'phone_model_id', 'dealer_id', 'imei_1', 'imei_2',
     'serial_number', 'mdm_id', 'lock_status', 'status', 'grading', 'repair_cost',
     'purchase_price', 'received_at', 'extra_data',
 ])]
@@ -37,14 +37,9 @@ class InventoryUnit extends Model
         return $this->belongsTo(PhoneModel::class);
     }
 
-    public function branch(): BelongsTo
+    public function dealer(): BelongsTo
     {
-        return $this->belongsTo(Branch::class);
-    }
-
-    public function vendor(): BelongsTo
-    {
-        return $this->belongsTo(Vendor::class);
+        return $this->belongsTo(Dealer::class);
     }
 
     public function loan(): HasOne

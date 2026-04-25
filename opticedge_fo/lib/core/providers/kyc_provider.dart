@@ -74,7 +74,6 @@ class KycDraftState {
   final String deviceSpecs;
   final String imeiNumber;
   final String imei2;
-  final String serialNumber;
   final String cashPrice;
   final String depositAmount;
   final String preferredRepayment;
@@ -172,7 +171,6 @@ class KycDraftState {
     this.deviceSpecs = '',
     this.imeiNumber = '',
     this.imei2 = '',
-    this.serialNumber = '',
     this.cashPrice = '',
     this.depositAmount = '',
     this.preferredRepayment = 'weekly',
@@ -261,7 +259,6 @@ class KycDraftState {
     String? deviceSpecs,
     String? imeiNumber,
     String? imei2,
-    String? serialNumber,
     String? cashPrice,
     String? depositAmount,
     String? preferredRepayment,
@@ -351,7 +348,6 @@ class KycDraftState {
       deviceSpecs: deviceSpecs ?? this.deviceSpecs,
       imeiNumber: imeiNumber ?? this.imeiNumber,
       imei2: imei2 ?? this.imei2,
-      serialNumber: serialNumber ?? this.serialNumber,
       cashPrice: cashPrice ?? this.cashPrice,
       depositAmount: depositAmount ?? this.depositAmount,
       preferredRepayment: preferredRepayment ?? this.preferredRepayment,
@@ -556,9 +552,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       inventoryUnitId: '',
       inventorySearch: '',
       deviceSpecs: '',
-      imeiNumber: '',
-      imei2: '',
-      serialNumber: '',
       cashPrice: '',
       loanInterestRate: '',
       loanInterestType: 'flat',
@@ -574,9 +567,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         inventoryUnitId: '',
         deviceSpecs: '',
         cashPrice: '',
-        imeiNumber: '',
-        imei2: '',
-        serialNumber: '',
         loanInterestRate: '',
         loanInterestType: 'flat',
         loanDurationWeeks: '',
@@ -592,9 +582,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         inventoryUnitId: '',
         deviceSpecs: model.deviceSpecs,
         cashPrice: model.retailPrice?.toString() ?? '',
-        imeiNumber: '',
-        imei2: '',
-        serialNumber: '',
       ),
       interestRate: model.recommendedInterestRate,
       interestType: model.recommendedInterestType,
@@ -607,9 +594,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
     if (unit == null) {
       state = state.copyWith(
         inventoryUnitId: '',
-        imeiNumber: '',
-        imei2: '',
-        serialNumber: '',
       );
       return;
     }
@@ -621,7 +605,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         cashPrice: unit.recommendedCashPrice?.toString() ?? state.cashPrice,
         imeiNumber: unit.imei1,
         imei2: unit.imei2 ?? '',
-        serialNumber: unit.serialNumber ?? '',
       ),
       interestRate: unit.recommendedInterestRate,
       interestType: unit.recommendedInterestType,
@@ -801,7 +784,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         if (state.deviceSpecs.isNotEmpty) 'device_specs': state.deviceSpecs,
         if (state.imeiNumber.isNotEmpty) 'imei_number': state.imeiNumber,
         if (state.imei2.isNotEmpty) 'imei_2': state.imei2,
-        if (state.serialNumber.isNotEmpty) 'serial_number': state.serialNumber,
         if (state.cashPrice.isNotEmpty) 'cash_price': state.cashPrice,
         'deposit_amount': state.depositAmount,
         'preferred_repayment': _repaymentForApi(state.preferredRepayment),
@@ -945,7 +927,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         'alt_phone_country': state.altPhoneCountry,
         if (state.email.isNotEmpty) 'email': state.email,
         'branch_id': state.branchId,
-        if (state.address.isNotEmpty) 'address': state.address,
         if (state.landmark.isNotEmpty) 'landmark': state.landmark,
         if (state.region.isNotEmpty) 'region': state.region,
         if (state.district.isNotEmpty) 'district': state.district,
@@ -990,14 +971,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       final id = state.customerId!;
       final form = FormData.fromMap({
         if (state.occupation.isNotEmpty) 'occupation': state.occupation,
-        if (state.employer.isNotEmpty) 'employer': state.employer,
-        if (state.workLocation.isNotEmpty) 'work_location': state.workLocation,
         'monthly_income': state.monthlyIncome,
-        if (state.monthlyExpenses.isNotEmpty)
-          'monthly_expenses': state.monthlyExpenses,
-        'income_payment_cycle': _incomeCycleValueForApi(
-          state.incomePaymentCycle,
-        ),
+        'income_payment_cycle': _incomeCycleValueForApi(state.incomePaymentCycle),
         'is_pep': state.isPep ? '1' : '0',
         if (state.durationAtWork.isNotEmpty)
           'duration_at_work': state.durationAtWork,
@@ -1184,19 +1159,12 @@ class KycNotifier extends StateNotifier<KycDraftState> {
           'alt_phone_country': state.altPhoneCountry,
         if (state.email.isNotEmpty) 'email': state.email,
         if (state.branchId.isNotEmpty) 'branch_id': state.branchId,
-        if (state.address.isNotEmpty) 'address': state.address,
         if (state.landmark.isNotEmpty) 'landmark': state.landmark,
         if (state.region.isNotEmpty) 'region': state.region,
         if (state.district.isNotEmpty) 'district': state.district,
         if (state.occupation.isNotEmpty) 'occupation': state.occupation,
-        if (state.employer.isNotEmpty) 'employer': state.employer,
-        if (state.workLocation.isNotEmpty) 'work_location': state.workLocation,
         'monthly_income': state.monthlyIncome,
-        if (state.monthlyExpenses.isNotEmpty)
-          'monthly_expenses': state.monthlyExpenses,
-        'income_payment_cycle': _incomeCycleValueForApi(
-          state.incomePaymentCycle,
-        ),
+        'income_payment_cycle': _incomeCycleValueForApi(state.incomePaymentCycle),
         if (state.durationAtWork.isNotEmpty)
           'duration_at_work': state.durationAtWork,
         if (state.businessPhoto != null)
@@ -1399,7 +1367,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         deviceSpecs: detail.device['specs']?.toString() ?? '',
         imeiNumber: detail.device['imei_1']?.toString() ?? '',
         imei2: detail.device['imei_2']?.toString() ?? '',
-        serialNumber: detail.device['serial_number']?.toString() ?? '',
         cashPrice: detail.device['cash_price']?.toString() ?? '',
         depositAmount: detail.device['deposit_amount']?.toString() ?? '',
         preferredRepayment:

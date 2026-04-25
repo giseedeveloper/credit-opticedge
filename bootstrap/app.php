@@ -37,6 +37,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ->dailyAt('06:00')
             ->withoutOverlapping()
             ->sendOutputTo(storage_path('logs/penalty-automator.log'), true);
+
+        $schedule->command('app:sync-device-catalog')
+            ->dailyAt('02:30')
+            ->withoutOverlapping()
+            ->sendOutputTo(storage_path('logs/device-catalog-sync.log'), true);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -61,4 +61,8 @@ return [
         'payment_status_poll_sleep_ms' => (int) env('SELCOM_PAYMENT_STATUS_POLL_SLEEP_MS', 2000),
     ],
 
+    'face_match' => [
+        'url' => env('FACE_MATCH_URL'),
+    ],
+
 ];

@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Branch;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
@@ -19,18 +18,6 @@ class AdminUserSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        $hq = Branch::firstOrCreate(
-            ['code' => 'HQ-001'],
-            [
-                'name' => 'OpticEdge HQ - Dar es Salaam',
-                'region' => 'Dar es Salaam',
-                'address' => 'Samora Avenue, Posta, Ilala',
-                'phone' => '+255 22 211 0000',
-                'is_headquarter' => true,
-                'is_active' => true,
-            ]
-        );
-
         $admin = User::firstOrCreate(
             ['email' => 'admin@opticedge.co.tz'],
             [
@@ -40,7 +27,6 @@ class AdminUserSeeder extends Seeder
                 'phone' => '+255 700 000 000',
                 'role' => 'admin',
                 'employee_code' => 'EMP-ADMIN-001',
-                'branch_id' => $hq->id,
                 'joined_at' => now()->toDateString(),
                 'is_active' => true,
             ]
@@ -68,7 +54,6 @@ class AdminUserSeeder extends Seeder
                 'phone' => '+255 700 000 001',
                 'role' => 'admin',
                 'employee_code' => 'EMP-ADMIN-CREDITY',
-                'branch_id' => $hq->id,
                 'joined_at' => now()->toDateString(),
                 'is_active' => true,
             ]

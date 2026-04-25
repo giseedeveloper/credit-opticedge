@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +16,7 @@ import '../screens/profile/profile_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../core/l10n/app_strings.dart';
 import '../widgets/common/app_color_icon.dart';
+import '../widgets/common/premium_glass_background.dart';
 
 class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this._ref) {
@@ -142,31 +145,62 @@ class _MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final navBg = isDark ? DesignTokens.darkNavBarBg : Colors.white;
     final navBorder =
         isDark ? DesignTokens.darkNavBarBorder : const Color(0xFFE2E8F0);
     final s = S.of(ref);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    const navReserve = 72.0;
 
     return Scaffold(
-      body: child,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: navBg,
-          border: Border(top: BorderSide(color: navBorder, width: 1)),
-          boxShadow: [
-            BoxShadow(
-              color: isDark
-                  ? Colors.black.withValues(alpha: 0.45)
-                  : DesignTokens.primary.withValues(alpha: 0.06),
-              blurRadius: isDark ? 20 : 16,
-              offset: const Offset(0, -4),
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const Positioned.fill(
+            child: PremiumGlassBackground(
+              useHeroTint: true,
+              child: SizedBox.expand(),
             ),
-          ],
-        ),
-        child: SafeArea(
-          child: SizedBox(
-            height: 68,
-            child: Row(
+          ),
+          Positioned.fill(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: navReserve + bottomInset),
+              child: child,
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? DesignTokens.darkSurfaceElevated.withValues(
+                            alpha: 0.94,
+                          )
+                        : Colors.white.withValues(alpha: 0.88),
+                    border: Border(
+                      top: BorderSide(color: navBorder, width: 1),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark
+                            ? Colors.black.withValues(alpha: 0.45)
+                            : DesignTokens.primary.withValues(alpha: 0.06),
+                        blurRadius: isDark ? 20 : 16,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: SizedBox(
+                      height: 68,
+                      child: Row(
               children: [
                 _NavItem(
                   iconAsset: AppIconAssets.dashboard,
@@ -263,8 +297,13 @@ class _MainShell extends ConsumerWidget {
                 ),
               ],
             ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

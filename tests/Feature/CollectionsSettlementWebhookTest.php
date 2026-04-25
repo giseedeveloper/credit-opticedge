@@ -1,8 +1,8 @@
 <?php
 
-use App\Models\Branch;
 use App\Models\Brand;
 use App\Models\Customer;
+use App\Models\Dealer;
 use App\Models\InventoryUnit;
 use App\Models\Loan;
 use App\Models\Permission;
@@ -10,7 +10,6 @@ use App\Models\PhoneModel;
 use App\Models\RepaymentSchedule;
 use App\Models\Transaction;
 use App\Models\User;
-use App\Models\Vendor;
 use App\Services\LoanCalculatorService;
 use App\Services\LoanManagementService;
 use App\Services\PaymentProcessingService;
@@ -159,18 +158,15 @@ test('webhook records signed payments and blocks duplicate references', function
 
 function createCollectionsLoan(float $principal = 400_000, int $weeks = 4): Loan
 {
-    $branch = Branch::factory()->create();
     $brand = Brand::factory()->create();
     $model = PhoneModel::factory()->create(['brand_id' => $brand->id]);
-    $vendor = Vendor::factory()->create(['branch_id' => $branch->id]);
+    $vendor = Dealer::factory()->create();
     $customer = Customer::factory()->create([
-        'branch_id' => $branch->id,
-        'vendor_id' => $vendor->id,
+        'dealer_id' => $vendor->id,
     ]);
     $unit = InventoryUnit::factory()->create([
         'phone_model_id' => $model->id,
-        'branch_id' => $branch->id,
-        'vendor_id' => $vendor->id,
+        'dealer_id' => $vendor->id,
     ]);
 
     $calculator = app(LoanCalculatorService::class);
@@ -179,8 +175,7 @@ function createCollectionsLoan(float $principal = 400_000, int $weeks = 4): Loan
     $loan = Loan::factory()->create([
         'customer_id' => $customer->id,
         'inventory_unit_id' => $unit->id,
-        'vendor_id' => $vendor->id,
-        'branch_id' => $branch->id,
+        'dealer_id' => $vendor->id,
         'loan_number' => $calculator->generateLoanNumber(),
         'principal_amount' => $principal,
         'interest_rate' => 20,

@@ -129,8 +129,12 @@ class LendingPanel extends Component
         $totalDebt = $principal + $computed['total_interest'];
         $remaining = $computed['total_payable'];
 
+        $customer = Customer::query()->findOrFail($this->newCustomerId);
+        $unit = InventoryUnit::query()->findOrFail($this->newUnitId);
+        $dealerId = $customer->dealer_id ?? $unit->dealer_id;
+
         $loan = DB::transaction(function () use (
-            $principal, $deposit, $totalDebt, $remaining
+            $principal, $deposit, $totalDebt, $remaining, $dealerId
         ) {
             // Atomic loan number — lock last row to prevent race condition
             $last = Loan::withTrashed()->lockForUpdate()->count();
@@ -139,9 +143,9 @@ class LendingPanel extends Component
             return Loan::create([
                 'customer_id' => $this->newCustomerId,
                 'inventory_unit_id' => $this->newUnitId,
+                'dealer_id' => $dealerId,
                 'disbursed_by' => auth()->id(),
                 'approved_by' => auth()->id(),
-                'branch_id' => auth()->user()->branch_id,
                 'loan_number' => $loanNumber,
                 'principal_amount' => $principal,
                 'deposit_paid' => $deposit,

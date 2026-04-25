@@ -2,17 +2,18 @@
 
 namespace App\Livewire\Kyc;
 
-use App\Models\Branch;
+use App\Jobs\ProcessFaceMatchJob;
 use App\Models\Brand;
 use App\Models\Customer;
+use App\Models\InventoryUnit;
 use App\Models\PhoneModel;
 use App\Models\SelcomPaymentRequest;
 use App\Models\SystemDocument;
-use App\Models\Vendor;
 use App\Models\Verification;
 use App\Services\ApplicationAutoCheckService;
 use App\Services\CustomerLoanProvisioningService;
 use App\Services\DeviceIdentifierScanService;
+use App\Services\ExternalDeviceCatalogService;
 use App\Services\IMEITrackingService;
 use App\Services\KycAccessoryOfferService;
 use App\Services\KycDeviceCatalogService;
@@ -67,8 +68,6 @@ class VerificationWizard extends Component
     public string $imeiNumber = '';
 
     public string $imei2 = '';
-
-    public string $serialNumber = '';
 
     public string $cashPrice = '';
 
@@ -146,8 +145,6 @@ class VerificationWizard extends Component
     public string $altPhoneCountry = 'TZ';
 
     public string $email = '';
-
-    public string $branchId = '';
 
     public string $address = '';
 
@@ -246,8 +243,6 @@ class VerificationWizard extends Component
         $this->draftCode = $this->generateDraftCode();
         $this->preferredRepayment = 'weekly';
         $this->seedLoanTermsFromDefaults(overwrite: true);
-
-        $this->branchId = $this->resolveBranchIdForCapture() ?? '';
     }
 
     /** @return array<string,mixed> */
@@ -258,7 +253,6 @@ class VerificationWizard extends Component
             'phoneModelId' => ['required', 'exists:phone_models,id'],
             'imeiNumber' => ['required', 'string', 'digits:15'],
             'imei2' => ['nullable', 'string', 'digits:15'],
-            'serialNumber' => ['nullable', 'string', 'max:60'],
             'cashPrice' => ['required', 'numeric', 'min:1'],
             'depositAmount' => ['required', 'numeric', 'min:0'],
             'preferredRepayment' => ['required', 'in:weekly,biweekly,monthly'],
@@ -294,11 +288,9 @@ class VerificationWizard extends Component
             'altPhone' => ['nullable', 'string', 'min:7', 'max:20', 'different:phone'],
             'altPhoneCountry' => ['required', 'string', 'size:2'],
             'email' => ['nullable', 'email', 'max:120'],
-            'address' => ['nullable', 'string', 'max:255'],
             'landmark' => ['nullable', 'string', 'max:255'],
             'region' => ['required', 'string', 'max:80'],
             'district' => ['required', 'string', 'max:80'],
-            'branchId' => ['required', 'exists:branches,id'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ];
@@ -309,12 +301,8 @@ class VerificationWizard extends Component
     {
         return [
             'occupation' => ['required', 'string', 'max:100'],
-            'incomePaymentCycle' => ['required', 'in:daily,weekly,biweekly,monthly,irregular'],
             'isPep' => ['boolean'],
-            'employer' => ['nullable', 'string', 'max:100'],
-            'workLocation' => ['nullable', 'string', 'max:200'],
             'monthlyIncome' => ['required', 'numeric', 'min:0'],
-            'monthlyExpenses' => ['nullable', 'numeric', 'min:0'],
             'durationAtWork' => ['nullable', 'string', 'max:60'],
             'businessPhoto' => ['nullable', 'image', 'max:5120'],
         ];
@@ -360,6 +348,9 @@ class VerificationWizard extends Component
 
     private function validateStepFour(): void
     {
+        if ($this->incomePaymentCycle === '') {
+            $this->incomePaymentCycle = 'monthly';
+        }
         $this->validate($this->step4Rules());
     }
 
@@ -443,14 +434,26 @@ class VerificationWizard extends Component
             'inventoryUnitId',
             'inventorySearch',
             'deviceSpecs',
-            'imeiNumber',
-            'imei2',
-            'serialNumber',
             'cashPrice',
             'deviceScan',
             'scanFeedbackMessage',
         ]);
         $this->scanFeedbackTone = 'slate';
+
+        $brand = Brand::query()
+            ->whereKey($this->brandId !== '' ? $this->brandId : null)
+            ->where('is_active', true)
+            ->first();
+
+        if (! $brand) {
+            return;
+        }
+
+        $synced = app(ExternalDeviceCatalogService::class)->syncModelsForBrand($brand);
+
+        if ($synced > 0) {
+            $this->dispatch('toast', message: "Models updated for {$brand->name}.", type: 'success');
+        }
     }
 
     public function updatedPhoneModelId(): void
@@ -458,9 +461,6 @@ class VerificationWizard extends Component
         $this->reset([
             'inventoryUnitId',
             'inventorySearch',
-            'imeiNumber',
-            'imei2',
-            'serialNumber',
             'deviceScan',
             'scanFeedbackMessage',
         ]);
@@ -494,9 +494,6 @@ class VerificationWizard extends Component
     public function updatedInventoryUnitId(KycDeviceCatalogService $catalog): void
     {
         if ($this->inventoryUnitId === '') {
-            $this->imeiNumber = '';
-            $this->imei2 = '';
-            $this->serialNumber = '';
             $this->deviceScan = [];
             $this->scanFeedbackMessage = null;
             $this->scanFeedbackTone = 'slate';
@@ -537,9 +534,8 @@ class VerificationWizard extends Component
         $this->cashPrice = (string) ((float) $phoneModel->retail_price);
         $this->imeiNumber = $unit->imei_1;
         $this->imei2 = $unit->imei_2 ?? '';
-        $this->serialNumber = $unit->serial_number ?? '';
         $this->scanFeedbackTone = 'sky';
-        $this->scanFeedbackMessage = 'Stock unit linked. IMEI and serial have been loaded automatically from inventory.';
+        $this->scanFeedbackMessage = 'Stock unit linked. IMEI has been loaded automatically from inventory.';
         $this->seedLoanTermsFromDefaults();
     }
 
@@ -574,7 +570,7 @@ class VerificationWizard extends Component
 
         if (! $detectedImei && ! $detectedSerial) {
             $this->scanFeedbackTone = 'amber';
-            $this->scanFeedbackMessage = 'Uploaded image was received, but no clear IMEI or serial number was detected. You can still type them manually.';
+            $this->scanFeedbackMessage = 'Uploaded image was received, but no clear IMEI or serial number was detected. You can still enter the IMEI manually.';
 
             return;
         }
@@ -637,10 +633,6 @@ class VerificationWizard extends Component
                 return;
             }
 
-            if ($detectedSerial && ! $linkedUnit->serial_number) {
-                $this->serialNumber = strtoupper($detectedSerial);
-            }
-
             $this->scanFeedbackTone = 'emerald';
             $this->scanFeedbackMessage = 'Scan confirmed the selected stock unit successfully.';
 
@@ -653,10 +645,6 @@ class VerificationWizard extends Component
 
         if ($this->imei2 === '' && $detectedImei2) {
             $this->imei2 = $detectedImei2;
-        }
-
-        if ($detectedSerial) {
-            $this->serialNumber = strtoupper($detectedSerial);
         }
 
         $this->scanFeedbackTone = 'emerald';
@@ -1048,7 +1036,6 @@ class VerificationWizard extends Component
             'deviceSpecs' => ['required', 'string', 'min:3', 'max:200'],
             'imeiNumber' => ['required', 'string', 'digits:15'],
             'imei2' => ['nullable', 'string', 'digits:15'],
-            'serialNumber' => ['nullable', 'string', 'max:60'],
             'cashPrice' => ['required', 'numeric', 'min:1'],
             'depositAmount' => ['required', 'numeric', 'min:0'],
             'preferredRepayment' => ['required', 'in:weekly,biweekly,monthly'],
@@ -1070,7 +1057,6 @@ class VerificationWizard extends Component
             'landmark' => ['nullable', 'string', 'max:255'],
             'region' => ['required', 'string', 'max:80'],
             'district' => ['required', 'string', 'max:80'],
-            'branchId' => ['required', 'exists:branches,id'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             // Step 4
@@ -1121,8 +1107,7 @@ class VerificationWizard extends Component
 
         $customer = Customer::create([
             'registered_by' => auth()->id(),
-            'branch_id' => $this->branchId ?: null,
-            'vendor_id' => $selectedUnit?->vendor_id,
+            'dealer_id' => $selectedUnit?->dealer_id,
             'phone_model_id' => $this->phoneModelId ?: null,
             'inventory_unit_id' => $selectedUnit?->id,
             'application_draft_reference' => $this->draftReference,
@@ -1130,7 +1115,7 @@ class VerificationWizard extends Component
             'device_specs' => trim($this->deviceSpecs),
             'imei_number' => $selectedUnit?->imei_1 ?? strtoupper(trim($this->imeiNumber)),
             'imei_2' => $selectedUnit?->imei_2 ?? ($this->imei2 ? strtoupper(trim($this->imei2)) : null),
-            'serial_number' => $selectedUnit?->serial_number ?? ($this->serialNumber ? strtoupper(trim($this->serialNumber)) : null),
+            'serial_number' => $this->resolvedSerialForCustomer($selectedUnit),
             'cash_price' => $this->cashPrice,
             'deposit_amount' => $this->depositAmount,
             'preferred_repayment' => $this->preferredRepayment,
@@ -1228,6 +1213,8 @@ class VerificationWizard extends Component
         $result = $checker->run($customer, $verification);
         $this->autoCheckResult = $result;
 
+        ProcessFaceMatchJob::dispatch($verification->id);
+
         activity('kyc')
             ->performedOn($customer)
             ->causedBy(auth()->user())
@@ -1236,6 +1223,21 @@ class VerificationWizard extends Component
 
         $this->submittedName = $customer->full_name;
         $this->submitted = true;
+    }
+
+    private function resolvedSerialForCustomer(?InventoryUnit $selectedUnit): ?string
+    {
+        if ($selectedUnit?->serial_number) {
+            return strtoupper(trim((string) $selectedUnit->serial_number));
+        }
+
+        $fromScan = $this->deviceScan['selected_serial'] ?? null;
+
+        if (! is_string($fromScan) || trim($fromScan) === '') {
+            return null;
+        }
+
+        return strtoupper(trim($fromScan));
     }
 
     private function enforceDeviceSelectionIntegrity(
@@ -1271,7 +1273,8 @@ class VerificationWizard extends Component
         try {
             $imeiTracking->assertImeiUnique(
                 strtoupper(trim($this->imeiNumber)),
-                $this->imei2 ? strtoupper(trim($this->imei2)) : null
+                $this->imei2 ? strtoupper(trim($this->imei2)) : null,
+                $this->inventoryUnitId !== '' ? $this->inventoryUnitId : null,
             );
         } catch (ValidationException $exception) {
             $mappedErrors = collect($exception->errors())
@@ -1352,29 +1355,6 @@ class VerificationWizard extends Component
         $this->seedLoanTermsFromDefaults(overwrite: true);
         $this->paymentStatus = 'pending';
         $this->paymentMessage = '';
-
-        $this->branchId = $this->resolveBranchIdForCapture() ?? '';
-    }
-
-    private function resolveBranchIdForCapture(): ?string
-    {
-        $user = auth()->user();
-
-        if (! $user) {
-            return null;
-        }
-
-        if ($user->branch_id) {
-            return (string) $user->branch_id;
-        }
-
-        $vendorId = $user->managedVendors()->value('id');
-
-        if (! $vendorId) {
-            return null;
-        }
-
-        return Vendor::query()->whereKey($vendorId)->value('branch_id');
     }
 
     public function render()
@@ -1400,10 +1380,6 @@ class VerificationWizard extends Component
             ->whereKey($this->phoneModelId ?: null)
             ->first();
         $selectedInventoryUnit = null;
-        $branches = Branch::orderBy('name')->get();
-        $selectedBranch = $this->branchId !== ''
-            ? $branches->firstWhere('id', $this->branchId)
-            : null;
         $phoneCountries = collect(app(KycPhoneService::class)->supportedCountries())
             ->keyBy('iso')
             ->all();
@@ -1413,8 +1389,6 @@ class VerificationWizard extends Component
 
         return view('livewire.kyc.verification-wizard', compact(
             'recentProfiles',
-            'branches',
-            'selectedBranch',
             'availableBrands',
             'availableModels',
             'availableUnits',

@@ -1,29 +1,28 @@
 <?php
 
 use App\Models\Brand;
+use App\Models\Dealer;
 use App\Models\InventoryUnit;
 use App\Models\PhoneModel;
-use App\Models\Vendor;
-use App\Models\Branch;
 use App\Services\IMEITrackingService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->service = app(IMEITrackingService::class);
-    $branch = Branch::factory()->create();
     $brand = Brand::factory()->create();
     $this->model = PhoneModel::factory()->create(['brand_id' => $brand->id]);
-    $this->vendor = Vendor::factory()->create(['branch_id' => $branch->id]);
+    $this->vendor = Dealer::factory()->create();
 });
 
 test('registers a unit with unique IMEI', function () {
     $unit = $this->service->registerUnit([
         'phone_model_id' => $this->model->id,
-        'vendor_id'      => $this->vendor->id,
-        'imei_1'         => '123456789012345',
-        'status'         => 'available',
+        'dealer_id' => $this->vendor->id,
+        'imei_1' => '123456789012345',
+        'status' => 'available',
     ]);
 
     expect(InventoryUnit::count())->toBe(1)
@@ -33,7 +32,7 @@ test('registers a unit with unique IMEI', function () {
 test('throws validation exception for duplicate IMEI', function () {
     InventoryUnit::factory()->create([
         'phone_model_id' => $this->model->id,
-        'imei_1'         => '111111111111111',
+        'imei_1' => '111111111111111',
     ]);
 
     $this->service->assertImeiUnique('111111111111111');
@@ -42,7 +41,7 @@ test('throws validation exception for duplicate IMEI', function () {
 test('bulk register inserts unique rows and skips duplicates', function () {
     InventoryUnit::factory()->create([
         'phone_model_id' => $this->model->id,
-        'imei_1'         => 'DUPE00000000001',
+        'imei_1' => 'DUPE00000000001',
     ]);
 
     $rows = collect([
@@ -73,12 +72,12 @@ test('bulk register handles empty IMEI rows', function () {
 test('transferUnit assigns vendor and sets status to assigned', function () {
     $unit = InventoryUnit::factory()->create([
         'phone_model_id' => $this->model->id,
-        'imei_1'         => '999000000000001',
-        'status'         => 'available',
+        'imei_1' => '999000000000001',
+        'status' => 'available',
     ]);
 
     $this->service->transferUnit($unit, $this->vendor->id);
 
-    expect($unit->fresh()->vendor_id)->toBe($this->vendor->id)
+    expect($unit->fresh()->dealer_id)->toBe($this->vendor->id)
         ->and($unit->fresh()->status)->toBe('assigned');
 });

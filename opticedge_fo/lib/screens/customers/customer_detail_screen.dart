@@ -35,7 +35,26 @@ class CustomerDetailScreen extends ConsumerWidget {
           child: CircularProgressIndicator(color: AppConstants.primary),
         ),
       ),
-      error: (error, _) => Scaffold(
+      error: (error, _) {
+        final locked =
+            error is DioException && (error.response?.statusCode ?? 0) == 403;
+
+        if (locked) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Customer ameshafanyiwa release. Unaruhusiwa kuona summary tu.',
+                ),
+                backgroundColor: AppConstants.warning,
+              ),
+            );
+            context.go('/customers');
+          });
+        }
+
+        return Scaffold(
         appBar: AppBar(title: const Text('Customer Detail')),
         body: Center(
           child: Padding(
@@ -50,7 +69,9 @@ class CustomerDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  error.toString(),
+                  locked
+                      ? 'Locked: summary only.'
+                      : error.toString(),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: AppConstants.textSecondary),
                 ),
@@ -65,7 +86,8 @@ class CustomerDetailScreen extends ConsumerWidget {
             ),
           ),
         ),
-      ),
+        );
+      },
       data: (customer) => _DetailView(
         customer: customer,
         customerId: customerId,

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\InventoryUnit;
 use App\Models\Loan;
+use App\Models\RecoveryTicket;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -15,26 +16,26 @@ class InventoryAuditService
     public function transferStock(InventoryUnit $unit, string $toVendorId): InventoryUnit
     {
         return DB::transaction(function () use ($unit, $toVendorId) {
-            $fromVendorId = $unit->vendor_id;
+            $fromVendorId = $unit->dealer_id;
 
             if ($fromVendorId === $toVendorId) {
-                throw new InvalidArgumentException("Device is already assigned to this vendor.");
+                throw new InvalidArgumentException('Device is already assigned to this vendor.');
             }
 
             if ($unit->status === 'sold') {
-                throw new InvalidArgumentException("Cannot transfer a sold device.");
+                throw new InvalidArgumentException('Cannot transfer a sold device.');
             }
 
             $unit->update([
-                'vendor_id' => $toVendorId,
-                'status'    => 'vendor_stock',
+                'dealer_id' => $toVendorId,
+                'status' => 'vendor_stock',
             ]);
 
             activity('inventory')
                 ->performedOn($unit)
                 ->causedBy(auth()->user())
                 ->event('transfer')
-                ->log("Transferred from " . ($fromVendorId ?? 'HQ') . " to {$toVendorId}");
+                ->log('Transferred from '.($fromVendorId ?? 'HQ')." to {$toVendorId}");
 
             return $unit->fresh();
         });
@@ -47,7 +48,7 @@ class InventoryAuditService
     {
         DB::transaction(function () use ($loan, $unit, $condition) {
             if ($loan->status === 'completed') {
-                throw new InvalidArgumentException("Cannot reclaim a fully paid device.");
+                throw new InvalidArgumentException('Cannot reclaim a fully paid device.');
             }
 
             $unit->update([
@@ -70,14 +71,14 @@ class InventoryAuditService
     /**
      * Specialized method for Recovery Officers handing over devices.
      */
-    public function recordRepossession(\App\Models\RecoveryTicket $ticket, string $condition): InventoryUnit
+    public function recordRepossession(RecoveryTicket $ticket, string $condition): InventoryUnit
     {
         return DB::transaction(function () use ($ticket, $condition) {
             $loan = $ticket->loan;
             $unit = $loan->inventoryUnit;
 
-            if (!$unit) {
-                throw new InvalidArgumentException("No device attached to this loan.");
+            if (! $unit) {
+                throw new InvalidArgumentException('No device attached to this loan.');
             }
 
             $unit->update([
@@ -88,7 +89,7 @@ class InventoryAuditService
 
             $ticket->update([
                 'status' => 'recovered',
-                'completed_at' => now()
+                'completed_at' => now(),
             ]);
 
             activity('recovery')

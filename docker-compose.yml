@@ -102,11 +102,26 @@ services:
     networks:
       - opticedge_net
 
+  # ── Face match (internal microservice) ───────────────────────────────────────
+  face_match:
+    build:
+      context: ./docker/face_match
+      dockerfile: Dockerfile
+    container_name: opticedge_face_match
+    restart: unless-stopped
+    volumes:
+      - face_match_models:/root/.insightface
+    expose:
+      - "8001"
+    networks:
+      - opticedge_net
+
 volumes:
   db_data:
   redis_data:
   app_storage:
   certbot_webroot:
+  face_match_models:
 
 networks:
   opticedge_net:

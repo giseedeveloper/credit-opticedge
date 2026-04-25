@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\Branch;
 use App\Models\Brand;
 use App\Models\Customer;
+use App\Models\Dealer;
 use App\Models\InventoryUnit;
 use App\Models\Loan;
 use App\Models\PhoneModel;
@@ -12,7 +12,6 @@ use App\Models\RepaymentSchedule;
 use App\Models\Role;
 use App\Models\Transaction;
 use App\Models\User;
-use App\Models\Vendor;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -25,34 +24,7 @@ class DemoDataSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // ── 1. BRANCHES ──────────────────────────────────────────────────
-        $hq = Branch::firstOrCreate(
-            ['code' => 'HQ-001'],
-            [
-                'name' => 'OpticEdge HQ - Dar es Salaam',
-                'region' => 'Dar es Salaam',
-                'address' => 'Samora Avenue, Posta, Ilala',
-                'phone' => '+255 22 211 0000',
-                'is_headquarter' => true,
-                'is_active' => true,
-            ]
-        );
-
-        $branches = collect([
-            ['code' => 'BR-002', 'name' => 'Kariakoo Branch', 'region' => 'Dar es Salaam', 'address' => 'Msimbazi Street, Kariakoo'],
-            ['code' => 'BR-003', 'name' => 'Arusha Branch', 'region' => 'Arusha', 'address' => 'Sokoine Road, Arusha CBD'],
-            ['code' => 'BR-004', 'name' => 'Mwanza Branch', 'region' => 'Mwanza', 'address' => 'Station Road, Mwanza'],
-            ['code' => 'BR-005', 'name' => 'Dodoma Branch', 'region' => 'Dodoma', 'address' => 'Jakaya Kikwete Road, Dodoma'],
-            ['code' => 'BR-006', 'name' => 'Moshi Branch', 'region' => 'Kilimanjaro', 'address' => 'Rindi Lane, Moshi Town'],
-        ])->map(fn ($b) => Branch::firstOrCreate(['code' => $b['code']], array_merge($b, [
-            'phone' => '+255 75'.fake()->numerify('#######'),
-            'is_headquarter' => false,
-            'is_active' => true,
-        ])));
-
-        $allBranches = collect([$hq])->merge($branches);
-
-        // ── 2. BRANDS & MODELS ───────────────────────────────────────────
+        // ── 1. BRANDS & MODELS ───────────────────────────────────────────
         $brandData = [
             'Samsung' => [
                 ['name' => 'Galaxy A06',    'retail' => 290_000,  'cost' => 240_000, 'specs' => ['ram' => '4GB', 'storage' => '64GB',  'color' => 'Black']],
@@ -117,52 +89,53 @@ class DemoDataSeeder extends Seeder
             }
         }
 
-        // ── 3. VENDORS ────────────────────────────────────────────────────
-        $vendorData = [
-            ['name' => 'TechHub Kariakoo',     'code' => 'VND-001', 'branch' => 'BR-002', 'commission' => 4.5],
-            ['name' => 'MobiDeals Arusha',     'code' => 'VND-002', 'branch' => 'BR-003', 'commission' => 3.5],
-            ['name' => 'SmartPhone Palace',    'code' => 'VND-003', 'branch' => 'BR-002', 'commission' => 5.0],
-            ['name' => 'Lake Zone Gadgets',    'code' => 'VND-004', 'branch' => 'BR-004', 'commission' => 4.0],
-            ['name' => 'Kili Mobile Shop',     'code' => 'VND-005', 'branch' => 'BR-006', 'commission' => 3.0],
-            ['name' => 'Capital City Electronics', 'code' => 'VND-006', 'branch' => 'BR-005', 'commission' => 4.5],
+        // ── 2. DEALERS ────────────────────────────────────────────────────
+        $dealerData = [
+            ['name' => 'TechHub Kariakoo',     'code' => 'VND-001', 'commission' => 4.5],
+            ['name' => 'MobiDeals Arusha',     'code' => 'VND-002', 'commission' => 3.5],
+            ['name' => 'SmartPhone Palace',    'code' => 'VND-003', 'commission' => 5.0],
+            ['name' => 'Lake Zone Gadgets',    'code' => 'VND-004', 'commission' => 4.0],
+            ['name' => 'Kili Mobile Shop',     'code' => 'VND-005', 'commission' => 3.0],
+            ['name' => 'Capital City Electronics', 'code' => 'VND-006', 'commission' => 4.5],
         ];
 
-        $vendors = collect();
-        foreach ($vendorData as $v) {
-            $branch = $allBranches->firstWhere('code', $v['branch']) ?? $hq;
-            $vendor = Vendor::firstOrCreate(
+        $dealers = collect();
+        foreach ($dealerData as $v) {
+            $dealer = Dealer::firstOrCreate(
                 ['code' => $v['code']],
                 [
-                    'branch_id' => $branch->id,
                     'name' => $v['name'],
                     'phone' => '+255 76'.fake()->numerify('#######'),
-                    'email' => Str::slug($v['name']).'@vendor.co.tz',
-                    'address' => $branch->address,
+                    'email' => Str::slug($v['name']).'@dealer.co.tz',
+                    'address' => 'Tanzania',
                     'tin_number' => fake()->numerify('###-###-###'),
                     'commission_rate' => $v['commission'],
                     'status' => 'active',
                 ]
             );
-            $vendors->push($vendor);
+            $dealers->push($dealer);
         }
 
-        // ── 4. STAFF USERS ────────────────────────────────────────────────
+        // ── 3. STAFF USERS ────────────────────────────────────────────────
         $staffData = [
-            ['name' => 'Amina Khalid',   'email' => 'amina.khalid@opticedge.co.tz',   'role' => 'manager',       'branch' => 'BR-002', 'phone' => '+255 754 100 001'],
-            ['name' => 'Juma Omari',     'email' => 'juma.omari@opticedge.co.tz',     'role' => 'front-officer', 'branch' => 'BR-002', 'phone' => '+255 754 100 002'],
-            ['name' => 'Grace Ndumbo',   'email' => 'grace.ndumbo@opticedge.co.tz',   'role' => 'front-officer', 'branch' => 'BR-003', 'phone' => '+255 754 100 003'],
-            ['name' => 'Hassan Mwanga',  'email' => 'hassan.mwanga@opticedge.co.tz',  'role' => 'accountant',    'branch' => 'HQ-001', 'phone' => '+255 754 100 004'],
-            ['name' => 'Fatuma Ally',    'email' => 'fatuma.ally@opticedge.co.tz',    'role' => 'back-officer',  'branch' => 'HQ-001', 'phone' => '+255 754 100 005'],
-            ['name' => 'Peter Masanja',  'email' => 'peter.masanja@opticedge.co.tz',  'role' => 'supervisor',    'branch' => 'BR-003', 'phone' => '+255 754 100 006'],
-            ['name' => 'Neema Mramba',   'email' => 'neema.mramba@opticedge.co.tz',   'role' => 'front-officer', 'branch' => 'BR-004', 'phone' => '+255 754 100 007'],
-            ['name' => 'David Lyimo',    'email' => 'david.lyimo@opticedge.co.tz',    'role' => 'manager',       'branch' => 'BR-004', 'phone' => '+255 754 100 008'],
-            ['name' => 'Zainab Suleiman', 'email' => 'zainab.suleiman@opticedge.co.tz', 'role' => 'front-officer', 'branch' => 'BR-005', 'phone' => '+255 754 100 009'],
-            ['name' => 'Emmanuel Tarimo', 'email' => 'emmanuel.tarimo@opticedge.co.tz', 'role' => 'accountant',    'branch' => 'BR-006', 'phone' => '+255 754 100 010'],
+            ['name' => 'Amina Khalid',   'email' => 'amina.khalid@opticedge.co.tz',   'role' => 'manager',       'dealer_code' => 'VND-001', 'phone' => '+255 754 100 001'],
+            ['name' => 'Juma Omari',     'email' => 'juma.omari@opticedge.co.tz',     'role' => 'front-officer', 'dealer_code' => 'VND-001', 'phone' => '+255 754 100 002'],
+            ['name' => 'Grace Ndumbo',   'email' => 'grace.ndumbo@opticedge.co.tz',   'role' => 'front-officer', 'dealer_code' => 'VND-002', 'phone' => '+255 754 100 003'],
+            ['name' => 'Hassan Mwanga',  'email' => 'hassan.mwanga@opticedge.co.tz',  'role' => 'accountant',    'dealer_code' => null, 'phone' => '+255 754 100 004'],
+            ['name' => 'Fatuma Ally',    'email' => 'fatuma.ally@opticedge.co.tz',    'role' => 'back-officer',  'dealer_code' => 'VND-001', 'phone' => '+255 754 100 005'],
+            ['name' => 'Peter Masanja',  'email' => 'peter.masanja@opticedge.co.tz',  'role' => 'supervisor',    'dealer_code' => null, 'phone' => '+255 754 100 006'],
+            ['name' => 'Neema Mramba',   'email' => 'neema.mramba@opticedge.co.tz',   'role' => 'front-officer', 'dealer_code' => 'VND-004', 'phone' => '+255 754 100 007'],
+            ['name' => 'David Lyimo',    'email' => 'david.lyimo@opticedge.co.tz',    'role' => 'manager',       'dealer_code' => 'VND-004', 'phone' => '+255 754 100 008'],
+            ['name' => 'Zainab Suleiman', 'email' => 'zainab.suleiman@opticedge.co.tz', 'role' => 'front-officer', 'dealer_code' => 'VND-006', 'phone' => '+255 754 100 009'],
+            ['name' => 'Emmanuel Tarimo', 'email' => 'emmanuel.tarimo@opticedge.co.tz', 'role' => 'accountant',    'dealer_code' => null, 'phone' => '+255 754 100 010'],
         ];
 
         $staffUsers = collect();
         foreach ($staffData as $s) {
-            $branch = $allBranches->firstWhere('code', $s['branch']) ?? $hq;
+            $dealerId = isset($s['dealer_code']) && $s['dealer_code']
+                ? $dealers->firstWhere('code', $s['dealer_code'])?->id
+                : null;
+
             $user = User::firstOrCreate(
                 ['email' => $s['email']],
                 [
@@ -172,23 +145,23 @@ class DemoDataSeeder extends Seeder
                     'phone' => $s['phone'],
                     'role' => $s['role'],
                     'employee_code' => strtoupper('EMP-'.fake()->unique()->bothify('####')),
-                    'branch_id' => $branch->id,
+                    'dealer_id' => $dealerId,
                     'joined_at' => fake()->dateTimeBetween('-2 years', '-2 weeks')->format('Y-m-d'),
                     'is_active' => true,
                 ]
             );
 
-            $role = Role::firstOrCreate(['name' => $s['role'], 'guard_name' => 'web']);
+            Role::firstOrCreate(['name' => $s['role'], 'guard_name' => 'web']);
             $user->syncRoles([$s['role']]);
             $user->forceFill([
                 'role' => $s['role'],
-                'branch_id' => $branch->id,
+                'dealer_id' => $dealerId,
                 'joined_at' => $user->joined_at ?? fake()->dateTimeBetween('-2 years', '-2 weeks')->format('Y-m-d'),
             ])->save();
             $staffUsers->push($user);
         }
 
-        // ── 5. CUSTOMERS ─────────────────────────────────────────────────
+        // ── 4. CUSTOMERS ─────────────────────────────────────────────────
         $customerNames = [
             ['first' => 'Mariam',   'last' => 'Juma'],
             ['first' => 'Rashid',   'last' => 'Bakari'],
@@ -219,15 +192,13 @@ class DemoDataSeeder extends Seeder
 
         $customers = collect();
         foreach ($customerNames as $i => $cn) {
-            $branch = $allBranches->get($i % $allBranches->count());
-            $vendor = $vendors->get($i % $vendors->count());
+            $dealer = $dealers->get($i % $dealers->count());
             $staff = $staffUsers->get($i % $staffUsers->count());
 
             $customer = Customer::firstOrCreate(
                 ['phone' => '07'.str_pad($i + 60000000, 8, '0', STR_PAD_LEFT)],
                 [
-                    'branch_id' => $branch->id,
-                    'vendor_id' => $vendor->id,
+                    'dealer_id' => $dealer->id,
                     'registered_by' => $staff->id,
                     'first_name' => $cn['first'],
                     'last_name' => $cn['last'],
@@ -238,8 +209,8 @@ class DemoDataSeeder extends Seeder
                     'occupation' => fake()->randomElement(['Teacher', 'Trader', 'Driver', 'Farmer', 'Nurse', 'Engineer', 'Accountant', 'Tailor', 'Electrician']),
                     'employer' => fake()->company(),
                     'monthly_income' => fake()->randomElement([450_000, 600_000, 800_000, 1_000_000, 1_200_000, 1_500_000]),
-                    'address' => $branch->address,
-                    'region' => $branch->region,
+                    'address' => fake()->streetAddress(),
+                    'region' => fake()->randomElement(['Dar es Salaam', 'Arusha', 'Mwanza', 'Dodoma']),
                     'district' => fake()->city(),
                     'kyc_status' => $i < 20 ? 'approved' : 'pending',
                     'credit_status' => 'eligible',
@@ -248,40 +219,37 @@ class DemoDataSeeder extends Seeder
             $customers->push($customer);
         }
 
-        // ── 6. INVENTORY UNITS (DEVICES) ──────────────────────────────────
+        // ── 5. INVENTORY UNITS (DEVICES) ──────────────────────────────────
         $inventoryUnits = collect();
         $unitIndex = 0;
 
-        foreach ($allBranches as $branch) {
-            // 8 devices per branch = 48 total
-            foreach ($phoneModels->random(8) as $model) {
-                $imei1 = '35'.str_pad($unitIndex + 1000000, 13, '0', STR_PAD_LEFT);
-                $status = match (true) {
-                    $unitIndex < 25 => 'sold',
-                    $unitIndex < 35 => 'available',
-                    default => 'available',
-                };
+        for ($u = 0; $u < 48; $u++) {
+            $model = $phoneModels->random();
+            $imei1 = '35'.str_pad($unitIndex + 1000000, 13, '0', STR_PAD_LEFT);
+            $status = match (true) {
+                $unitIndex < 25 => 'sold',
+                $unitIndex < 35 => 'available',
+                default => 'available',
+            };
 
-                $vendor = $vendors->get($unitIndex % $vendors->count());
-                $unit = InventoryUnit::firstOrCreate(
-                    ['imei_1' => $imei1],
-                    [
-                        'phone_model_id' => $model->id,
-                        'branch_id' => $branch->id,
-                        'vendor_id' => $vendor->id,
-                        'imei_2' => null,
-                        'serial_number' => 'SN-'.strtoupper(Str::random(5)).'-'.str_pad($unitIndex + 1, 4, '0', STR_PAD_LEFT),
-                        'status' => $status,
-                        'purchase_price' => $model->cost_price,
-                        'received_at' => Carbon::now()->subDays(rand(30, 180))->format('Y-m-d'),
-                    ]
-                );
-                $inventoryUnits->push($unit);
-                $unitIndex++;
-            }
+            $dealer = $dealers->get($unitIndex % $dealers->count());
+            $unit = InventoryUnit::firstOrCreate(
+                ['imei_1' => $imei1],
+                [
+                    'phone_model_id' => $model->id,
+                    'dealer_id' => $dealer->id,
+                    'imei_2' => null,
+                    'serial_number' => 'SN-'.strtoupper(Str::random(5)).'-'.str_pad($unitIndex + 1, 4, '0', STR_PAD_LEFT),
+                    'status' => $status,
+                    'purchase_price' => $model->cost_price,
+                    'received_at' => Carbon::now()->subDays(rand(30, 180))->format('Y-m-d'),
+                ]
+            );
+            $inventoryUnits->push($unit);
+            $unitIndex++;
         }
 
-        // ── 7. LOANS (ACTIVE / COMPLETED / OVERDUE / PENDING) ─────────────
+        // ── 6. LOANS (ACTIVE / COMPLETED / OVERDUE / PENDING) ─────────────
         $soldUnits = $inventoryUnits->where('status', 'sold')->values();
         $approvedCustomers = $customers->where('kyc_status', 'approved')->values();
 
@@ -320,8 +288,7 @@ class DemoDataSeeder extends Seeder
             $customer = $approvedCustomers->get($idx % $approvedCustomers->count());
             $unit = $soldUnits->get($idx % $soldUnits->count());
             $staff = $staffUsers->get($idx % $staffUsers->count());
-            $vendor = $vendors->get($idx % $vendors->count());
-            $branch = $allBranches->get($idx % $allBranches->count());
+            $dealer = $dealers->get($idx % $dealers->count());
 
             $deposit = round($principal * $depositPct);
             $months = (int) ceil($weeks / 4);
@@ -348,8 +315,7 @@ class DemoDataSeeder extends Seeder
             $loan = Loan::create([
                 'customer_id' => $customer->id,
                 'inventory_unit_id' => $unit->id,
-                'vendor_id' => $vendor->id,
-                'branch_id' => $branch->id,
+                'dealer_id' => $dealer->id,
                 'disbursed_by' => $staff->id,
                 'approved_by' => $adminUser->id,
                 'loan_number' => $loanNumber,
@@ -435,10 +401,9 @@ class DemoDataSeeder extends Seeder
             }
         }
 
-        $this->command->info('✓ Branches:        '.$allBranches->count());
         $this->command->info('✓ Brands:          '.Brand::count());
         $this->command->info('✓ Phone Models:    '.PhoneModel::count());
-        $this->command->info('✓ Vendors:         '.Vendor::count());
+        $this->command->info('✓ Vendors:         '.Dealer::count());
         $this->command->info('✓ Staff Users:     '.($staffUsers->count() + 1));
         $this->command->info('✓ Customers:       '.Customer::count());
         $this->command->info('✓ Inventory Units: '.InventoryUnit::count());

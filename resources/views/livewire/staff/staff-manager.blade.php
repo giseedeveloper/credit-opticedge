@@ -12,29 +12,26 @@
 
     {{-- ── Create Staff Modal ──────────────────────────────────────── --}}
     @if($showCreateModal)
-    @php
-        $newRoleRequiresBranch = $this->roleRequiresBranch($newRole);
-    @endphp
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" wire:click.self="closeCreateModal">
         <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-zinc-700 w-full max-w-2xl mx-4">
             <div class="px-6 py-5 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between">
                 <div>
                     <h3 class="text-base font-bold text-gray-900 dark:text-white">Add Staff Member</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Create a new system user, assign a role, and anchor branch accountability</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Create a new system user and assign a role</p>
                 </div>
                 <button wire:click="closeCreateModal" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
             <div class="px-6 py-5 grid grid-cols-2 gap-4">
-                <div class="col-span-2 rounded-2xl border {{ $newRoleRequiresBranch ? 'border-orange-200 bg-oe-soft/80 dark:border-orange-900/40 dark:bg-orange-950/30' : 'border-oe/20 bg-blue-50/80 dark:border-oe/25 dark:bg-blue-950/20' }} p-4">
+                <div class="col-span-2 rounded-2xl border border-oe/20 bg-blue-50/80 dark:border-oe/25 dark:bg-blue-950/20 p-4">
                     <div class="flex items-start gap-3">
-                        <x-fluent-icon name="{{ $newRoleRequiresBranch ? 'building-office' : 'shield-check' }}" size="sm" palette="{{ $newRoleRequiresBranch ? 'orange' : 'sky' }}" />
+                        <x-fluent-icon name="shield-check" size="sm" palette="sky" />
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-wider {{ $newRoleRequiresBranch ? 'text-oe-hover dark:text-oe' : 'text-slate-600 dark:text-slate-300' }}">
-                                {{ $newRole ? ($newRoleRequiresBranch ? 'Branch-bound role' : 'Global role') : 'Role scope' }}
+                            <p class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                                Role scope
                             </p>
-                            <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ $this->roleScopeDescription($newRole) }}</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">Select a role to define system permissions for this staff member.</p>
                         </div>
                     </div>
                 </div>
@@ -73,22 +70,22 @@
                     </select>
                     @error('newRole') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
-                        Branch {{ $newRoleRequiresBranch ? '*' : '' }}
-                    </label>
-                    <select wire:model="newBranchId"
+
+                @if(in_array($newRole, ['front-officer', 'back-officer'], true))
+                <div class="col-span-2">
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Dealer *</label>
+                    <select wire:model="newDealerId"
                             class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe">
-                        <option value="">Select branch…</option>
-                        @foreach($branches as $branch)
-                        <option value="{{ $branch->id }}">{{ $branch->code }} · {{ $branch->name }}{{ $branch->is_headquarter ? ' (HQ)' : '' }}</option>
+                        <option value="">Select dealer counter…</option>
+                        @foreach($dealers as $d)
+                        <option value="{{ $d->id }}">{{ $d->name }} ({{ $d->code }})</option>
                         @endforeach
                     </select>
-                    <p class="text-[11px] text-gray-400 mt-1">
-                        {{ $newRoleRequiresBranch ? 'Required for branch operational roles.' : 'Optional for global roles such as admin or owner.' }}
-                    </p>
-                    @error('newBranchId') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    @error('newDealerId') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    <p class="text-[11px] text-gray-400 mt-1.5">Front and back office users must be assigned to a dealer counter.</p>
                 </div>
+                @endif
+
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Joined Date *</label>
                     <input wire:model="newJoinedAt" type="date"
@@ -106,29 +103,26 @@
 
     {{-- ── Edit Staff Modal ────────────────────────────────────────── --}}
     @if($showEditModal)
-    @php
-        $editRoleRequiresBranch = $this->roleRequiresBranch($editRole);
-    @endphp
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" wire:click.self="closeEditModal">
         <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-zinc-700 w-full max-w-2xl mx-4">
             <div class="px-6 py-5 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between">
                 <div>
                     <h3 class="text-base font-bold text-gray-900 dark:text-white">Edit Staff Member</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Update profile, role scope, and branch assignment</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Update profile and role scope</p>
                 </div>
                 <button wire:click="closeEditModal" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
             <div class="px-6 py-5 grid grid-cols-2 gap-4">
-                <div class="col-span-2 rounded-2xl border {{ $editRoleRequiresBranch ? 'border-orange-200 bg-oe-soft/80 dark:border-orange-900/40 dark:bg-orange-950/30' : 'border-oe/20 bg-blue-50/80 dark:border-oe/25 dark:bg-blue-950/20' }} p-4">
+                <div class="col-span-2 rounded-2xl border border-oe/20 bg-blue-50/80 dark:border-oe/25 dark:bg-blue-950/20 p-4">
                     <div class="flex items-start gap-3">
-                        <x-fluent-icon name="{{ $editRoleRequiresBranch ? 'building-office' : 'shield-check' }}" size="sm" palette="{{ $editRoleRequiresBranch ? 'orange' : 'sky' }}" />
+                        <x-fluent-icon name="shield-check" size="sm" palette="sky" />
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-wider {{ $editRoleRequiresBranch ? 'text-oe-hover dark:text-oe' : 'text-slate-600 dark:text-slate-300' }}">
-                                {{ $editRole ? ($editRoleRequiresBranch ? 'Branch-bound role' : 'Global role') : 'Role scope' }}
+                            <p class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                                Role scope
                             </p>
-                            <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">{{ $this->roleScopeDescription($editRole) }}</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">Select a role to define system permissions for this staff member.</p>
                         </div>
                     </div>
                 </div>
@@ -160,22 +154,21 @@
                     </select>
                     @error('editRole') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
-                        Branch {{ $editRoleRequiresBranch ? '*' : '' }}
-                    </label>
-                    <select wire:model="editBranchId"
+
+                @if(in_array($editRole, ['front-officer', 'back-officer'], true))
+                <div class="col-span-2">
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Dealer *</label>
+                    <select wire:model="editDealerId"
                             class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe">
-                        <option value="">Select branch…</option>
-                        @foreach($branches as $branch)
-                        <option value="{{ $branch->id }}">{{ $branch->code }} · {{ $branch->name }}{{ $branch->is_headquarter ? ' (HQ)' : '' }}</option>
+                        <option value="">Select dealer counter…</option>
+                        @foreach($dealers as $d)
+                        <option value="{{ $d->id }}">{{ $d->name }} ({{ $d->code }})</option>
                         @endforeach
                     </select>
-                    <p class="text-[11px] text-gray-400 mt-1">
-                        {{ $editRoleRequiresBranch ? 'Required for branch operational roles.' : 'Optional for global roles such as admin or owner.' }}
-                    </p>
-                    @error('editBranchId') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
+                    @error('editDealerId') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
+                @endif
+
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Joined Date *</label>
                     <input wire:model="editJoinedAt" type="date"
@@ -331,7 +324,7 @@
                     <th class="px-6 py-3.5 text-left">Staff Member</th>
                     <th class="px-5 py-3.5 text-left">Role</th>
                     <th class="px-5 py-3.5 text-left hidden md:table-cell">Phone</th>
-                    <th class="px-5 py-3.5 text-left hidden lg:table-cell">Branch · Joined</th>
+                    <th class="px-5 py-3.5 text-left hidden lg:table-cell">Joined</th>
                     <th class="px-5 py-3.5 text-center">Status</th>
                     <th class="px-5 py-3.5 text-center">Actions</th>
                 </tr>
@@ -363,8 +356,8 @@
                         {{ $member->phone ?? '—' }}
                     </td>
                     <td class="px-5 py-4 hidden lg:table-cell">
-                        <p class="text-xs text-gray-700 dark:text-gray-300">{{ $member->branch?->name ?? '—' }}</p>
-                        <p class="text-[10px] text-gray-400 mt-0.5">{{ ($member->joined_at ?? $member->created_at)?->format('d M Y') ?? '—' }}</p>
+                        <p class="text-xs text-gray-700 dark:text-gray-300">{{ ($member->joined_at ?? $member->created_at)?->format('d M Y') ?? '—' }}</p>
+                        <p class="text-[10px] text-gray-400 mt-0.5">{{ ($member->joined_at ?? $member->created_at)?->diffForHumans() ?? '—' }}</p>
                     </td>
                     <td class="px-5 py-4 text-center">
                         @if($member->is_active)
@@ -436,7 +429,7 @@
                 $detailInitials = $detailStaff?->initials() ?? '';
                 $loansCount = $detailStaff ? $detailStaff->disbursedLoans()->count() : 0;
                 $customersCount = $detailStaff ? $detailStaff->registeredCustomers()->count() : 0;
-                $vendorsCount = $detailStaff ? $detailStaff->managedVendors()->count() : 0;
+                $dealersCount = $detailStaff ? $detailStaff->managedDealers()->count() : 0;
             @endphp
             @if($detailStaff)
 
@@ -491,12 +484,12 @@
                             <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $detailStaff->phone ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase font-bold">Employee Code</p>
-                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5 font-mono">{{ $detailStaff->employee_code ?? '—' }}</p>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold">Dealer</p>
+                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $detailStaff->dealer?->name ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase font-bold">Branch</p>
-                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $detailStaff->branch?->name ?? '—' }}</p>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold">Employee Code</p>
+                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5 font-mono">{{ $detailStaff->employee_code ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase font-bold">Joined</p>
@@ -519,8 +512,8 @@
                             <p class="text-[10px] text-gray-400 mt-0.5 font-semibold">Customers<br>Registered</p>
                         </div>
                         <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 text-center border border-amber-100 dark:border-amber-900/30">
-                            <p class="text-xl font-black text-amber-600 dark:text-amber-400">{{ number_format($vendorsCount) }}</p>
-                            <p class="text-[10px] text-gray-400 mt-0.5 font-semibold">Vendors<br>Managed</p>
+                            <p class="text-xl font-black text-amber-600 dark:text-amber-400">{{ number_format($dealersCount) }}</p>
+                            <p class="text-[10px] text-gray-400 mt-0.5 font-semibold">Dealers<br>managed</p>
                         </div>
                     </div>
                 </div>

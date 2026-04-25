@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\InventoryUnit;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class IMEITrackingService
@@ -14,14 +15,30 @@ class IMEITrackingService
      *
      * @throws ValidationException
      */
-    public function assertImeiUnique(string $imei1, ?string $imei2 = null): void
+    public function assertImeiUnique(string $imei1, ?string $imei2 = null, ?string $exceptInventoryUnitId = null): void
     {
-        if (InventoryUnit::where('imei_1', $imei1)->orWhere('imei_2', $imei1)->exists()) {
+        $imei1Query = InventoryUnit::query();
+        if ($exceptInventoryUnitId !== null && $exceptInventoryUnitId !== '') {
+            $imei1Query->where('id', '!=', $exceptInventoryUnitId);
+        }
+
+        if ($imei1Query->where(function ($q) use ($imei1): void {
+            $q->where('imei_1', $imei1)->orWhere('imei_2', $imei1);
+        })->exists()) {
             throw ValidationException::withMessages(['imei_1' => "IMEI {$imei1} already exists in inventory."]);
         }
 
-        if ($imei2 && InventoryUnit::where('imei_1', $imei2)->orWhere('imei_2', $imei2)->exists()) {
-            throw ValidationException::withMessages(['imei_2' => "IMEI {$imei2} already exists in inventory."]);
+        if ($imei2) {
+            $imei2Query = InventoryUnit::query();
+            if ($exceptInventoryUnitId !== null && $exceptInventoryUnitId !== '') {
+                $imei2Query->where('id', '!=', $exceptInventoryUnitId);
+            }
+
+            if ($imei2Query->where(function ($q) use ($imei2): void {
+                $q->where('imei_1', $imei2)->orWhere('imei_2', $imei2);
+            })->exists()) {
+                throw ValidationException::withMessages(['imei_2' => "IMEI {$imei2} already exists in inventory."]);
+            }
         }
     }
 
@@ -65,14 +82,16 @@ class IMEITrackingService
                 $imei2 = trim($row['imei_2'] ?? '');
 
                 if (empty($imei1)) {
-                    $errors[$i] = 'Row ' . ($i + 1) . ': imei_1 is required.';
+                    $errors[$i] = 'Row '.($i + 1).': imei_1 is required.';
                     $skipped++;
+
                     continue;
                 }
 
                 if (isset($existingImeis[$imei1]) || ($imei2 && isset($existingImeis[$imei2]))) {
-                    $errors[$i] = 'Row ' . ($i + 1) . ": IMEI {$imei1} already exists.";
+                    $errors[$i] = 'Row '.($i + 1).": IMEI {$imei1} already exists.";
                     $skipped++;
+
                     continue;
                 }
 
@@ -82,10 +101,10 @@ class IMEITrackingService
                 }
 
                 $toInsert[] = array_merge($row, [
-                    'id'         => \Illuminate\Support\Str::orderedUuid()->toString(),
-                    'imei_1'     => $imei1,
-                    'imei_2'     => $imei2 ?: null,
-                    'status'     => $row['status'] ?? 'available',
+                    'id' => Str::orderedUuid()->toString(),
+                    'imei_1' => $imei1,
+                    'imei_2' => $imei2 ?: null,
+                    'status' => $row['status'] ?? 'available',
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -101,11 +120,11 @@ class IMEITrackingService
     }
 
     /**
-     * Transfer a unit to a vendor or branch.
+     * Transfer a unit to a dealer.
      */
     public function transferUnit(InventoryUnit $unit, string $vendorId): InventoryUnit
     {
-        $unit->update(['vendor_id' => $vendorId, 'status' => 'assigned']);
+        $unit->update(['dealer_id' => $vendorId, 'status' => 'assigned']);
 
         return $unit->fresh();
     }

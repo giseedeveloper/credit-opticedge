@@ -26,13 +26,13 @@
             <div class="px-6 py-5 space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wider">Role Name</label>
-                    <input wire:model="newRoleName" type="text" placeholder="e.g. branch-manager"
+                    <input wire:model="newRoleName" type="text" placeholder="e.g. area-manager"
                            class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                     @error('newRoleName') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wider">Description</label>
-                    <input wire:model="newRoleDescription" type="text" placeholder="e.g. Branch Manager privileges"
+                    <input wire:model="newRoleDescription" type="text" placeholder="e.g. Regional manager privileges"
                            class="w-full px-3.5 py-2.5 text-sm border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-oe" />
                     @error('newRoleDescription') <p class="text-xs text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
@@ -436,8 +436,8 @@
                             <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5 font-mono">{{ $du->employee_code ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
-                            <p class="text-[10px] text-gray-400 uppercase font-bold">Branch</p>
-                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $du->branch?->name ?? '—' }}</p>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold">Dealer</p>
+                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 mt-0.5">{{ $du->dealer?->name ?? '—' }}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-zinc-800 rounded-xl p-3">
                             <p class="text-[10px] text-gray-400 uppercase font-bold">Joined</p>

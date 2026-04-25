@@ -13,6 +13,7 @@ class PhoneNumberField extends StatelessWidget {
   final String hintText;
   final String? helperText;
   final String? Function(String?)? validator;
+  final bool showDialCodeChip;
 
   const PhoneNumberField({
     super.key,
@@ -25,6 +26,7 @@ class PhoneNumberField extends StatelessWidget {
     this.hintText = '712345678',
     this.helperText,
     this.validator,
+    this.showDialCodeChip = false,
   });
 
   @override
@@ -164,7 +166,7 @@ class PhoneNumberField extends StatelessWidget {
                       horizontal: 6,
                       vertical: 14,
                     ),
-                    suffixIcon: selectedOption == null
+                    suffixIcon: (!showDialCodeChip || selectedOption == null)
                         ? null
                         : Padding(
                             padding: const EdgeInsets.only(right: 10),

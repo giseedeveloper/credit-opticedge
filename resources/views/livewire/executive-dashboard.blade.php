@@ -37,7 +37,7 @@
             ['label' => 'New Loan',      'icon' => 'plus-circle',       'href' => route('credit.panel'),    'color' => 'bg-oe hover:bg-oe-hover text-white'],
             ['label' => 'KYC Register',  'icon' => 'identification',    'href' => route('kyc.wizard'),      'color' => 'bg-oe hover:bg-oe-hover text-white'],
             ['label' => 'View Loans',    'icon' => 'document-text',     'href' => route('credit.panel'),    'color' => 'bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-zinc-700'],
-            ['label' => 'Stock Manager', 'icon' => 'device-phone-mobile','href' => route('stock.index'),    'color' => 'bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-zinc-700'],
+            ['label' => 'IMEI Search',   'icon' => 'magnifying-glass',  'href' => route('stock.imei'),      'color' => 'bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-zinc-700'],
             ['label' => 'Schedules',     'icon' => 'calendar-days',     'href' => route('credit.schedules'),'color' => 'bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-zinc-700'],
             ['label' => 'Collections',   'icon' => 'banknotes',         'href' => route('financials.collections'),'color' => 'bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-zinc-700'],
         ];
@@ -126,7 +126,7 @@
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active Devices</span>
             </div>
             @if($readyToLoad)
-                <p class="text-xl font-black text-gray-900 dark:text-white">{{ number_format($activeDevices) }}</p>
+                <p class="text-xl font-black text-gray-900 dark:text-white">{{ number_format($totalActiveLoans) }}</p>
                 <p class="text-xs text-gray-400 mt-1">In the field</p>
             @else
                 <div class="h-7 bg-gray-100 dark:bg-zinc-800 rounded-lg w-2/3 animate-pulse mt-1"></div>
@@ -143,7 +143,7 @@
         ['label'=>'New Loans (MTD)',   'value'=> number_format($newLoansThisMonth), 'icon'=>'plus-circle',        'bg'=>'bg-amber-100 dark:bg-amber-900/30',  'ic'=>'text-amber-600 dark:text-amber-400',  'href'=> route('credit.panel')],
         ['label'=>'MTD Collections',  'value'=>'TZS '.number_format($monthCollections,0), 'icon'=>'banknotes',  'bg'=>'bg-teal-100 dark:bg-teal-900/30',    'ic'=>'text-teal-600 dark:text-teal-400',    'href'=> route('financials.collections')],
         ['label'=>'Overdue / Default','value'=> number_format($overdueCount),      'icon'=>'exclamation-circle', 'bg'=>'bg-red-100 dark:bg-red-900/30',      'ic'=>'text-red-600 dark:text-red-400',      'href'=> route('credit.defaulters'),  'alert'=>$overdueCount > 0],
-        ['label'=>'Available Stock',  'value'=> number_format($availableStockCount),'icon'=>'device-phone-mobile','bg'=>'bg-oe/15 dark:bg-orange-900/30',   'ic'=>'text-oe dark:text-orange-400',    'href'=> route('stock.index')],
+        ['label'=>'IMEI Lookups',     'value'=> number_format($totalCustomers),    'icon'=>'magnifying-glass',  'bg'=>'bg-oe/15 dark:bg-orange-900/30',   'ic'=>'text-oe dark:text-orange-400',    'href'=> route('stock.imei')],
     ];
     @endphp
     <div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-6">
@@ -365,28 +365,28 @@
             </div>
         </div>
 
-        {{-- Branch Performance + Top Overdue --}}
+        {{-- Dealer performance + Top Overdue --}}
         <div class="flex flex-col gap-5">
 
-            {{-- Branch Performance --}}
+            {{-- Dealer performance (per-dealer rollups when available) --}}
             <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
                 <div class="px-5 py-4 border-b border-gray-100 dark:border-zinc-800">
-                    <h3 class="font-bold text-sm text-gray-900 dark:text-white">Branch Performance</h3>
+                    <h3 class="font-bold text-sm text-gray-900 dark:text-white">Dealer performance</h3>
                     <p class="text-xs text-gray-400 mt-0.5">Active loans &amp; MTD collections</p>
                 </div>
                 <div class="divide-y divide-gray-50 dark:divide-zinc-800">
-                    @forelse($branchStats as $branch)
+                    @forelse($dealerStats as $dealer)
                     <div class="px-5 py-2.5 flex items-center justify-between gap-2">
                         <div class="min-w-0 flex-1">
-                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">{{ $branch['name'] }}</p>
-                            <p class="text-[10px] text-gray-400">{{ $branch['active_loans'] }} active {{ Str::plural('loan', $branch['active_loans']) }}</p>
+                            <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">{{ $dealer['name'] }}</p>
+                            <p class="text-[10px] text-gray-400">{{ $dealer['active_loans'] }} active {{ Str::plural('loan', $dealer['active_loans']) }}</p>
                         </div>
                         <p class="text-xs font-bold text-oe dark:text-orange-400 flex-shrink-0">
-                            TZS {{ number_format($branch['collections'] / 1000, 0) }}K
+                            TZS {{ number_format($dealer['collections'] / 1000, 0) }}K
                         </p>
                     </div>
                     @empty
-                    <div class="px-5 py-6 text-center text-xs text-gray-400">No branch data</div>
+                    <div class="px-5 py-6 text-center text-xs text-gray-400">No dealer data yet</div>
                     @endforelse
                 </div>
             </div>

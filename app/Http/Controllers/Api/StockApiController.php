@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\InventoryUnit;
-use App\Models\Vendor;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,7 +11,7 @@ use Illuminate\Http\Request;
 /**
  * @group Stock Control
  *
- * Endpoints for vendor shop floor terminals to live-search IMEIs.
+ * Endpoints for dealer shop-floor terminals to live-search IMEIs.
  */
 class StockApiController extends Controller
 {
@@ -46,28 +45,24 @@ class StockApiController extends Controller
     }
 
     /**
-     * Vendor Stock List
+     * Dealer stock list
      *
-     * Returns all assigned inventory to a specific vendor ID.
+     * Returns inventory assigned to the authenticated user's dealer context.
      */
     public function vendorStock(Request $request): JsonResponse
     {
         $user = $request->user();
-        $vendorId = $user->managedVendors()->value('id');
+        $dealerId = $user->dealer_id ?: $user->managedDealers()->value('id');
 
-        if (! $vendorId && $user->branch_id) {
-            $vendorId = Vendor::where('branch_id', $user->branch_id)->value('id');
-        }
-
-        if (! $vendorId) {
-            return $this->errorResponse('No valid vendor hierarchy found.', 403);
+        if (! $dealerId) {
+            return $this->errorResponse('No valid dealer mapping found.', 403);
         }
 
         $stock = InventoryUnit::with('phoneModel')
-            ->where('vendor_id', $vendorId)
+            ->where('dealer_id', $dealerId)
             ->where('status', 'vendor_stock')
             ->paginate(50);
 
-        return $this->successResponse($stock, 'Vendor stock retrieved');
+        return $this->successResponse($stock, 'Dealer stock retrieved');
     }
 }

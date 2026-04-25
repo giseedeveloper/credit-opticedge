@@ -1,14 +1,13 @@
 <?php
 
-use App\Models\Branch;
 use App\Models\Brand;
 use App\Models\Customer;
+use App\Models\Dealer;
 use App\Models\InventoryUnit;
 use App\Models\Loan;
 use App\Models\Permission;
 use App\Models\PhoneModel;
 use App\Models\User;
-use App\Models\Vendor;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -117,17 +116,16 @@ it('builds staff metrics from existing customer and loan ownership fields', func
         ->assertJsonPath('data.active_loans_managed', 1);
 });
 
-it('resolves vendor stock through the user branch vendor mapping', function () {
-    $branch = Branch::factory()->create();
+it('resolves vendor stock through the user dealer mapping', function () {
     $brand = Brand::factory()->create();
     $model = PhoneModel::factory()->create(['brand_id' => $brand->id]);
-    $vendor = Vendor::factory()->create(['branch_id' => $branch->id]);
+    $vendor = Dealer::factory()->create();
     $unit = InventoryUnit::factory()->create([
         'phone_model_id' => $model->id,
-        'vendor_id' => $vendor->id,
+        'dealer_id' => $vendor->id,
         'status' => 'vendor_stock',
     ]);
-    $user = User::factory()->create(['branch_id' => $branch->id]);
+    $user = User::factory()->create(['dealer_id' => $vendor->id]);
     $user->givePermissionTo('devices.view');
 
     Sanctum::actingAs($user);

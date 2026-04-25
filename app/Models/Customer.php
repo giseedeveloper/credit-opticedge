@@ -19,7 +19,7 @@ use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 #[Fillable([
-    'branch_id', 'vendor_id', 'registered_by', 'phone_model_id', 'inventory_unit_id',
+    'registered_by', 'dealer_id', 'inventory_unit_id', 'phone_model_id',
     'application_draft_reference',
     // Identity
     'first_name', 'last_name', 'middle_name', 'gender', 'date_of_birth', 'email',
@@ -228,7 +228,6 @@ class Customer extends Model implements Authenticatable, HasMedia
             && $this->hasCapturedSignatures()
             && $this->hasAssetHandoverRecord()
             && filled($this->agreement_document_id)
-            && filled($this->inventory_unit_id)
             && ! $this->isAssetReleased();
     }
 
@@ -264,29 +263,24 @@ class Customer extends Model implements Authenticatable, HasMedia
         });
     }
 
-    public function branch(): BelongsTo
-    {
-        return $this->belongsTo(Branch::class);
-    }
-
-    public function vendor(): BelongsTo
-    {
-        return $this->belongsTo(Vendor::class);
-    }
-
     public function phoneModel(): BelongsTo
     {
         return $this->belongsTo(PhoneModel::class);
     }
 
-    public function agreementDocument(): BelongsTo
-    {
-        return $this->belongsTo(SystemDocument::class, 'agreement_document_id');
-    }
-
     public function inventoryUnit(): BelongsTo
     {
         return $this->belongsTo(InventoryUnit::class);
+    }
+
+    public function dealer(): BelongsTo
+    {
+        return $this->belongsTo(Dealer::class);
+    }
+
+    public function agreementDocument(): BelongsTo
+    {
+        return $this->belongsTo(SystemDocument::class, 'agreement_document_id');
     }
 
     public function registeredBy(): BelongsTo

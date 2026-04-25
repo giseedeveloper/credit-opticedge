@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['vendor_id', 'balance', 'total_earned', 'total_withdrawn', 'last_transaction_at'])]
-class VendorWallet extends Model
+#[Fillable(['dealer_id', 'balance', 'total_earned', 'total_withdrawn', 'last_transaction_at'])]
+class DealerWallet extends Model
 {
     use HasUuids;
+
     protected function casts(): array
     {
         return [
@@ -21,8 +22,8 @@ class VendorWallet extends Model
         ];
     }
 
-    public function vendor(): BelongsTo
+    public function dealer(): BelongsTo
     {
-        return $this->belongsTo(Vendor::class);
+        return $this->belongsTo(Dealer::class, 'dealer_id');
     }
 }

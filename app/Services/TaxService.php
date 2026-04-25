@@ -29,7 +29,7 @@ class TaxService
 
         $transactions = DB::table('transactions')
             ->join('loans', 'transactions.loan_id', '=', 'loans.id')
-            ->where('loans.vendor_id', $vendorId)
+            ->where('loans.dealer_id', $vendorId)
             ->where('transactions.type', 'repayment')
             ->where('transactions.entry_type', 'credit')
             ->whereDate('transactions.transacted_at', $targetDate)
@@ -42,7 +42,7 @@ class TaxService
 
         return [
             'date' => $targetDate,
-            'vendor_id' => $vendorId,
+            'dealer_id' => $vendorId,
             'total_collections' => $transactions->sum('amount'),
             'methods' => $methods->toArray(),
         ];

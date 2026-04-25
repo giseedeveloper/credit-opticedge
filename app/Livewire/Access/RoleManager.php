@@ -5,8 +5,11 @@ namespace App\Livewire\Access;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Spatie\Permission\PermissionRegistrar;
 
 class RoleManager extends Component
 {
@@ -112,11 +115,23 @@ class RoleManager extends Component
             'newRoleDescription' => 'nullable|string|max:128',
         ]);
 
-        $role = Role::create([
-            'name' => strtolower(trim($this->newRoleName)),
-            'guard_name' => 'web',
-            'description' => trim($this->newRoleDescription),
-        ]);
+        try {
+            $role = Role::create([
+                'name' => strtolower(trim($this->newRoleName)),
+                'guard_name' => 'web',
+                'description' => trim($this->newRoleDescription),
+            ]);
+        } catch (QueryException $e) {
+            Log::error('Role create failed', [
+                'actor' => auth()->id(),
+                'name' => $this->newRoleName,
+                'exception' => $e->getMessage(),
+            ]);
+
+            $this->dispatch('toast', message: 'Could not create role. Please retry.', type: 'danger');
+
+            return;
+        }
 
         $this->newRoleName = '';
         $this->newRoleDescription = '';
@@ -124,6 +139,7 @@ class RoleManager extends Component
 
         $this->loadRoles();
         $this->selectRole($role->id);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         activity('security')
             ->performedOn($role)
@@ -150,14 +166,27 @@ class RoleManager extends Component
             'editRoleDescription' => 'nullable|string|max:128',
         ]);
 
-        $this->selectedRole->update([
-            'name' => strtolower(trim($this->editRoleName)),
-            'description' => trim($this->editRoleDescription),
-        ]);
+        try {
+            $this->selectedRole->update([
+                'name' => strtolower(trim($this->editRoleName)),
+                'description' => trim($this->editRoleDescription),
+            ]);
+        } catch (QueryException $e) {
+            Log::error('Role update failed', [
+                'actor' => auth()->id(),
+                'role_id' => $this->selectedRole?->id,
+                'exception' => $e->getMessage(),
+            ]);
+
+            $this->dispatch('toast', message: 'Could not update role. Please retry.', type: 'danger');
+
+            return;
+        }
 
         $this->editingRole = false;
         $this->loadRoles();
         $this->selectRole($this->selectedRole->id);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         activity('security')
             ->performedOn($this->selectedRole)
@@ -182,8 +211,20 @@ class RoleManager extends Component
         }
 
         $roleName = ucfirst($this->selectedRole->name);
-        $this->selectedRole->users()->detach();
-        $this->selectedRole->delete();
+        try {
+            $this->selectedRole->users()->detach();
+            $this->selectedRole->delete();
+        } catch (QueryException $e) {
+            Log::error('Role delete failed', [
+                'actor' => auth()->id(),
+                'role_id' => $this->selectedRole?->id,
+                'exception' => $e->getMessage(),
+            ]);
+
+            $this->dispatch('toast', message: 'Could not delete role. Please retry.', type: 'danger');
+
+            return;
+        }
 
         activity('security')
             ->causedBy(auth()->user())
@@ -193,6 +234,7 @@ class RoleManager extends Component
         $this->rolePermissions = [];
         $this->showDeleteConfirm = false;
         $this->loadRoles();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->dispatch('toast', message: "Role '{$roleName}' deleted.", type: 'danger');
     }
@@ -245,7 +287,21 @@ class RoleManager extends Component
         $sanitized = array_values(array_intersect($this->rolePermissions, $validNames));
 
         $oldPermissions = $this->selectedRole->permissions->pluck('name')->toArray();
-        $this->selectedRole->syncPermissions($sanitized);
+        try {
+            $this->selectedRole->syncPermissions($sanitized);
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+        } catch (QueryException $e) {
+            Log::error('Sync role permissions failed', [
+                'actor' => auth()->id(),
+                'role_id' => $this->selectedRole->id,
+                'exception' => $e->getMessage(),
+            ]);
+
+            $this->savingPermissions = false;
+            $this->dispatch('toast', message: 'Could not save permissions. Please retry.', type: 'danger');
+
+            return;
+        }
 
         $added = array_diff($sanitized, $oldPermissions);
         $removed = array_diff($oldPermissions, $sanitized);

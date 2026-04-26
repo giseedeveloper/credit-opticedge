@@ -337,5 +337,6 @@
             })();
         </script>
         @fluxScripts
+        @livewireScripts
     </body>
 </html>

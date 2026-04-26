@@ -14,3 +14,5 @@
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 @fluxAppearance
 <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.0/dist/apexcharts.min.js" defer></script>
+
+@livewireStyles

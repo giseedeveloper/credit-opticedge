@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/constants.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
-import '../../../widgets/common/photo_picker_tile.dart';
 
 class Step4IncomeScreen extends ConsumerStatefulWidget {
   const Step4IncomeScreen({super.key});
@@ -158,20 +157,6 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
             const SizedBox(height: 14),
             _field(_duration, 'Duration at Work',
                 optional: true, hint: 'e.g. 2 years'),
-            const SizedBox(height: 24),
-            _sectionHeader('Picha ya biashara', ''),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: 120,
-              height: 100,
-              child: PhotoPickerTile(
-                label: 'Business Photo',
-                file: state.businessPhoto,
-                onPicked: (f) => ref
-                    .read(kycProvider.notifier)
-                    .update((s) => s.copyWith(businessPhoto: f)),
-              ),
-            ),
             const SizedBox(height: 32),
             AppButton(
               label: 'Save & Continue',

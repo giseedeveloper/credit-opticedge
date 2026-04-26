@@ -1332,10 +1332,6 @@ class KycApiController extends Controller
             ], 'This asset was already released.');
         }
 
-        if (! $customer->inventoryUnit) {
-            return $this->errorResponse('No linked stock unit was found for this application.', 422);
-        }
-
         $loan = DB::transaction(function () use ($customer, $loanProvisioning) {
             $customer->update([
                 'asset_release_status' => 'released',
@@ -1343,11 +1339,14 @@ class KycApiController extends Controller
                 'asset_released_by' => auth()->id(),
             ]);
 
-            if ($customer->inventoryUnit->status !== 'sold') {
+            if ($customer->inventoryUnit && $customer->inventoryUnit->status !== 'sold') {
                 $customer->inventoryUnit->update(['status' => 'assigned']);
             }
 
-            return $loanProvisioning->provision($customer->fresh(['inventoryUnit', 'assetReleasedBy']), auth()->user());
+            return $loanProvisioning->provision(
+                $customer->fresh(['inventoryUnit', 'assetReleasedBy']),
+                auth()->user()
+            );
         });
 
         activity('kyc')

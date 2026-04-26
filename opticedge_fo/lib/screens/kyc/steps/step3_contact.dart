@@ -3,8 +3,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/constants.dart';
-import '../../../config/design_tokens.dart';
-import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
 import '../../../widgets/common/glass_card.dart';
@@ -22,36 +20,8 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
   late TextEditingController _phone;
   late TextEditingController _altPhone;
   late TextEditingController _email;
-  late TextEditingController _landmark;
-
-  String? _selectedBranch;
-  String? _selectedRegion;
-  String? _selectedDistrict;
   String _phoneCountry = 'TZ';
   String _altPhoneCountry = 'TZ';
-
-  final _regions = const [
-    'Dar es Salaam',
-    'Arusha',
-    'Dodoma',
-    'Mwanza',
-    'Kilimanjaro',
-    'Morogoro',
-    'Mbeya',
-    'Tanga',
-    'Zanzibar',
-    'Mtwara',
-    'Lindi',
-    'Ruvuma',
-    'Iringa',
-    'Tabora',
-    'Shinyanga',
-    'Singida',
-    'Kagera',
-    'Rukwa',
-    'Kigoma',
-    'Pwani',
-  ];
 
   @override
   void initState() {
@@ -60,20 +30,13 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
     _phone = TextEditingController(text: state.phone);
     _altPhone = TextEditingController(text: state.altPhone);
     _email = TextEditingController(text: state.email);
-    _landmark = TextEditingController(text: state.landmark);
-    final signedInBranchId = ref.read(authProvider).user?.branch?.id;
-    _selectedBranch = state.branchId.isNotEmpty
-        ? state.branchId
-        : (signedInBranchId?.isNotEmpty == true ? signedInBranchId : null);
-    _selectedRegion = state.region.isNotEmpty ? state.region : null;
-    _selectedDistrict = state.district.isNotEmpty ? state.district : null;
     _phoneCountry = state.phoneCountry;
     _altPhoneCountry = state.altPhoneCountry;
   }
 
   @override
   void dispose() {
-    for (final controller in [_phone, _altPhone, _email, _landmark]) {
+    for (final controller in [_phone, _altPhone, _email]) {
       controller.dispose();
     }
     super.dispose();
@@ -87,26 +50,17 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
             altPhone: _altPhone.text.trim(),
             altPhoneCountry: _altPhoneCountry,
             email: _email.text.trim(),
-            branchId: _selectedBranch ?? '',
-            landmark: _landmark.text.trim(),
-            region: _selectedRegion ?? '',
-            district: _selectedDistrict ?? '',
+            // Branch + location now derived server-side (dealer context).
+            branchId: '',
+            landmark: '',
+            region: '',
+            district: '',
           ),
         );
   }
 
   Future<void> _next() async {
     if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    if (_selectedBranch == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a branch'),
-          backgroundColor: AppConstants.error,
-        ),
-      );
       return;
     }
 
@@ -117,14 +71,9 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(kycProvider);
-    final signedInUser = ref.watch(authProvider).user;
-    final branchesAsync = ref.watch(branchesProvider);
     final countriesAsync = ref.watch(phoneCountriesProvider);
     final completionCount = [
       state.phone.isNotEmpty,
-      state.branchId.isNotEmpty,
-      state.region.isNotEmpty,
-      state.district.isNotEmpty,
     ].where((item) => item).length;
 
     return SingleChildScrollView(
@@ -200,129 +149,6 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
                 ),
               ),
             ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0),
-            const SizedBox(height: 16),
-            _card(
-              title: '2. Branch',
-              subtitle: '',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if ((signedInUser?.branch?.id ?? '').isNotEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppConstants.surfaceMuted,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppConstants.border),
-                      ),
-                      child: Text(
-                        'Branch (auto): ${signedInUser!.branch!.name}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppConstants.textPrimary,
-                        ),
-                      ),
-                    )
-                  else
-                    branchesAsync.when(
-                      loading: () => const LinearProgressIndicator(
-                        color: AppConstants.primary,
-                      ),
-                      error: (_, __) => const Text(
-                        'Failed to load branches',
-                        style: TextStyle(color: AppConstants.error),
-                      ),
-                      data: (branches) => DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        initialValue: _selectedBranch,
-                        decoration: const InputDecoration(
-                          labelText: 'Branch',
-                          hintText: 'Choose the branch serving this customer',
-                          prefixIcon:
-                              Icon(Icons.location_city_outlined, size: 18),
-                        ),
-                        items: branches
-                            .map(
-                              (branch) => DropdownMenuItem<String>(
-                                value: branch.id,
-                                child: Text(branch.name),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedBranch = value;
-                          });
-                        },
-                      ),
-                    ),
-                ],
-              ),
-            ).animate().fadeIn(delay: 120.ms).slideY(begin: 0.06, end: 0),
-            const SizedBox(height: 16),
-            _card(
-              title: '3. Eneo',
-              subtitle: '',
-              child: Column(
-                children: [
-                  DropdownButtonFormField<String>(
-                    isExpanded: true,
-                    initialValue: _selectedRegion,
-                    decoration: const InputDecoration(
-                      labelText: 'Region',
-                      hintText: 'Select region',
-                      prefixIcon: Icon(Icons.map_outlined, size: 18),
-                    ),
-                    items: _regions
-                        .map(
-                          (region) => DropdownMenuItem<String>(
-                            value: region,
-                            child: Text(region),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedRegion = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    initialValue: _selectedDistrict ?? '',
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedDistrict = value;
-                      });
-                    },
-                    decoration: const InputDecoration(
-                      labelText: 'District',
-                      hintText: 'Enter district',
-                      prefixIcon: Icon(Icons.place_outlined, size: 18),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _landmark,
-                    decoration: const InputDecoration(
-                      labelText: 'Landmark',
-                      hintText: 'Near mosque, school, petrol station...',
-                      prefixIcon: Icon(Icons.pin_drop_outlined, size: 18),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _locationPreviewCard(
-                    branchLabel: _selectedBranch,
-                    region: _selectedRegion,
-                    district: _selectedDistrict,
-                    address: '',
-                    landmark: _landmark.text.trim(),
-                  ),
-                ],
-              ),
-            ).animate().fadeIn(delay: 180.ms).slideY(begin: 0.06, end: 0),
             const SizedBox(height: 30),
             AppButton(
               label: 'Save & Continue',
@@ -405,7 +231,7 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            '$completionCount/5',
+            '$completionCount/1',
             style: TextStyle(
               fontSize: 12,
               color: Colors.white.withValues(alpha: 0.82),
@@ -452,78 +278,5 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
     );
   }
 
-  Widget _locationPreviewCard({
-    required String? branchLabel,
-    required String? region,
-    required String? district,
-    required String address,
-    required String landmark,
-  }) {
-    final rows = <String>[
-      if (branchLabel != null && branchLabel.isNotEmpty) 'Branch linked',
-      if (region != null && region.isNotEmpty) region,
-      if (district != null && district.isNotEmpty) district,
-      if (address.isNotEmpty) address,
-      if (landmark.isNotEmpty) 'Near $landmark',
-    ];
-
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark
-            ? DesignTokens.darkBorder.withValues(alpha: 0.28)
-            : AppConstants.surfaceMuted,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-            color: isDark ? DesignTokens.darkBorder : AppConstants.border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color:
-                  isDark ? DesignTokens.darkSurfaceElevated : Colors.white,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.map_rounded,
-              color: AppConstants.info,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Location summary',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  rows.isEmpty
-                      ? 'Jaza branch na anwani.'
-                      : rows.join(' • '),
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.45,
-                    color: Theme.of(context).textTheme.bodyMedium?.color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Branch & location UI removed.
 }

@@ -76,7 +76,6 @@ class CustomerLoanProvisioningService
     public function canProvision(Customer $customer): bool
     {
         return $customer->isAssetReleased()
-            && filled($customer->inventory_unit_id)
             && filled($customer->cash_price)
             && filled($customer->preferred_repayment)
             && $customer->cash_price > 0;

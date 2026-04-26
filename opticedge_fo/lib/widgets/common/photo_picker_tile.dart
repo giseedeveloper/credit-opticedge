@@ -26,16 +26,29 @@ class PhotoPickerTile extends StatelessWidget {
       maxWidth: 1200,
     );
     if (picked != null) {
-      final file = File(picked.path);
-      final msg = KycUploadLimits.validateOptional(file, label);
-      if (msg != null) {
+      final length = await picked.length();
+      if (length <= 0) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(msg)),
+            SnackBar(content: Text('Could not read $label. Pick the photo again.')),
           );
         }
         return;
       }
+      if (length > KycUploadLimits.maxBytesPerPhoto) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '$label must be under ${KycUploadLimits.formatMaxMb()} MB (this file is ${KycUploadLimits.formatMb(length)} MB). '
+                'Try cropping or retaking at a lower resolution.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+      final file = File(picked.path);
       onPicked(file);
     }
   }

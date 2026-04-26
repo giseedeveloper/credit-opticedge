@@ -461,10 +461,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                             );
                           },
                         ),
-                        if (state.phoneModelId.isNotEmpty) ...[
-                          const SizedBox(height: 14),
-                          _inventoryFromStockSection(context, ref, state),
-                        ],
+                        // Stock linking UI removed (FO selects brand/model only).
                         const SizedBox(height: 14),
                         Text(
                           'Repayment Cycle',
@@ -904,117 +901,5 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
     return value[0].toUpperCase() + value.substring(1);
   }
 
-  /// Links Step 1 to an existing [InventoryUnit] so the API sends
-  /// `inventory_unit_id` and skips "register new IMEI" validation.
-  Widget _inventoryFromStockSection(
-    BuildContext context,
-    WidgetRef ref,
-    KycDraftState state,
-  ) {
-    final unitsAsync = ref.watch(
-      inventoryUnitsProvider((
-        phoneModelId: state.phoneModelId,
-        search: '',
-        preferredRepayment: state.preferredRepayment,
-      )),
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Stock duukani (pendekezwa)',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            color: Theme.of(context).textTheme.bodyLarge?.color,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Ikiwa IMEI tayari iko kwenye mfumo, chagua kifaa hapa ili kuunganisha stock '
-          '— vinginevyo utaona "IMEI already exists in inventory".',
-          style: TextStyle(
-            fontSize: 11,
-            height: 1.45,
-            color: Theme.of(context).textTheme.bodyMedium?.color,
-          ),
-        ),
-        const SizedBox(height: 10),
-        unitsAsync.when(
-          loading: () => const LinearProgressIndicator(
-            color: AppConstants.primary,
-            minHeight: 2,
-          ),
-          error: (_, __) => const Text(
-            'Imeshindwa kupakia stock.',
-            style: TextStyle(color: AppConstants.error, fontSize: 12),
-          ),
-          data: (units) {
-            if (state.inventoryUnitId.isNotEmpty &&
-                !units.any((u) => u.id == state.inventoryUnitId)) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!context.mounted) return;
-                ref.read(kycProvider.notifier).selectInventoryUnit(null);
-              });
-            }
-
-            if (units.isEmpty) {
-              return Text(
-                'Hakuna vitu vya stock vilivyopatikana kwa model hii katika tawi lako. '
-                'Tumia Manual tu ikiwa kifaa hakijajumuishwa kwenye stock.',
-                style: TextStyle(
-                  fontSize: 12,
-                  height: 1.45,
-                  color: Theme.of(context).textTheme.bodyMedium?.color,
-                ),
-              );
-            }
-
-            final selectedId = state.inventoryUnitId.isNotEmpty &&
-                    units.any((u) => u.id == state.inventoryUnitId)
-                ? state.inventoryUnitId
-                : null;
-
-            return DropdownButtonFormField<String?>(
-              key: ValueKey<String?>(selectedId),
-              isExpanded: true,
-              initialValue: selectedId,
-              decoration: const InputDecoration(
-                labelText: 'Chagua kifaa (IMEI) kutoka stock',
-                prefixIcon: Icon(Icons.inventory_2_outlined, size: 18),
-              ),
-              items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text(
-                    'Sijasajili kutoka stock — andika IMEI mkono',
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                ...units.map(
-                  (u) => DropdownMenuItem<String?>(
-                    value: u.id,
-                    child: Text(
-                      u.subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ],
-              onChanged: (id) {
-                if (id == null) {
-                  ref.read(kycProvider.notifier).selectInventoryUnit(null);
-                } else {
-                  final unit = units.firstWhere((u) => u.id == id);
-                  ref.read(kycProvider.notifier).selectInventoryUnit(unit);
-                }
-              },
-            );
-          },
-        ),
-      ],
-    );
-  }
+  // Stock linking UI removed.
 }

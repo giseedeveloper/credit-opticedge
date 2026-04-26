@@ -873,7 +873,7 @@ it('allows fo to upload handover checklist when the customer record is missing t
         ->and(str_contains((string) $customer->fresh()->asset_handover_list_path, 'kyc/handover'))->toBeTrue();
 });
 
-it('release asset marks the stock unit as assigned', function () {
+it('release asset provisions a loan (with or without stock linkage)', function () {
     $agreement = SystemDocument::factory()->create([
         'key' => 'kyc_customer_agreement',
         'disk' => 'public',
@@ -912,11 +912,55 @@ it('release asset marks the stock unit as assigned', function () {
     $loan = Loan::query()->where('customer_id', $customer->id)->first();
 
     expect($customer->fresh()->asset_release_status)->toBe('released')
-        ->and($this->inventoryUnit->fresh()->status)->toBe('assigned')
         ->and($loan)->not->toBeNull()
         ->and($loan?->repayment_frequency)->toBe('weekly')
         ->and($loan?->status)->toBe('active')
         ->and(RepaymentSchedule::query()->where('loan_id', $loan?->id)->count())->toBeGreaterThan(0);
+
+    expect($this->inventoryUnit->fresh()->status)->toBe('assigned');
+});
+
+it('release asset works even when no inventory unit is linked', function () {
+    $agreement = SystemDocument::factory()->create([
+        'key' => 'kyc_customer_agreement',
+        'disk' => 'public',
+        'path' => 'agreements/release-no-stock.pdf',
+        'is_active' => true,
+        'uploaded_by' => $this->agent->id,
+    ]);
+
+    Storage::disk('public')->put('kyc/customer-signatures/api-customer.png', base64_decode(apiKycRawSignature(), true));
+    Storage::disk('public')->put('kyc/fo-signatures/api-fo.png', base64_decode(apiKycRawSignature(), true));
+    Storage::disk('public')->put('kyc/handover/api-release.pdf', 'handover checklist');
+
+    $customer = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'dealer_id' => $this->dealer->id,
+        'phone_model_id' => $this->phoneModel->id,
+        'inventory_unit_id' => null,
+        'agreement_document_id' => $agreement->id,
+        'agreement_accepted' => true,
+        'customer_signature_path' => 'kyc/customer-signatures/api-customer.png',
+        'fo_signature_path' => 'kyc/fo-signatures/api-fo.png',
+        'asset_handover_list_path' => 'kyc/handover/api-release.pdf',
+        'deposit_payment_status' => 'completed',
+        'cash_price' => 380000,
+        'deposit_amount' => 50000,
+        'preferred_repayment' => 'weekly',
+        'asset_release_status' => 'pending',
+        'kyc_status' => 'approved',
+        'imei_number' => '353456789012345',
+    ]);
+
+    $this->postJson("/api/v1/kyc/customers/{$customer->id}/release-asset")
+        ->assertOk()
+        ->assertJsonPath('data.release.status', 'released')
+        ->assertJsonPath('data.loan.status', 'active');
+
+    $loan = Loan::query()->where('customer_id', $customer->id)->first();
+    expect($loan)->not->toBeNull()
+        ->and($loan?->inventory_unit_id)->toBeNull()
+        ->and($loan?->dealer_id)->toBe($this->dealer->id);
 });
 
 it('save-draft marks fo timestamp and draft tab lists only explicit drafts', function () {

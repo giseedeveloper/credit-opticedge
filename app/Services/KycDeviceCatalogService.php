@@ -12,6 +12,34 @@ use Illuminate\Support\Collection;
 class KycDeviceCatalogService
 {
     /**
+     * Catalog-wide brands list (not stock-scoped).
+     *
+     * @return Collection<int, Brand>
+     */
+    public function catalogBrands(): Collection
+    {
+        return Brand::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * Catalog-wide models list (not stock-scoped).
+     *
+     * @return Collection<int, PhoneModel>
+     */
+    public function catalogModels(?string $brandId = null): Collection
+    {
+        return PhoneModel::query()
+            ->with('brand')
+            ->when($brandId, fn (Builder $query) => $query->where('brand_id', $brandId))
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
      * @return Collection<int, Brand>
      */
     public function brandsFor(User $user): Collection

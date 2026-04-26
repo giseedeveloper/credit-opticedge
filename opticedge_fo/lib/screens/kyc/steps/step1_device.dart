@@ -314,144 +314,214 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                   ),
                 ),
               ),
-              data: (brands) => GlassCard.surface(
-                context,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Selection (Kuchagua)',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      key: ValueKey<String?>(
-                        state.brandId.isEmpty ? null : state.brandId,
-                      ),
-                      isExpanded: true,
-                      initialValue: state.brandId.isEmpty ? null : state.brandId,
-                      decoration: const InputDecoration(
-                        labelText: 'Model / Brand (Tecno, Samsung, iPhone...)',
-                        prefixIcon: Icon(Icons.category_outlined, size: 18),
-                      ),
-                      items: brands
-                          .map(
-                            (brand) => DropdownMenuItem<String>(
-                              value: brand.id,
-                              child: Text(brand.name),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) => ref
-                          .read(kycProvider.notifier)
-                          .selectBrand(value?.trim() ?? ''),
-                      validator: (value) {
-                        if ((value ?? '').trim().isEmpty) {
-                          return 'Chagua model / brand';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    modelsAsync.when(
-                      loading: () => const LinearProgressIndicator(
-                        color: AppConstants.primary,
-                      ),
-                      error: (_, __) => const Text(
-                        'Failed to load phone specs.',
-                        style: TextStyle(color: AppConstants.error),
-                      ),
-                      data: (models) => DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        initialValue:
-                            state.phoneModelId.isEmpty ? null : state.phoneModelId,
-                        decoration: const InputDecoration(
-                          labelText: 'Device Specs / Model',
-                          prefixIcon: Icon(Icons.smartphone_outlined, size: 18),
+              data: (brands) {
+                return GlassCard.surface(
+                  context,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Selection (Kuchagua)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
                         ),
-                        items: models
-                            .map(
-                              (model) => DropdownMenuItem<String>(
-                                value: model.id,
-                                child: Text(
-                                  model.deviceSpecs.isNotEmpty
-                                      ? model.deviceSpecs
-                                      : '${model.brandName} ${model.name}',
-                                  overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 10),
+                      if (brands.isEmpty) ...[
+                        Text(
+                          'No brands found from server. Check API / connectivity then retry.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
+                            height: 1.35,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: () => ref.refresh(deviceBrandsProvider),
+                          icon: const Icon(Icons.refresh_rounded, size: 18),
+                          label: const Text('Retry'),
+                        ),
+                      ] else ...[
+                        DropdownButtonFormField<String>(
+                          key: ValueKey<String?>(
+                            state.brandId.isEmpty ? null : state.brandId,
+                          ),
+                          isExpanded: true,
+                          initialValue:
+                              state.brandId.isEmpty ? null : state.brandId,
+                          decoration: const InputDecoration(
+                            labelText: 'Model / Brand (Tecno, Samsung, iPhone...)',
+                            prefixIcon: Icon(Icons.category_outlined, size: 18),
+                          ),
+                          items: brands
+                              .where((b) => b.id.trim().isNotEmpty)
+                              .map(
+                                (brand) => DropdownMenuItem<String>(
+                                  value: brand.id,
+                                  child: Text(brand.name),
                                 ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          final model = models.cast<DeviceModelOption?>().firstWhere(
-                                (item) => item?.id == value,
-                                orElse: () => null,
+                              )
+                              .toList(),
+                          onChanged: (value) => ref
+                              .read(kycProvider.notifier)
+                              .selectBrand(value?.trim() ?? ''),
+                          validator: (value) {
+                            if ((value ?? '').trim().isEmpty) {
+                              return 'Chagua model / brand';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        modelsAsync.when(
+                          loading: () => const LinearProgressIndicator(
+                            color: AppConstants.primary,
+                          ),
+                          error: (_, __) => const Text(
+                            'Failed to load phone specs.',
+                            style: TextStyle(color: AppConstants.error),
+                          ),
+                          data: (models) {
+                            if (state.brandId.trim().isNotEmpty &&
+                                models.isEmpty) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'No models found for this brand.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.color,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  OutlinedButton.icon(
+                                    onPressed: () => ref.refresh(
+                                      deviceModelsProvider((
+                                        brandId: state.brandId,
+                                        preferredRepayment:
+                                            state.preferredRepayment,
+                                      )),
+                                    ),
+                                    icon: const Icon(Icons.refresh_rounded,
+                                        size: 18),
+                                    label: const Text('Retry models'),
+                                  ),
+                                ],
                               );
-                          ref.read(kycProvider.notifier).selectModel(model);
-                        },
-                        validator: (value) {
-                          if ((value ?? '').trim().isEmpty) {
-                            return 'Chagua device specs/model';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    if (state.phoneModelId.isNotEmpty) ...[
-                      const SizedBox(height: 14),
-                      _inventoryFromStockSection(context, ref, state),
-                    ],
-                    const SizedBox(height: 14),
-                    Text(
-                      'Repayment Cycle',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _repaymentOptions.map((option) {
-                        final selected = state.preferredRepayment == option;
+                            }
 
-                        return ChoiceChip(
-                          label: Text(
-                            option == 'bi-weekly' ? 'Bi-weekly' : _sentence(option),
-                          ),
-                          selected: selected,
-                          onSelected: (_) => ref.read(kycProvider.notifier).update(
-                                (current) => current.copyWith(
-                                  preferredRepayment: option,
-                                ),
+                            return DropdownButtonFormField<String>(
+                              isExpanded: true,
+                              initialValue: state.phoneModelId.isEmpty
+                                  ? null
+                                  : state.phoneModelId,
+                              decoration: const InputDecoration(
+                                labelText: 'Device Specs / Model',
+                                prefixIcon:
+                                    Icon(Icons.smartphone_outlined, size: 18),
                               ),
-                          selectedColor: AppConstants.primarySurface,
-                          side: BorderSide(
-                            color: selected
-                                ? AppConstants.primary
-                                : Theme.of(context).brightness == Brightness.dark
-                                    ? DesignTokens.darkBorder
-                                    : AppConstants.border,
+                              items: models
+                                  .where((m) => m.id.trim().isNotEmpty)
+                                  .map(
+                                    (model) => DropdownMenuItem<String>(
+                                      value: model.id,
+                                      child: Text(
+                                        model.deviceSpecs.isNotEmpty
+                                            ? model.deviceSpecs
+                                            : '${model.brandName} ${model.name}',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) {
+                                final model = models
+                                    .cast<DeviceModelOption?>()
+                                    .firstWhere(
+                                      (item) => item?.id == value,
+                                      orElse: () => null,
+                                    );
+                                ref.read(kycProvider.notifier).selectModel(model);
+                              },
+                              validator: (value) {
+                                if ((value ?? '').trim().isEmpty) {
+                                  return 'Chagua device specs/model';
+                                }
+                                return null;
+                              },
+                            );
+                          },
+                        ),
+                        if (state.phoneModelId.isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          _inventoryFromStockSection(context, ref, state),
+                        ],
+                        const SizedBox(height: 14),
+                        Text(
+                          'Repayment Cycle',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
                           ),
-                          labelStyle: TextStyle(
-                            color: selected
-                                ? AppConstants.primary
-                                : Theme.of(context).textTheme.bodyMedium?.color,
-                            fontWeight:
-                                selected ? FontWeight.w800 : FontWeight.w600,
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _repaymentOptions.map((option) {
+                            final selected = state.preferredRepayment == option;
+
+                            return ChoiceChip(
+                              label: Text(
+                                option == 'bi-weekly'
+                                    ? 'Bi-weekly'
+                                    : _sentence(option),
+                              ),
+                              selected: selected,
+                              onSelected: (_) =>
+                                  ref.read(kycProvider.notifier).update(
+                                        (current) => current.copyWith(
+                                          preferredRepayment: option,
+                                        ),
+                                      ),
+                              selectedColor: AppConstants.primarySurface,
+                              side: BorderSide(
+                                color: selected
+                                    ? AppConstants.primary
+                                    : Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? DesignTokens.darkBorder
+                                        : AppConstants.border,
+                              ),
+                              labelStyle: TextStyle(
+                                color: selected
+                                    ? AppConstants.primary
+                                    : Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.color,
+                                fontWeight: selected
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
             ).animate().fadeIn(delay: 70.ms).slideY(begin: 0.06, end: 0),
             const SizedBox(height: 16),
             GlassCard.surface(

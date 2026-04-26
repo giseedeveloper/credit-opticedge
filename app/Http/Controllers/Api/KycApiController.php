@@ -72,7 +72,7 @@ class KycApiController extends Controller
 
     public function deviceBrands(Request $request, KycDeviceCatalogService $catalog): JsonResponse
     {
-        $brands = $catalog->brandsFor($request->user())
+        $brands = $catalog->catalogBrands()
             ->map(fn ($brand) => [
                 'id' => $brand->id,
                 'name' => $brand->name,
@@ -96,7 +96,7 @@ class KycApiController extends Controller
             $request->string('preferred_repayment')->toString() ?: null
         );
 
-        $models = $catalog->modelsFor($request->user(), $request->string('brand_id')->toString() ?: null)
+        $models = $catalog->catalogModels($request->string('brand_id')->toString() ?: null)
             ->map(fn ($model) => [
                 'id' => $model->id,
                 'brand_id' => $model->brand_id,

@@ -33,7 +33,13 @@ class DeviceBrandOption {
 
   factory DeviceBrandOption.fromJson(Map<String, dynamic> json) =>
       DeviceBrandOption(
-        id: json['id']?.toString() ?? '',
+        // Backends sometimes return brand identifiers under different keys.
+        id: (json['id'] ??
+                json['_id'] ??
+                json['brand_id'] ??
+                json['brandId'] ??
+                json['uuid'])?.toString() ??
+            '',
         name: json['name']?.toString() ?? '',
       );
 }
@@ -69,8 +75,20 @@ class DeviceModelOption {
     final recommendedTerms = _specificationsMap(json['recommended_terms']);
 
     return DeviceModelOption(
-        id: json['id']?.toString() ?? '',
-        brandId: json['brand_id']?.toString() ?? '',
+        // Backend may send `phone_model_id` instead of `id`.
+        id: (json['id'] ??
+                json['_id'] ??
+                json['phone_model_id'] ??
+                json['model_id'] ??
+                json['modelId'] ??
+                json['uuid'])?.toString() ??
+            '',
+        brandId: (json['brand_id'] ??
+                json['brandId'] ??
+                (json['brand'] is Map ? (json['brand'] as Map)['id'] : null) ??
+                (json['brand'] is Map ? (json['brand'] as Map)['_id'] : null))
+            ?.toString() ??
+            '',
         brandName: json['brand_name']?.toString() ?? '',
         name: json['name']?.toString() ?? '',
         retailPrice: _nullableNum(json['retail_price']),

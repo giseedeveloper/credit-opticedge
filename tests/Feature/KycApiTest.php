@@ -282,6 +282,25 @@ it('device catalog endpoints return scoped brands, models and units', function (
         ->assertJsonFragment(['id' => $this->inventoryUnit->id, 'imei_1' => $this->inventoryUnit->imei_1]);
 });
 
+it('device catalog returns brands and models even when dealer has no stock', function () {
+    InventoryUnit::query()->delete();
+
+    $brand = Brand::factory()->create(['name' => 'Tecno', 'is_active' => true]);
+    $model = PhoneModel::factory()->create([
+        'brand_id' => $brand->id,
+        'name' => 'Spark 30',
+        'is_active' => true,
+    ]);
+
+    $this->getJson('/api/v1/kyc/application/device/brands')
+        ->assertOk()
+        ->assertJsonFragment(['id' => $brand->id, 'name' => 'Tecno']);
+
+    $this->getJson('/api/v1/kyc/application/device/models?brand_id='.$brand->id)
+        ->assertOk()
+        ->assertJsonFragment(['id' => $model->id, 'name' => 'Spark 30']);
+});
+
 // ─── Step 2: Identity ─────────────────────────────────────────────────────────
 
 it('step2 saves customer identity details', function () {

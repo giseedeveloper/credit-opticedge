@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\CustomerPortal\CustomerPaymentController;
 use App\Http\Controllers\Api\FinanceApiController;
 use App\Http\Controllers\Api\FraudApiController;
 use App\Http\Controllers\Api\KycApiController;
+use App\Http\Controllers\Api\KycFaceVerificationController;
 use App\Http\Controllers\Api\RecoveryApiController;
 use App\Http\Controllers\Api\RoleApiController;
 use App\Http\Controllers\Api\SecurityApiController;
@@ -111,6 +112,10 @@ Route::prefix('v1')->group(function () {
                 Route::post('/{customer_id}/step7', [KycApiController::class, 'step7Submit']);
                 Route::post('/{customer_id}/save-draft', [KycApiController::class, 'markFoSavedAsDraft']);
                 Route::get('/{customer_id}/status', [KycApiController::class, 'applicationStatus']);
+                // Face Verification — dedicated live-scan flow for FO app
+                Route::post('/{customer_id}/face/id-photo', [KycFaceVerificationController::class, 'uploadIdPhoto']);
+                Route::post('/{customer_id}/face/verify', [KycFaceVerificationController::class, 'verifyFace']);
+                Route::get('/{customer_id}/face/status', [KycFaceVerificationController::class, 'faceStatus']);
             });
 
         // Staff / Sales Agent Tracking

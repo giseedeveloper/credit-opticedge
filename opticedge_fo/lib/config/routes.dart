@@ -12,6 +12,7 @@ import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/customers/customer_list_screen.dart';
 import '../screens/customers/customer_detail_screen.dart';
 import '../screens/kyc/kyc_wizard_screen.dart';
+import '../screens/kyc/face_scanner_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../core/l10n/app_strings.dart';
@@ -87,7 +88,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/kyc/new/step/:step',
             pageBuilder: (context, state) {
-              final raw = int.tryParse(state.pathParameters['step'] ?? '1') ?? 1;
+              final raw =
+                  int.tryParse(state.pathParameters['step'] ?? '1') ?? 1;
               final step = raw.clamp(1, 7);
               return CustomTransitionPage<void>(
                 key: state.pageKey,
@@ -111,6 +113,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     ),
                   );
                 },
+              );
+            },
+          ),
+          GoRoute(
+            path: '/kyc/face-scanner/:customerId',
+            builder: (context, state) {
+              final customerId = state.pathParameters['customerId']!;
+              final idFrontUrl = state.uri.queryParameters['id_front_url'];
+              return FaceScannerScreen(
+                customerId: customerId,
+                idFrontUrl: idFrontUrl,
               );
             },
           ),
@@ -201,102 +214,103 @@ class _MainShell extends ConsumerWidget {
                     child: SizedBox(
                       height: 68,
                       child: Row(
-              children: [
-                _NavItem(
-                  iconAsset: AppIconAssets.dashboard,
-                  activeIconAsset: AppIconAssets.dashboard,
-                  label: s.dashboard,
-                  selected: _selectedIndex == 0,
-                  onTap: () => context.go('/dashboard'),
-                ),
-                _NavItem(
-                  iconAsset: AppIconAssets.customers,
-                  activeIconAsset: AppIconAssets.customers,
-                  label: s.customers,
-                  selected: _selectedIndex == 1,
-                  onTap: () => context.go('/customers'),
-                ),
-                // Center FAB-like button
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => context.go('/kyc/new'),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? DesignTokens.darkSurface
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: isDark
-                                  ? DesignTokens.darkBorder
-                                  : DesignTokens.primaryLight
-                                      .withValues(alpha: 0.45),
-                              width: 1.2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: DesignTokens.primary
-                                    .withValues(
-                                        alpha: isDark ? 0.22 : 0.35),
-                                blurRadius: 14,
-                                offset: const Offset(0, 6),
+                        children: [
+                          _NavItem(
+                            iconAsset: AppIconAssets.dashboard,
+                            activeIconAsset: AppIconAssets.dashboard,
+                            label: s.dashboard,
+                            selected: _selectedIndex == 0,
+                            onTap: () => context.go('/dashboard'),
+                          ),
+                          _NavItem(
+                            iconAsset: AppIconAssets.customers,
+                            activeIconAsset: AppIconAssets.customers,
+                            label: s.customers,
+                            selected: _selectedIndex == 1,
+                            onTap: () => context.go('/customers'),
+                          ),
+                          // Center FAB-like button
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => context.go('/kyc/new'),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? DesignTokens.darkSurface
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: isDark
+                                            ? DesignTokens.darkBorder
+                                            : DesignTokens.primaryLight
+                                                .withValues(alpha: 0.45),
+                                        width: 1.2,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: DesignTokens.primary
+                                              .withValues(
+                                                  alpha: isDark ? 0.22 : 0.35),
+                                          blurRadius: 14,
+                                          offset: const Offset(0, 6),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Center(
+                                      child: AppColorIcon(
+                                        assetName: AppIconAssets.register,
+                                        size: 24,
+                                        semanticsLabel: 'Register',
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4),
+                                    child: SizedBox(
+                                      width: double.infinity,
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          s.register,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w700,
+                                            color: DesignTokens.primary,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: const Center(
-                            child: AppColorIcon(
-                              assetName: AppIconAssets.register,
-                              size: 24,
-                              semanticsLabel: 'Register',
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                s.register,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                  color: DesignTokens.primary,
-                                ),
-                              ),
-                            ),
+                          _NavItem(
+                            iconAsset: AppIconAssets.profile,
+                            activeIconAsset: AppIconAssets.profile,
+                            label: s.profile,
+                            selected: _selectedIndex == 3,
+                            onTap: () => context.go('/profile'),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                _NavItem(
-                  iconAsset: AppIconAssets.profile,
-                  activeIconAsset: AppIconAssets.profile,
-                  label: s.profile,
-                  selected: _selectedIndex == 3,
-                  onTap: () => context.go('/profile'),
-                ),
-                _NavItem(
-                  iconAsset: AppIconAssets.settings,
-                  activeIconAsset: AppIconAssets.settings,
-                  label: s.settings,
-                  selected: _selectedIndex == 4,
-                  onTap: () => context.go('/settings'),
-                ),
-              ],
-            ),
+                          _NavItem(
+                            iconAsset: AppIconAssets.settings,
+                            activeIconAsset: AppIconAssets.settings,
+                            label: s.settings,
+                            selected: _selectedIndex == 4,
+                            onTap: () => context.go('/settings'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -339,9 +353,8 @@ class _NavItem extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: selected
-                    ? DesignTokens.navSelectedBg
-                    : Colors.transparent,
+                color:
+                    selected ? DesignTokens.navSelectedBg : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(

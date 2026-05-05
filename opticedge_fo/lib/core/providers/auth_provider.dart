@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../models/user_model.dart';
@@ -46,6 +48,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _init();
   }
 
+  /// Avoid an endless splash if secure storage hangs (seen on some OEM Android builds).
+  static const Duration sessionRestoreTimeout = Duration(seconds: 12);
+
   static bool shouldOfferBiometricUnlock({
     required bool biometricEnabled,
     required bool hasToken,
@@ -54,12 +59,48 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return biometricEnabled && hasToken && hasUser;
   }
 
+  void _patchState(AuthState Function(AuthState current) updater) {
+    if (!mounted) {
+      return;
+    }
+    state = updater(state);
+  }
+
   Future<void> _init() async {
+    try {
+      await _restoreSession().timeout(sessionRestoreTimeout);
+    } on TimeoutException catch (e, st) {
+      _logSessionRestoreFailure(e, st);
+      _patchState(
+        (s) => s.copyWith(
+          status: AuthStatus.unauthenticated,
+          canUseBiometricUnlock: false,
+        ),
+      );
+    } catch (e, st) {
+      _logSessionRestoreFailure(e, st);
+      _patchState(
+        (s) => s.copyWith(
+          status: AuthStatus.unauthenticated,
+          canUseBiometricUnlock: false,
+        ),
+      );
+    }
+  }
+
+  void _logSessionRestoreFailure(Object e, StackTrace st) {
+    debugPrint('AuthNotifier: session restore failed, continuing logged out. $e');
+    debugPrint('$st');
+  }
+
+  Future<void> _restoreSession() async {
     final token = await SecureStorageService.instance.getToken();
     if (token == null) {
-      state = state.copyWith(
-        status: AuthStatus.unauthenticated,
-        canUseBiometricUnlock: false,
+      _patchState(
+        (s) => s.copyWith(
+          status: AuthStatus.unauthenticated,
+          canUseBiometricUnlock: false,
+        ),
       );
       return;
     }
@@ -72,23 +113,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
         hasToken: true,
         hasUser: true,
       )) {
-        state = state.copyWith(
-          status: AuthStatus.unauthenticated,
-          user: UserModel.fromJson(userData),
-          canUseBiometricUnlock: true,
+        _patchState(
+          (s) => s.copyWith(
+            status: AuthStatus.unauthenticated,
+            user: UserModel.fromJson(userData),
+            canUseBiometricUnlock: true,
+          ),
         );
         return;
       }
 
-      state = state.copyWith(
-        status: AuthStatus.authenticated,
-        user: UserModel.fromJson(userData),
-        canUseBiometricUnlock: false,
+      _patchState(
+        (s) => s.copyWith(
+          status: AuthStatus.authenticated,
+          user: UserModel.fromJson(userData),
+          canUseBiometricUnlock: false,
+        ),
       );
     } else {
-      state = state.copyWith(
-        status: AuthStatus.unauthenticated,
-        canUseBiometricUnlock: false,
+      _patchState(
+        (s) => s.copyWith(
+          status: AuthStatus.unauthenticated,
+          canUseBiometricUnlock: false,
+        ),
       );
     }
   }

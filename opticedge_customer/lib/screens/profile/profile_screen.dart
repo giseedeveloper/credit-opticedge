@@ -86,7 +86,7 @@ class ProfileScreen extends ConsumerWidget {
                                   ? Image.network(
                                       c.headshotUrl!,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Center(
+                                      errorBuilder: (_, _, _) => Center(
                                         child: Text(
                                           _initials(c.firstName, c.lastName),
                                           style: const TextStyle(

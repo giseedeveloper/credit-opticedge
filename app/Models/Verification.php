@@ -36,6 +36,7 @@ class Verification extends Model
             'nok_called_at' => 'datetime',
             'auto_check_ran_at' => 'datetime',
             'auto_check_results' => 'array',
+            'face_match_score' => 'float',
             'face_match_ran_at' => 'datetime',
             'face_match_manual_verified_at' => 'datetime',
             'stage' => 'integer',

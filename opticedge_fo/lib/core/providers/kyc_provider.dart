@@ -101,6 +101,10 @@ class KycDraftState {
   final File? headshotPhoto;
   final File? clientFoPhoto;
 
+  // Face verification status (from backend)
+  final bool faceMatchPassed;
+  final double? faceMatchScore;
+
   // Step 3 — Contact
   final String phone;
   final String phoneCountry;
@@ -195,6 +199,8 @@ class KycDraftState {
     this.idBackPhoto,
     this.headshotPhoto,
     this.clientFoPhoto,
+    this.faceMatchPassed = false,
+    this.faceMatchScore,
     this.phone = '',
     this.phoneCountry = 'TZ',
     this.altPhone = '',
@@ -283,6 +289,8 @@ class KycDraftState {
     Object? idBackPhoto = _unset,
     Object? headshotPhoto = _unset,
     Object? clientFoPhoto = _unset,
+    bool? faceMatchPassed,
+    double? faceMatchScore,
     String? phone,
     String? phoneCountry,
     String? altPhone,
@@ -386,6 +394,8 @@ class KycDraftState {
       clientFoPhoto: identical(clientFoPhoto, _unset)
           ? this.clientFoPhoto
           : clientFoPhoto as File?,
+      faceMatchPassed: faceMatchPassed ?? this.faceMatchPassed,
+      faceMatchScore: faceMatchScore ?? this.faceMatchScore,
       phone: phone ?? this.phone,
       phoneCountry: phoneCountry ?? this.phoneCountry,
       altPhone: altPhone ?? this.altPhone,
@@ -972,7 +982,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       final form = FormData.fromMap({
         if (state.occupation.isNotEmpty) 'occupation': state.occupation,
         'monthly_income': state.monthlyIncome,
-        'income_payment_cycle': _incomeCycleValueForApi(state.incomePaymentCycle),
+        'income_payment_cycle':
+            _incomeCycleValueForApi(state.incomePaymentCycle),
         'is_pep': state.isPep ? '1' : '0',
         if (state.durationAtWork.isNotEmpty)
           'duration_at_work': state.durationAtWork,
@@ -1164,7 +1175,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         if (state.district.isNotEmpty) 'district': state.district,
         if (state.occupation.isNotEmpty) 'occupation': state.occupation,
         'monthly_income': state.monthlyIncome,
-        'income_payment_cycle': _incomeCycleValueForApi(state.incomePaymentCycle),
+        'income_payment_cycle':
+            _incomeCycleValueForApi(state.incomePaymentCycle),
         if (state.durationAtWork.isNotEmpty)
           'duration_at_work': state.durationAtWork,
         if (state.businessPhoto != null)
@@ -1254,8 +1266,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         if (state.etrReceiptPhoto != null)
           'etr_receipt_photo': await MultipartFile.fromFile(
             state.etrReceiptPhoto!.path,
-            filename:
-                'etr.${state.etrReceiptPhoto!.path.split('.').last}',
+            filename: 'etr.${state.etrReceiptPhoto!.path.split('.').last}',
           ),
         if (state.assetHandoverList != null)
           'asset_handover_list': await MultipartFile.fromFile(

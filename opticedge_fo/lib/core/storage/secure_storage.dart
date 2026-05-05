@@ -6,8 +6,13 @@ class SecureStorageService {
   SecureStorageService._();
   static final SecureStorageService instance = SecureStorageService._();
 
+  /// [resetOnError] helps recover from Android Keystore / EncryptedSharedPreferences
+  /// corruption on some devices (otherwise reads can throw and block startup).
   final _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+      resetOnError: true,
+    ),
   );
 
   Future<void> saveToken(String token) async {

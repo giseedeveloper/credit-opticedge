@@ -7,6 +7,7 @@ import '../../../config/design_tokens.dart';
 import '../../../core/providers/customer_provider.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/common/face_scanner_tile.dart';
 import '../../../widgets/common/glass_card.dart';
 import '../../../widgets/common/photo_picker_tile.dart';
 
@@ -296,15 +297,27 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                             .update((current) =>
                                 current.copyWith(idBackPhoto: file)),
                       ),
-                      PhotoPickerTile(
-                        label: 'Headshot Photo',
-                        required: true,
-                        file: state.headshotPhoto,
-                        onPicked: (file) => ref
-                            .read(kycProvider.notifier)
-                            .update((current) =>
-                                current.copyWith(headshotPhoto: file)),
-                      ),
+                      // Face Scanner Tile for live face verification
+                      if (state.customerId != null &&
+                          state.customerId!.isNotEmpty)
+                        FaceScannerTile(
+                          label: 'Face Verification',
+                          required: true,
+                          customerId: state.customerId!,
+                          idFrontUrl: state.idFrontPhoto?.path,
+                          verified: state.faceMatchPassed,
+                          matchScore: state.faceMatchScore,
+                        )
+                      else
+                        PhotoPickerTile(
+                          label: 'Headshot Photo',
+                          required: true,
+                          file: state.headshotPhoto,
+                          onPicked: (file) => ref
+                              .read(kycProvider.notifier)
+                              .update((current) =>
+                                  current.copyWith(headshotPhoto: file)),
+                        ),
                       PhotoPickerTile(
                         label: 'Client + FO Photo',
                         file: state.clientFoPhoto,
@@ -377,15 +390,33 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
 
         final status = faceMatch['status']?.toString();
         final scoreRaw = faceMatch['score'];
-        final score = scoreRaw is num ? scoreRaw.toDouble() : double.tryParse(scoreRaw?.toString() ?? '');
+        final score = scoreRaw is num
+            ? scoreRaw.toDouble()
+            : double.tryParse(scoreRaw?.toString() ?? '');
         final alert = faceMatch['alert'] == true;
 
         final badge = switch (status) {
-          'passed' => ('Passed', AppConstants.success, AppConstants.successSurface),
+          'passed' => (
+              'Passed',
+              AppConstants.success,
+              AppConstants.successSurface
+            ),
           'failed' => ('Failed', AppConstants.error, AppConstants.errorSurface),
-          'review' => ('Needs review', AppConstants.warning, AppConstants.warningSurface),
-          'manual_verified' => ('Manual verified', AppConstants.info, AppConstants.infoSurface),
-          'pending' => ('Pending', AppConstants.border, AppConstants.borderLight),
+          'review' => (
+              'Needs review',
+              AppConstants.warning,
+              AppConstants.warningSurface
+            ),
+          'manual_verified' => (
+              'Manual verified',
+              AppConstants.info,
+              AppConstants.infoSurface
+            ),
+          'pending' => (
+              'Pending',
+              AppConstants.border,
+              AppConstants.borderLight
+            ),
           _ => ('Not started', AppConstants.border, AppConstants.borderLight),
         };
 
@@ -398,7 +429,9 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(
-                alert ? Icons.warning_amber_rounded : Icons.verified_user_outlined,
+                alert
+                    ? Icons.warning_amber_rounded
+                    : Icons.verified_user_outlined,
                 color: badge.$2,
                 size: 18,
               ),
@@ -655,9 +688,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: isDark
-                  ? DesignTokens.darkSurface
-                  : Colors.white,
+              color: isDark ? DesignTokens.darkSurface : Colors.white,
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(
@@ -668,9 +699,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
               .animate(onPlay: (controller) => controller.repeat(reverse: true))
               .shimmer(
                   duration: 1400.ms,
-                  color: isDark
-                      ? Colors.white24
-                      : Colors.white54),
+                  color: isDark ? Colors.white24 : Colors.white54),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

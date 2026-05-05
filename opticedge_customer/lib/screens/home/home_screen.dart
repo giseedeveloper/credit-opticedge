@@ -237,7 +237,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       return Image.network(
                                         url,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Center(
+                                        errorBuilder: (_, _, _) => Center(
                                           child: Text(
                                             initials,
                                             style: const TextStyle(

@@ -135,12 +135,24 @@ class ApiClient {
     return 'Something went wrong with the network. Please try again.';
   }
 
+  /// Maps known English API messages to short Swahili hints for FO users.
+  String _maybeLocalizeApiMessage(String message) {
+    final l = message.toLowerCase();
+    if (l.contains('upload the id front photo before')) {
+      return 'Picha ya mbele ya kitambulisho lazima iwe kwenye seva kabla ya uthibitishaji wa uso. Tumia kitufe cha Endelea kwenye hatua ya kitambulisho, au rudi upakie ID kisha ujaribu tena.';
+    }
+    if (l.contains('id front photo is missing from storage')) {
+      return 'Picha ya ID haipo kwenye hifadhi. Pakia tena picha ya mbele ya kitambulisho kwenye fomu.';
+    }
+    return message;
+  }
+
   String parseError(dynamic error) {
     if (error is DioException) {
       final data = error.response?.data;
       if (data is Map) {
         if (data['message'] != null) {
-          return data['message'].toString();
+          return _maybeLocalizeApiMessage(data['message'].toString());
         }
         if (data['errors'] is Map) {
           final errors = data['errors'] as Map;
@@ -165,6 +177,9 @@ class ApiClient {
       }
       if (error.response?.statusCode == 403) {
         return 'Access denied. You don\'t have permission.';
+      }
+      if (error.response?.statusCode == 404) {
+        return 'Not found (404). This action may be unavailable or the link is wrong.';
       }
       if (error.response?.statusCode == 413) {
         return 'Upload is too large. Retake the handover image more closely and try again.';

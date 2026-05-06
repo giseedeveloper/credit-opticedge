@@ -133,7 +133,7 @@ class FaceScannerTile extends StatelessWidget {
                         verified
                             ? 'Verified · ${((matchScore ?? 0) * 100).round()}% match'
                             : hasIdFront
-                                ? 'Scan uso kwa camera'
+                                ? 'Skani uso — ID itahifadhiwa kiotomatiki inapohitajika'
                                 : 'Upload ID front kwanza',
                         style: TextStyle(
                           fontSize: 11,

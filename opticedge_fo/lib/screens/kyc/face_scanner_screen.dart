@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show ImageFilter;
 
 import 'package:camera/camera.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +13,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../config/constants.dart';
 import '../../config/design_tokens.dart';
+import '../../core/api/api_client.dart';
 import '../../core/services/face_verification_service.dart';
 
 /// Face Scanner Screen — Full screen camera preview with live face detection
@@ -35,8 +39,19 @@ class FaceScannerScreen extends ConsumerStatefulWidget {
   ConsumerState<FaceScannerScreen> createState() => _FaceScannerScreenState();
 }
 
+/// Scanning phase for smart UI feedback
+enum ScanPhase {
+  searching, // Looking for face
+  detected, // Face found, hold still
+  livenessBlink, // Blink detection
+  livenessTurn, // Turn head slightly
+  capturing, // Taking photo
+  success, // Verification complete
+  error, // Error state
+}
+
 class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   CameraController? _cameraController;
   late final FaceDetector _faceDetector;
 
@@ -50,23 +65,43 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   bool _faceDetected = false;
   bool _eyesOpen = false;
   bool _faceCentered = false;
-  bool _smiling = false;
-  double? _smileProbability;
+
+  // Smart scanning state
+  ScanPhase _scanPhase = ScanPhase.searching;
+  String? _errorInstruction;
+
+  // Liveness detection
+  bool _previousEyesOpen = true;
+  bool _blinkDetected = false;
+  int _blinkCount = 0;
+  DateTime? _lastBlinkTime;
+
+  // Animation controller for scan line
+  late final AnimationController _scanLineController;
 
   // Camera description for proper rotation
   CameraDescription? _cameraDescription;
+
+  /// True after ID front is confirmed on server this session (upload or status check).
+  bool _idFrontSyncedThisSession = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
+    // Initialize scan line animation
+    _scanLineController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+
     _faceDetector = FaceDetector(
       options: FaceDetectorOptions(
-        enableContours: true,
+        enableContours: false,
         enableClassification: true,
         enableTracking: true,
-        enableLandmarks: true,
+        enableLandmarks: false,
         performanceMode: FaceDetectorMode.fast,
       ),
     );
@@ -79,13 +114,17 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     final controller = _cameraController;
     if (controller == null || !controller.value.isInitialized) return;
 
-    if (state == AppLifecycleState.inactive) {
-      controller.stopImageStream();
-    } else if (state == AppLifecycleState.resumed) {
-      if (!controller.value.isStreamingImages) {
-        _startImageStream();
+    Future<void> run() async {
+      if (!mounted) return;
+      if (state == AppLifecycleState.inactive ||
+          state == AppLifecycleState.paused) {
+        await _safeStopImageStream();
+      } else if (state == AppLifecycleState.resumed) {
+        await _startImageStream();
       }
     }
+
+    unawaited(run());
   }
 
   Future<void> _initCamera() async {
@@ -103,7 +142,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
 
       _cameraController = CameraController(
         _cameraDescription!,
-        ResolutionPreset.max,
+        ResolutionPreset.high,
         enableAudio: false,
         imageFormatGroup: Platform.isAndroid
             ? ImageFormatGroup.nv21
@@ -114,7 +153,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
 
       if (mounted) {
         setState(() => _isInitialized = true);
-        _startImageStream();
+        await _startImageStream();
       }
     } on CameraException catch (e) {
       setState(() {
@@ -131,46 +170,134 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     }
   }
 
-  void _startImageStream() {
+  Future<void> _safeStopImageStream() async {
     final controller = _cameraController;
     if (controller == null || !controller.value.isInitialized) return;
+    if (!controller.value.isStreamingImages) return;
+    try {
+      await controller.stopImageStream();
+    } on CameraException catch (_) {
+      // State mismatch with platform; safe to ignore.
+    }
+  }
 
-    controller.startImageStream(_processImage);
+  Future<void> _startImageStream() async {
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized) return;
+    if (!mounted) return;
+    if (controller.value.isStreamingImages) return;
+
+    try {
+      await controller.startImageStream(_processImage);
+    } on CameraException catch (e) {
+      if (!mounted) return;
+      final msg = e.description ?? e.code;
+      if (msg.contains('streaming images') &&
+          msg.contains('started streaming')) {
+        return;
+      }
+      setState(() {
+        _error = 'Hitilafu ya kamera: $msg';
+      });
+    }
   }
 
   void _processImage(CameraImage image) {
-    if (_isProcessing || _cameraDescription == null) return;
+    if (_isProcessing || _cameraDescription == null || !mounted) return;
+
+    _isProcessing = true;
 
     final inputImage = _convertToInputImage(image);
-    if (inputImage == null) return;
+    if (inputImage == null) {
+      _isProcessing = false;
+      return;
+    }
 
     _faceDetector.processImage(inputImage).then((faces) {
       if (!mounted) return;
 
       setState(() {
-        _faceDetected = faces.isNotEmpty;
+        _faceDetected = faces.length == 1;
 
-        if (faces.isNotEmpty) {
-          final face = faces.first;
+        // Error: multiple faces
+        if (faces.length > 1) {
+          _scanPhase = ScanPhase.error;
+          _errorInstruction = 'Nyuso zaidi ya moja zimeonekana. Kuwa pekee.';
+          return;
+        }
 
-          // Eye open probability
-          final leftEye = face.leftEyeOpenProbability ?? 0.0;
-          final rightEye = face.rightEyeOpenProbability ?? 0.0;
-          _eyesOpen = leftEye > 0.5 && rightEye > 0.5;
+        // Error: no face
+        if (faces.isEmpty) {
+          _scanPhase = ScanPhase.searching;
+          _errorInstruction = null;
+          return;
+        }
 
-          // Smile probability
-          _smileProbability = face.smilingProbability;
-          _smiling = (_smileProbability ?? 0.0) > 0.3;
+        final face = faces.first;
 
-          // Center check (face should be in center 60% of frame)
-          final centerX = face.boundingBox.center.dx;
-          final frameWidth = image.width.toDouble();
-          _faceCentered =
-              centerX >= frameWidth * 0.2 && centerX <= frameWidth * 0.8;
-        } else {
-          _smileProbability = null;
+        // Eye open probability
+        final leftEye = face.leftEyeOpenProbability ?? 0.0;
+        final rightEye = face.rightEyeOpenProbability ?? 0.0;
+        _eyesOpen = leftEye > 0.5 && rightEye > 0.5;
+
+        // Blink detection for liveness
+        final eyesJustClosed = _previousEyesOpen && !_eyesOpen;
+        final eyesJustOpened = !_previousEyesOpen && _eyesOpen;
+
+        if (eyesJustClosed || eyesJustOpened) {
+          final now = DateTime.now();
+          if (_lastBlinkTime != null &&
+              now.difference(_lastBlinkTime!).inMilliseconds < 500) {
+            _blinkCount++;
+            if (_blinkCount >= 2) {
+              _blinkDetected = true;
+            }
+          }
+          _lastBlinkTime = now;
+        }
+        _previousEyesOpen = _eyesOpen;
+
+        // Center check (face should be in center 60% of frame)
+        final centerX = face.boundingBox.center.dx;
+        final frameWidth = image.width.toDouble();
+        _faceCentered =
+            centerX >= frameWidth * 0.2 && centerX <= frameWidth * 0.8;
+
+        // Face size check (too far or too close)
+        final faceArea = face.boundingBox.width * face.boundingBox.height;
+        final frameArea = frameWidth * image.height.toDouble();
+        final faceRatio = faceArea / frameArea;
+
+        // Smart phase transitions
+        if (!_faceCentered) {
+          _scanPhase = ScanPhase.error;
+          _errorInstruction = 'Leta uso katikati ya frame.';
+        } else if (faceRatio < 0.05) {
+          _scanPhase = ScanPhase.error;
+          _errorInstruction = 'Uso uko mbali sana. Karibia kidogo.';
+        } else if (faceRatio > 0.4) {
+          _scanPhase = ScanPhase.error;
+          _errorInstruction = 'Uso uko karibu sana. Kaa mbali kidogo.';
+        } else if (!_eyesOpen && _scanPhase != ScanPhase.livenessBlink) {
+          _scanPhase = ScanPhase.error;
+          _errorInstruction = 'Fungua macho yako.';
+        } else if (_faceDetected && _faceCentered && _eyesOpen) {
+          // Good position - check liveness
+          if (!_blinkDetected) {
+            _scanPhase = ScanPhase.livenessBlink;
+            _errorInstruction = null;
+          } else {
+            _scanPhase = ScanPhase.detected;
+            _errorInstruction = null;
+          }
         }
       });
+    }).catchError((_) {
+      // Silently ignore errors
+    }).whenComplete(() {
+      if (mounted) {
+        _isProcessing = false;
+      }
     });
   }
 
@@ -198,6 +325,51 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     );
   }
 
+  /// Ensures [id_front_photo_path] exists on the server before face verify.
+  /// Local file paths from Step 2 are uploaded via the dedicated ID-photo API.
+  Future<String?> _ensureIdFrontOnServer() async {
+    if (_idFrontSyncedThisSession) {
+      return null;
+    }
+
+    final raw = widget.idFrontUrl?.trim();
+    if (raw == null || raw.isEmpty) {
+      return 'Pakia picha ya mbele ya kitambulisho kwanza kwenye hatua ya 2.';
+    }
+
+    final decoded = Uri.decodeFull(raw);
+
+    if (decoded.startsWith('http://') || decoded.startsWith('https://')) {
+      try {
+        final status =
+            await FaceVerificationService.instance.getStatus(widget.customerId);
+        if (!status.hasIdFront) {
+          return 'Picha ya ID bado haijahifadhiwa kwenye seva. Gusa Endelea kwenye hatua ya kitambulisho kisha rudi hapa.';
+        }
+        _idFrontSyncedThisSession = true;
+        return null;
+      } on DioException catch (e) {
+        return ApiClient.instance.parseError(e);
+      }
+    }
+
+    final file = File(decoded);
+    if (!await file.exists()) {
+      return 'Faili la picha ya ID halipatikani. Chagua tena picha ya mbele ya kitambulisho.';
+    }
+
+    try {
+      await FaceVerificationService.instance.uploadIdPhoto(
+        widget.customerId,
+        file,
+      );
+      _idFrontSyncedThisSession = true;
+      return null;
+    } on DioException catch (e) {
+      return ApiClient.instance.parseError(e);
+    }
+  }
+
   Future<void> _captureAndVerify() async {
     final controller = _cameraController;
     if (controller == null || !controller.value.isInitialized) return;
@@ -208,8 +380,19 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     });
 
     try {
-      // Stop stream for capture
-      await controller.stopImageStream();
+      final syncErr = await _ensureIdFrontOnServer();
+      if (syncErr != null) {
+        if (mounted) {
+          setState(() {
+            _error = syncErr;
+            _isProcessing = false;
+          });
+          await _startImageStream();
+        }
+        return;
+      }
+
+      await _safeStopImageStream();
 
       final image = await controller.takePicture();
       final file = File(image.path);
@@ -226,13 +409,29 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
           _isProcessing = false;
         });
       }
+    } on DioException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = ApiClient.instance.parseError(e);
+          _isProcessing = false;
+        });
+        await _startImageStream();
+      }
+    } on CameraException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.description ?? e.code;
+          _isProcessing = false;
+        });
+        await _startImageStream();
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
           _error = e.toString();
           _isProcessing = false;
         });
-        _startImageStream();
+        await _startImageStream();
       }
     }
   }
@@ -254,6 +453,17 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     });
 
     try {
+      final syncErr = await _ensureIdFrontOnServer();
+      if (syncErr != null) {
+        if (mounted) {
+          setState(() {
+            _error = syncErr;
+            _isProcessing = false;
+          });
+        }
+        return;
+      }
+
       final result = await FaceVerificationService.instance.verifyFace(
         widget.customerId,
         File(picked.path),
@@ -263,6 +473,13 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
         setState(() {
           _result = result;
           _verificationPassed = result.passed;
+          _isProcessing = false;
+        });
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = ApiClient.instance.parseError(e);
           _isProcessing = false;
         });
       }
@@ -276,20 +493,38 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     }
   }
 
-  void _retry() {
+  Future<void> _retry() async {
+    await _safeStopImageStream();
+
+    if (!mounted) return;
+
     setState(() {
       _result = null;
       _verificationPassed = false;
       _error = null;
       _isProcessing = false;
       _faceDetected = false;
+      _eyesOpen = false;
+      _faceCentered = false;
+      // Reset smart scanning state
+      _scanPhase = ScanPhase.searching;
+      _errorInstruction = null;
+      _blinkDetected = false;
+      _blinkCount = 0;
+      _previousEyesOpen = true;
     });
-    _startImageStream();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        unawaited(_startImageStream());
+      }
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _scanLineController.dispose();
     _cameraController?.dispose();
     _faceDetector.close();
     super.dispose();
@@ -307,7 +542,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     if (_error != null) return _buildError();
     if (_result != null) return _buildResult();
     if (!_isInitialized) return _buildLoading();
-    return _buildCameraPreview();
+    return _buildCameraPreview(context);
   }
 
   Widget _buildLoading() {
@@ -367,460 +602,199 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
         ),
       ),
       child: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(28),
-                  decoration: BoxDecoration(
-                    color: DesignTokens.error.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: DesignTokens.error.withValues(alpha: 0.3),
-                      width: 2,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.error_outline_rounded,
-                    size: 56,
-                    color: DesignTokens.error,
-                  ),
-                ).animate().scale(duration: 400.ms, curve: Curves.elasticOut),
-                const SizedBox(height: 32),
-                const Text(
-                  'Hitilafu imetokea',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(28),
+                        decoration: BoxDecoration(
+                          color: DesignTokens.error.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: DesignTokens.error.withValues(alpha: 0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.error_outline_rounded,
+                          size: 56,
+                          color: DesignTokens.error,
+                        ),
+                      ).animate().scale(
+                          duration: 400.ms, curve: Curves.elasticOut),
+                      const SizedBox(height: 32),
+                      const Text(
+                        'Hitilafu imetokea',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        softWrap: true,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 15,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  _error!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 15,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 40),
-                _buildActionButton(
-                  label: 'Jaribu Tena',
-                  icon: Icons.refresh_rounded,
-                  onPressed: _retry,
-                  isPrimary: true,
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 24),
+              _buildActionButton(
+                label: 'Jaribu Tena',
+                icon: Icons.refresh_rounded,
+                onPressed: () => unawaited(_retry()),
+                isPrimary: true,
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCameraPreview() {
+  Rect _faceGuideRect(Size screen) {
+    final w = screen.width * 0.68;
+    final h = w * 1.22;
+    return Rect.fromCenter(
+      center: Offset(screen.width / 2, screen.height * 0.36),
+      width: w,
+      height: h,
+    );
+  }
+
+  Color _ringColorForPhase() {
+    final isReady = _scanPhase == ScanPhase.detected;
+    final isError = _scanPhase == ScanPhase.error;
+    if (isError) {
+      return DesignTokens.error;
+    }
+    if (isReady) {
+      return DesignTokens.success;
+    }
+    if (_faceDetected) {
+      return AppConstants.primary;
+    }
+    return Colors.white.withValues(alpha: 0.88);
+  }
+
+  Widget _buildCameraPreview(BuildContext context) {
+    final canCapture = _scanPhase == ScanPhase.detected ||
+        _scanPhase == ScanPhase.livenessBlink;
     final size = MediaQuery.sizeOf(context);
-    final allChecksPassed = _faceDetected && _eyesOpen && _faceCentered;
+    final faceRect = _faceGuideRect(size);
+    final ringColor = _ringColorForPhase();
+    final isReady = _scanPhase == ScanPhase.detected;
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Full screen camera preview
         CameraPreview(_cameraController!),
-
-        // Gradient overlays for better visibility
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 120,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.6),
-                  Colors.transparent,
-                ],
-              ),
+        IgnorePointer(
+          child: CustomPaint(
+            size: size,
+            painter: _FaceCutoutDimPainter(
+              faceOval: faceRect,
+              dimColor: Colors.black.withValues(alpha: 0.55),
             ),
           ),
         ),
-
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 280,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.85),
-                  Colors.black.withValues(alpha: 0.4),
-                  Colors.transparent,
-                ],
-              ),
+        IgnorePointer(
+          child: CustomPaint(
+            size: size,
+            painter: _FaceGuideRingPainter(
+              faceOval: faceRect,
+              ringColor: ringColor,
+              strokeWidth: isReady ? 3 : 2,
             ),
           ),
         ),
-
-        // Face overlay guide
-        Center(
-          child: _buildFaceOverlay(),
-        ),
-
-        // Top bar with close button and title
+        if (_scanPhase == ScanPhase.searching ||
+            _scanPhase == ScanPhase.detected)
+          _buildAnimatedScanLine(faceRect),
         Positioned(
           top: 0,
           left: 0,
           right: 0,
           child: _buildTopBar(),
         ),
-
-        // Bottom controls
         Positioned(
           bottom: 0,
           left: 0,
           right: 0,
-          child: _buildBottomControls(allChecksPassed),
-        ),
-
-        // Side indicators
-        Positioned(
-          left: 16,
-          top: size.height * 0.35,
-          child: _buildSideIndicators(),
+          child: _buildSmartStatusPanel(canCapture),
         ),
       ],
     );
   }
 
-  Widget _buildTopBar() {
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Row(
-          children: [
-            // Close button
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => context.pop(_verificationPassed),
-                borderRadius: BorderRadius.circular(24),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    color: Colors.black38,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.close_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
+  Widget _buildAnimatedScanLine(Rect faceRect) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: _scanLineController,
+          builder: (context, child) {
+            final progress = _scanLineController.value;
+            final yPosition =
+                faceRect.top + 16 + progress * (faceRect.height - 32);
+
+            return CustomPaint(
+              painter: _ScanLinePainter(
+                position: yPosition,
+                color: _scanPhase == ScanPhase.detected
+                    ? DesignTokens.success.withValues(alpha: 0.75)
+                    : AppConstants.primary.withValues(alpha: 0.75),
               ),
-            ),
-
-            const Spacer(),
-
-            // Title
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: const BoxDecoration(
-                color: Colors.black38,
-                borderRadius: BorderRadius.all(Radius.circular(20)),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.face_retouching_natural_rounded,
-                    color: AppConstants.primary,
-                    size: 20,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Uthibitishaji wa Uso',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const Spacer(),
-
-            const SizedBox(width: 48), // Balance the close button
-          ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildFaceOverlay() {
-    final overlayColor = _faceDetected
-        ? (_eyesOpen && _faceCentered
-            ? DesignTokens.success
-            : DesignTokens.warning)
-        : Colors.white.withValues(alpha: 0.4);
-
-    return AnimatedContainer(
-      duration: 300.ms,
-      width: 260,
-      height: 320,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(160),
-        border: Border.all(
-          color: overlayColor,
-          width: _faceDetected ? 3 : 2,
-        ),
-        boxShadow: _faceDetected
-            ? [
-                BoxShadow(
-                  color: overlayColor.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                ),
-              ]
-            : null,
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Corner guides
-          ..._buildCornerGuides(overlayColor),
-
-          // Face detection animation
-          if (_faceDetected && _eyesOpen && _faceCentered)
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(160),
-                  border: Border.all(
-                    color: DesignTokens.success.withValues(alpha: 0.5),
-                    width: 1,
-                  ),
-                ),
-              ).animate(onPlay: (c) => c.repeat(reverse: true)).scale(
-                    begin: const Offset(1, 1),
-                    end: const Offset(1.02, 1.02),
-                    duration: 800.ms,
-                  ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildCornerGuides(Color color) {
-    const cornerSize = 30.0;
-    const cornerWidth = 4.0;
-
-    return [
-      Positioned(
-          top: 0,
-          left: 0,
-          child: _cornerGuide(color, cornerSize, cornerWidth, true, true)),
-      Positioned(
-          top: 0,
-          right: 0,
-          child: _cornerGuide(color, cornerSize, cornerWidth, true, false)),
-      Positioned(
-          bottom: 0,
-          left: 0,
-          child: _cornerGuide(color, cornerSize, cornerWidth, false, true)),
-      Positioned(
-          bottom: 0,
-          right: 0,
-          child: _cornerGuide(color, cornerSize, cornerWidth, false, false)),
-    ];
-  }
-
-  Widget _cornerGuide(
-      Color color, double size, double width, bool top, bool left) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        painter: _CornerPainter(
-          color: color,
-          strokeWidth: width,
-          topLeft: top && left,
-          topRight: top && !left,
-          bottomLeft: !top && left,
-          bottomRight: !top && !left,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSideIndicators() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildIndicatorChip(
-          icon: Icons.face_rounded,
-          label: 'Uso',
-          active: _faceDetected,
-        ),
-        const SizedBox(height: 12),
-        _buildIndicatorChip(
-          icon: Icons.visibility_rounded,
-          label: 'Macho',
-          active: _eyesOpen,
-        ),
-        const SizedBox(height: 12),
-        _buildIndicatorChip(
-          icon: Icons.center_focus_strong_rounded,
-          label: 'Kati',
-          active: _faceCentered,
-        ),
-        const SizedBox(height: 12),
-        _buildIndicatorChip(
-          icon: Icons.sentiment_satisfied_rounded,
-          label: 'Tabasamu',
-          active: _smiling,
-          optional: true,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildIndicatorChip({
-    required IconData icon,
-    required String label,
-    required bool active,
-    bool optional = false,
-  }) {
-    return AnimatedContainer(
-      duration: 200.ms,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: active
-            ? DesignTokens.success.withValues(alpha: 0.2)
-            : Colors.black38,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: active
-              ? DesignTokens.success.withValues(alpha: 0.5)
-              : Colors.white24,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 18,
-            color: active
-                ? DesignTokens.success
-                : Colors.white.withValues(alpha: 0.5),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: active
-                  ? DesignTokens.success
-                  : Colors.white.withValues(alpha: 0.5),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          if (optional) ...[
-            const SizedBox(width: 4),
-            Icon(
-              active ? Icons.check_circle : Icons.circle_outlined,
-              size: 14,
-              color: active
-                  ? DesignTokens.success
-                  : Colors.white.withValues(alpha: 0.3),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomControls(bool canCapture) {
+  Widget _buildSmartStatusPanel(bool canCapture) {
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+            colors: [
+              Colors.black.withValues(alpha: 0.82),
+              Colors.black.withValues(alpha: 0.45),
+              Colors.transparent,
+            ],
+          ),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Status message
-            AnimatedSwitcher(
-              duration: 300.ms,
-              child: Container(
-                key: ValueKey('$_faceDetected$_eyesOpen$_faceCentered'),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                decoration: BoxDecoration(
-                  color: canCapture
-                      ? DesignTokens.success.withValues(alpha: 0.2)
-                      : Colors.black38,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: canCapture
-                        ? DesignTokens.success.withValues(alpha: 0.4)
-                        : Colors.white24,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      canCapture
-                          ? Icons.check_circle_rounded
-                          : Icons.info_outline_rounded,
-                      color: canCapture
-                          ? DesignTokens.success
-                          : Colors.white.withValues(alpha: 0.8),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        canCapture
-                            ? 'Uso umegundulwa! Piga picha sasa'
-                            : _faceDetected
-                                ? 'Elekeza uso vizuri ndani ya mduara'
-                                : 'Weka uso wako ndani ya mduara',
-                        style: TextStyle(
-                          color: canCapture
-                              ? DesignTokens.success
-                              : Colors.white.withValues(alpha: 0.8),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // Smart instruction text
+            _buildSmartInstruction(),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
-            // Capture button
+            // Progress indicators
+            _buildProgressIndicators(),
+
+            const SizedBox(height: 24),
+
+            // Capture button row
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -828,18 +802,12 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                 _buildCircleButton(
                   icon: Icons.photo_library_rounded,
                   onPressed: _isProcessing ? null : _pickFromGallery,
-                  size: 52,
                 ),
 
                 const SizedBox(width: 24),
 
-                // Main capture button
+                // Capture button
                 _buildCaptureButton(canCapture),
-
-                const SizedBox(width: 24),
-
-                // Flash placeholder (for symmetry)
-                const SizedBox(width: 52),
               ],
             ),
           ],
@@ -848,30 +816,182 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     );
   }
 
-  Widget _buildCaptureButton(bool canCapture) {
-    const size = 80.0;
+  Widget _buildSmartInstruction() {
+    final (icon, text, color) = _getInstructionForPhase();
 
+    return AnimatedContainer(
+      duration: 300.ms,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  (IconData, String, Color) _getInstructionForPhase() {
+    // If there's an error instruction, show it
+    if (_errorInstruction != null) {
+      return (
+        Icons.error_outline_rounded,
+        _errorInstruction!,
+        DesignTokens.error
+      );
+    }
+
+    return switch (_scanPhase) {
+      ScanPhase.searching => (
+          Icons.search_rounded,
+          'Weka uso ndani ya frame.',
+          Colors.white
+        ),
+      ScanPhase.detected => (
+          Icons.check_circle_rounded,
+          'Kaa bila kutikisika.',
+          DesignTokens.success
+        ),
+      ScanPhase.livenessBlink => (
+          Icons.remove_red_eye_rounded,
+          'Kunyaza macho yako.',
+          AppConstants.primary
+        ),
+      ScanPhase.livenessTurn => (
+          Icons.rotate_right_rounded,
+          'Geuza kichwa kidogo.',
+          AppConstants.primary
+        ),
+      ScanPhase.capturing => (
+          Icons.camera_alt_rounded,
+          'Inachukua picha...',
+          AppConstants.primary
+        ),
+      ScanPhase.success => (
+          Icons.verified_rounded,
+          'Uthibitishaji umekamilika!',
+          DesignTokens.success
+        ),
+      ScanPhase.error => (
+          Icons.error_outline_rounded,
+          _errorInstruction ?? 'Hitilafu imetokea.',
+          DesignTokens.error
+        ),
+    };
+  }
+
+  Widget _buildProgressIndicators() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildProgressStep('Uso', _faceDetected, Icons.face_rounded),
+        _buildProgressConnector(_faceDetected),
+        _buildProgressStep('Macho', _eyesOpen, Icons.visibility_rounded),
+        _buildProgressConnector(_eyesOpen),
+        _buildProgressStep(
+            'Kati', _faceCentered, Icons.center_focus_strong_rounded),
+        _buildProgressConnector(_faceCentered && _blinkDetected),
+        _buildProgressStep(
+            'Liveness', _blinkDetected, Icons.fingerprint_rounded),
+      ],
+    );
+  }
+
+  Widget _buildProgressStep(String label, bool completed, IconData icon) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedContainer(
+          duration: 300.ms,
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: completed
+                ? DesignTokens.success
+                : Colors.white.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: completed
+                  ? DesignTokens.success
+                  : Colors.white.withValues(alpha: 0.3),
+              width: 2,
+            ),
+          ),
+          child: Icon(
+            completed ? Icons.check_rounded : icon,
+            size: 18,
+            color:
+                completed ? Colors.white : Colors.white.withValues(alpha: 0.5),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: TextStyle(
+            color:
+                completed ? Colors.white : Colors.white.withValues(alpha: 0.5),
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressConnector(bool completed) {
+    return Container(
+      width: 30,
+      height: 2,
+      margin: const EdgeInsets.only(bottom: 22),
+      decoration: BoxDecoration(
+        color: completed
+            ? DesignTokens.success
+            : Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(1),
+      ),
+    );
+  }
+
+  Widget _buildCaptureButton(bool canCapture) {
     return GestureDetector(
       onTap: canCapture && !_isProcessing ? _captureAndVerify : null,
-      child: AnimatedContainer(
-        duration: 200.ms,
-        width: size,
-        height: size,
+      child: Container(
+        width: 80,
+        height: 80,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: canCapture
-              ? AppConstants.primary
-              : Colors.white.withValues(alpha: 0.3),
+              ? DesignTokens.success
+              : Colors.white.withValues(alpha: 0.2),
           border: Border.all(
-            color: canCapture
-                ? AppConstants.primaryLight
-                : Colors.white.withValues(alpha: 0.2),
+            color:
+                canCapture ? Colors.white : Colors.white.withValues(alpha: 0.4),
             width: 4,
           ),
           boxShadow: canCapture
               ? [
                   BoxShadow(
-                    color: AppConstants.primary.withValues(alpha: 0.4),
+                    color: DesignTokens.success.withValues(alpha: 0.4),
                     blurRadius: 20,
                     spreadRadius: 2,
                   ),
@@ -886,9 +1006,11 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                   strokeWidth: 3,
                 ),
               )
-            : const Icon(
+            : Icon(
                 Icons.camera_alt_rounded,
-                color: Colors.white,
+                color: canCapture
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.5),
                 size: 32,
               ),
       ),
@@ -898,27 +1020,146 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   Widget _buildCircleButton({
     required IconData icon,
     VoidCallback? onPressed,
-    double size = 48,
   }) {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        width: size,
-        height: size,
-        decoration: const BoxDecoration(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.black38,
-          border: Border.fromBorderSide(BorderSide(
-            color: Colors.white24,
-          )),
+          color: onPressed != null
+              ? Colors.black.withValues(alpha: 0.5)
+              : Colors.black.withValues(alpha: 0.3),
+          border: Border.all(
+            color: onPressed != null
+                ? Colors.white.withValues(alpha: 0.2)
+                : Colors.white.withValues(alpha: 0.1),
+            width: 1.5,
+          ),
         ),
         child: Icon(
           icon,
-          color: onPressed != null ? Colors.white : Colors.white38,
-          size: size * 0.45,
+          color: onPressed != null
+              ? Colors.white
+              : Colors.white.withValues(alpha: 0.3),
+          size: 24,
         ),
       ),
     );
+  }
+
+  Widget _buildTopBar() {
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => context.pop(_verificationPassed),
+                    child: Container(
+                      padding: const EdgeInsets.all(11),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.38),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.12),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const Spacer(),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.38),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.14),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.face_retouching_natural_rounded,
+                        color: AppConstants.primary,
+                        size: 18,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Uthibitishaji wa Uso',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const Spacer(),
+            const SizedBox(width: 44),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// User-facing Swahili for known API / face-match reasons.
+  String _localizedFaceMatchReason(String reason) {
+    final l = reason.toLowerCase();
+    if (l.contains('face match service is not configured')) {
+      return 'Huduma ya ulinganisho wa uso haijawekwa kwenye seva (kumbukumbu FACE_MATCH_URL). Msimamizi wa mfumo aihangaishe kisha ajaribu tena.';
+    }
+    if (l.contains('face match service is unreachable')) {
+      return 'Huduma ya ulinganisho haipatikani kwa sasa. Angalia mtandao au jaribu tena baada ya muda mfupi.';
+    }
+    if (l.contains('face match failed') && l.contains('manual')) {
+      return 'Ulinganisho haukufanikiwa. Jaribu picha nyingine au omba uhakiki wa mkono.';
+    }
+    if (l.contains('multiple_faces_detected')) {
+      return 'Nyuso zaidi ya moja zimeonekana. Hakikisha mtu mmoja tu anaonekana kwenye frame.';
+    }
+    if (l.contains('no_face_detected')) {
+      return 'Uso haujaonekana vizuri. Weka uso katikati ya frame na ujaribu tena.';
+    }
+    if (l.contains('face_too_small')) {
+      return 'Uso uko mbali sana. Msogeze mteja karibu kidogo kwenye kamera.';
+    }
+    if (l.contains('image_blurry')) {
+      return 'Picha imeblur. Simamisha kamera kwa utulivu na mwanga wa kutosha.';
+    }
+    if (l.contains('image_too_dark')) {
+      return 'Picha ni giza sana. Ongeza mwanga kabla ya kupiga picha tena.';
+    }
+    if (l.contains('image_too_bright')) {
+      return 'Mwanga ni mkali sana. Punguza mwanga mkali na ujaribu tena.';
+    }
+    return reason;
   }
 
   Widget _buildResult() {
@@ -1084,7 +1325,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            _result!.reason!,
+                            _localizedFaceMatchReason(_result!.reason!),
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.8),
                               fontSize: 13,
@@ -1114,7 +1355,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                         child: _buildActionButton(
                           label: 'Jaribu Tena',
                           icon: Icons.refresh_rounded,
-                          onPressed: _retry,
+                          onPressed: () => unawaited(_retry()),
                           isPrimary: true,
                         ),
                       ),
@@ -1153,7 +1394,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
         borderRadius: BorderRadius.circular(24),
         child: AnimatedContainer(
           duration: 200.ms,
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
             color: isPrimary ? bgColor : Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(24),
@@ -1173,20 +1414,26 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                 : null,
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.max,
             children: [
               Icon(
                 icon,
                 color: Colors.white,
                 size: 20,
               ),
-              const SizedBox(width: 10),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -1197,63 +1444,114 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   }
 }
 
-/// Custom painter for corner guides
-class _CornerPainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-  final bool topLeft;
-  final bool topRight;
-  final bool bottomLeft;
-  final bool bottomRight;
+/// Dims the full frame except a clear face oval (modern ID-scan style mask).
+class _FaceCutoutDimPainter extends CustomPainter {
+  final Rect faceOval;
+  final Color dimColor;
 
-  _CornerPainter({
-    required this.color,
+  _FaceCutoutDimPainter({
+    required this.faceOval,
+    required this.dimColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final outer = Path()
+      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+    final inner = Path()..addOval(faceOval);
+    final cut = Path.combine(PathOperation.difference, outer, inner);
+    canvas.drawPath(cut, Paint()..color = dimColor);
+  }
+
+  @override
+  bool shouldRepaint(covariant _FaceCutoutDimPainter oldDelegate) {
+    return oldDelegate.faceOval != faceOval || oldDelegate.dimColor != dimColor;
+  }
+}
+
+/// Thin ring + soft glow around the face guide oval.
+class _FaceGuideRingPainter extends CustomPainter {
+  final Rect faceOval;
+  final Color ringColor;
+  final double strokeWidth;
+
+  _FaceGuideRingPainter({
+    required this.faceOval,
+    required this.ringColor,
     required this.strokeWidth,
-    this.topLeft = false,
-    this.topRight = false,
-    this.bottomLeft = false,
-    this.bottomRight = false,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final glow = Paint()
+      ..color = ringColor.withValues(alpha: 0.2)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth + 10
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+    canvas.drawOval(faceOval, glow);
+
+    canvas.drawOval(
+      faceOval,
+      Paint()
+        ..color = ringColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _FaceGuideRingPainter oldDelegate) {
+    return oldDelegate.faceOval != faceOval ||
+        oldDelegate.ringColor != ringColor ||
+        oldDelegate.strokeWidth != strokeWidth;
+  }
+}
+
+/// Custom painter for animated scan line
+class _ScanLinePainter extends CustomPainter {
+  final double position;
+  final Color color;
+
+  _ScanLinePainter({
+    required this.position,
+    required this.color,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
-      ..strokeWidth = strokeWidth
+      ..strokeWidth = 2
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    final path = Path();
-    final w = size.width;
-    final h = size.height;
-    final cornerLength = w * 0.4;
+    // Draw horizontal scan line at the given position
+    final y = position;
+    const lineLength = 180.0;
+    final centerX = size.width / 2;
 
-    if (topLeft) {
-      path.moveTo(0, cornerLength);
-      path.lineTo(0, 0);
-      path.lineTo(cornerLength, 0);
-    }
-    if (topRight) {
-      path.moveTo(w - cornerLength, 0);
-      path.lineTo(w, 0);
-      path.lineTo(w, cornerLength);
-    }
-    if (bottomLeft) {
-      path.moveTo(0, h - cornerLength);
-      path.lineTo(0, h);
-      path.lineTo(cornerLength, h);
-    }
-    if (bottomRight) {
-      path.moveTo(w - cornerLength, h);
-      path.lineTo(w, h);
-      path.lineTo(w, h - cornerLength);
-    }
+    // Main scan line
+    canvas.drawLine(
+      Offset(centerX - lineLength, y),
+      Offset(centerX + lineLength, y),
+      paint,
+    );
 
-    canvas.drawPath(path, paint);
+    // Glow effect
+    final glowPaint = Paint()
+      ..color = color.withValues(alpha: 0.3)
+      ..strokeWidth = 6
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
+    canvas.drawLine(
+      Offset(centerX - lineLength, y),
+      Offset(centerX + lineLength, y),
+      glowPaint,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _CornerPainter oldDelegate) {
-    return oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
+  bool shouldRepaint(covariant _ScanLinePainter oldDelegate) {
+    return oldDelegate.position != position || oldDelegate.color != color;
   }
 }

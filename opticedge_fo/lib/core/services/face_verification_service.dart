@@ -118,7 +118,7 @@ class FaceVerificationService {
     });
 
     final response = await ApiClient.instance.postForm(
-      '/api/v1/kyc/application/$customerId/face/id-photo',
+      '/kyc/application/$customerId/face/id-photo',
       formData,
     );
 
@@ -140,7 +140,7 @@ class FaceVerificationService {
     });
 
     final response = await ApiClient.instance.postForm(
-      '/api/v1/kyc/application/$customerId/face/verify',
+      '/kyc/application/$customerId/face/verify',
       formData,
     );
 
@@ -152,7 +152,7 @@ class FaceVerificationService {
   /// Get current face verification status
   Future<FaceVerificationStatus> getStatus(String customerId) async {
     final response = await ApiClient.instance.get(
-      '/api/v1/kyc/application/$customerId/face/status',
+      '/kyc/application/$customerId/face/status',
     );
 
     return FaceVerificationStatus.fromJson(

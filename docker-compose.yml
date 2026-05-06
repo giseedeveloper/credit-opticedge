@@ -35,6 +35,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      face_match:
+        condition: service_healthy
     networks:
       - opticedge_net
 
@@ -103,16 +105,36 @@ services:
       - opticedge_net
 
   # ── Face match (internal microservice) ───────────────────────────────────────
+  # Laravel: set FACE_MATCH_URL=http://face_match:8001 in .env (same Docker network).
   face_match:
     build:
       context: ./docker/face_match
       dockerfile: Dockerfile
     container_name: opticedge_face_match
     restart: unless-stopped
+    environment:
+      FACE_MATCH_PASS_THRESHOLD: ${FACE_MATCH_PASS_THRESHOLD:-0.80}
+      FACE_MATCH_REVIEW_THRESHOLD: ${FACE_MATCH_REVIEW_THRESHOLD:-0.60}
+      FACE_MATCH_MIN_FACE_AREA_RATIO: ${FACE_MATCH_MIN_FACE_AREA_RATIO:-0.045}
+      FACE_MATCH_MIN_SHARPNESS: ${FACE_MATCH_MIN_SHARPNESS:-35}
+      FACE_MATCH_MIN_BRIGHTNESS: ${FACE_MATCH_MIN_BRIGHTNESS:-35}
+      FACE_MATCH_MAX_BRIGHTNESS: ${FACE_MATCH_MAX_BRIGHTNESS:-225}
     volumes:
       - face_match_models:/root/.insightface
     expose:
       - "8001"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=5)",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
     networks:
       - opticedge_net
 
@@ -125,4 +147,5 @@ volumes:
 
 networks:
   opticedge_net:
+    name: opticedge_internal
     driver: bridge

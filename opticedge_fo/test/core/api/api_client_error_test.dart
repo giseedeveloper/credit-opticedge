@@ -74,4 +74,44 @@ void main() {
       'Upload is too large. Retake the handover image more closely and try again.',
     );
   });
+
+  test('ApiClient localizes face verify ID prerequisite message', () {
+    final error = DioException(
+      requestOptions:
+          RequestOptions(path: '/kyc/application/1/face/verify'),
+      response: Response(
+        requestOptions:
+            RequestOptions(path: '/kyc/application/1/face/verify'),
+        statusCode: 422,
+        data: const {
+          'message':
+              'Upload the ID front photo before running face verification.',
+        },
+      ),
+      type: DioExceptionType.badResponse,
+    );
+
+    expect(
+      ApiClient.instance.parseError(error),
+      startsWith('Picha ya mbele'),
+    );
+  });
+
+  test('ApiClient maps 404 responses to a not-found hint', () {
+    final error = DioException(
+      requestOptions:
+          RequestOptions(path: '/kyc/application/1/face/verify'),
+      response: Response(
+        requestOptions:
+            RequestOptions(path: '/kyc/application/1/face/verify'),
+        statusCode: 404,
+      ),
+      type: DioExceptionType.badResponse,
+    );
+
+    expect(
+      ApiClient.instance.parseError(error),
+      'Not found (404). This action may be unavailable or the link is wrong.',
+    );
+  });
 }

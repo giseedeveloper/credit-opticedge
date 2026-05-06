@@ -15,6 +15,9 @@ class FaceScannerTile extends StatelessWidget {
   final double? matchScore;
   final VoidCallback? onRetry;
 
+  /// Called after the face scanner route closes (pass, fail, review, or back).
+  final Future<void> Function()? onScannerClosed;
+
   const FaceScannerTile({
     super.key,
     required this.label,
@@ -24,6 +27,7 @@ class FaceScannerTile extends StatelessWidget {
     this.verified = false,
     this.matchScore,
     this.onRetry,
+    this.onScannerClosed,
   });
 
   @override
@@ -32,9 +36,14 @@ class FaceScannerTile extends StatelessWidget {
 
     return InkWell(
       onTap: hasIdFront
-          ? () => context.push(
+          ? () async {
+              await context.push(
                 '/kyc/face-scanner/$customerId?id_front_url=${Uri.encodeComponent(idFrontUrl ?? '')}',
-              )
+              );
+              if (context.mounted) {
+                await onScannerClosed?.call();
+              }
+            }
           : null,
       borderRadius: BorderRadius.circular(18),
       child: AnimatedContainer(

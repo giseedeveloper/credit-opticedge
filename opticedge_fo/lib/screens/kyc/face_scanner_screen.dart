@@ -54,6 +54,11 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   CameraController? _cameraController;
   late final FaceDetector _faceDetector;
+  List<CameraDescription> _availableCameras = [];
+  bool _isSwitchingCamera = false;
+
+  /// Bumps when switching cameras so stale ML Kit callbacks cannot touch state.
+  int _cameraSession = 0;
 
   bool _isInitialized = false;
   bool _isProcessing = false;
@@ -130,29 +135,24 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   Future<void> _initCamera() async {
     try {
       final cameras = await availableCameras();
-      if (cameras.isEmpty) {
+      _availableCameras = cameras;
+      if (_availableCameras.isEmpty) {
         setState(() => _error = 'Hakuna kamera iliyopatikana');
         return;
       }
 
-      _cameraDescription = cameras.firstWhere(
+      _cameraDescription ??= _availableCameras.firstWhere(
         (cam) => cam.lensDirection == CameraLensDirection.front,
-        orElse: () => cameras.first,
+        orElse: () => _availableCameras.first,
       );
 
-      _cameraController = CameraController(
-        _cameraDescription!,
-        ResolutionPreset.high,
-        enableAudio: false,
-        imageFormatGroup: Platform.isAndroid
-            ? ImageFormatGroup.nv21
-            : ImageFormatGroup.bgra8888,
-      );
-
-      await _cameraController!.initialize();
+      await _initializeCameraController(_cameraDescription!);
 
       if (mounted) {
-        setState(() => _isInitialized = true);
+        setState(() {
+          _isInitialized = true;
+          _error = null;
+        });
         await _startImageStream();
       }
     } on CameraException catch (e) {
@@ -167,6 +167,76 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
       });
     } catch (e) {
       setState(() => _error = 'Haiwezi kuanza kamera: $e');
+    }
+  }
+
+  Future<void> _initializeCameraController(CameraDescription description) async {
+    _cameraController = CameraController(
+      description,
+      ResolutionPreset.high,
+      enableAudio: false,
+      imageFormatGroup:
+          Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
+    );
+    await _cameraController!.initialize();
+  }
+
+  Future<void> _switchCamera() async {
+    if (_isSwitchingCamera || _availableCameras.length < 2) {
+      return;
+    }
+
+    final current = _cameraDescription;
+    if (current == null) {
+      return;
+    }
+
+    final preferredDirection = current.lensDirection == CameraLensDirection.front
+        ? CameraLensDirection.back
+        : CameraLensDirection.front;
+
+    final next = _availableCameras.firstWhere(
+      (camera) => camera.lensDirection == preferredDirection,
+      orElse: () {
+        final currentIndex = _availableCameras.indexWhere(
+          (camera) => camera.name == current.name,
+        );
+        final nextIndex = (currentIndex + 1) % _availableCameras.length;
+        return _availableCameras[nextIndex];
+      },
+    );
+
+    _isSwitchingCamera = true;
+    try {
+      await _safeStopImageStream();
+      _cameraSession++;
+      await _cameraController?.dispose();
+      _cameraDescription = next;
+
+      if (mounted) {
+        setState(() {
+          _isInitialized = false;
+          _error = null;
+        });
+      }
+
+      await _initializeCameraController(next);
+
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+          _error = null;
+        });
+        await _startImageStream();
+      }
+    } on CameraException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Hitilafu ya kubadili kamera: ${e.description ?? e.code}';
+        });
+      }
+    } finally {
+      _isSwitchingCamera = false;
     }
   }
 
@@ -203,6 +273,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   }
 
   void _processImage(CameraImage image) {
+    final session = _cameraSession;
     if (_isProcessing || _cameraDescription == null || !mounted) return;
 
     _isProcessing = true;
@@ -214,7 +285,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     }
 
     _faceDetector.processImage(inputImage).then((faces) {
-      if (!mounted) return;
+      if (!mounted || session != _cameraSession) return;
 
       setState(() {
         _faceDetected = faces.length == 1;
@@ -295,7 +366,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     }).catchError((_) {
       // Silently ignore errors
     }).whenComplete(() {
-      if (mounted) {
+      if (mounted && session == _cameraSession) {
         _isProcessing = false;
       }
     });
@@ -405,7 +476,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
       if (mounted) {
         setState(() {
           _result = result;
-          _verificationPassed = result.passed;
+          _verificationPassed = result.isFaceStepComplete;
           _isProcessing = false;
         });
       }
@@ -472,7 +543,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
       if (mounted) {
         setState(() {
           _result = result;
-          _verificationPassed = result.passed;
+          _verificationPassed = result.isFaceStepComplete;
           _isProcessing = false;
         });
       }
@@ -1050,6 +1121,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   }
 
   Widget _buildTopBar() {
+    final canSwitch = _availableCameras.length > 1;
     return SafeArea(
       bottom: false,
       child: Padding(
@@ -1122,7 +1194,38 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
               ),
             ),
             const Spacer(),
-            const SizedBox(width: 44),
+            if (canSwitch)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _isSwitchingCamera ? null : () => unawaited(_switchCamera()),
+                      child: Container(
+                        padding: const EdgeInsets.all(11),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.38),
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.12),
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.flip_camera_android_rounded,
+                          color: _isSwitchingCamera
+                              ? Colors.white.withValues(alpha: 0.55)
+                              : Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              const SizedBox(width: 44),
           ],
         ),
       ),
@@ -1163,9 +1266,32 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   }
 
   Widget _buildResult() {
-    final passed = _result!.passed;
-    final color = passed ? DesignTokens.success : DesignTokens.warning;
+    final isSuccess = _result!.isFaceStepComplete;
+    final isReview = _result!.isReviewBand;
+    final color = isSuccess
+        ? DesignTokens.success
+        : isReview
+            ? DesignTokens.warning
+            : DesignTokens.error;
     final score = (_result!.score * 100).round();
+
+    final title = isSuccess
+        ? 'Uthibitishaji Umefanikiwa!'
+        : isReview
+            ? 'Imehifadhiwa — ukaguzi wa kati'
+            : 'Haikupitisha kiotomatiki';
+
+    final subtitle = isSuccess
+        ? 'Uso wako umelinganishwa na picha ya kitambulisho'
+        : isReview
+            ? 'Alama ni ya kati (si mbaya wala kamili). Msimamizi anaweza kuidhinisha kwa mkono, au jaribu picha nyingine.'
+            : 'Tafadhali jaribu tena na picha nyingine au mwanga bora.';
+
+    final resultIcon = isSuccess
+        ? Icons.verified_user_rounded
+        : isReview
+            ? Icons.pending_actions_rounded
+            : Icons.error_outline_rounded;
 
     return Container(
       decoration: const BoxDecoration(
@@ -1194,9 +1320,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                     ),
                   ),
                   child: Icon(
-                    passed
-                        ? Icons.verified_user_rounded
-                        : Icons.warning_amber_rounded,
+                    resultIcon,
                     size: 72,
                     color: color,
                   ),
@@ -1209,9 +1333,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
 
                 // Status text
                 Text(
-                  passed
-                      ? 'Uthibitishaji Umefanikiwa!'
-                      : 'Uthibitishaji Haujakamilika',
+                  title,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white,
@@ -1223,9 +1345,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                 const SizedBox(height: 12),
 
                 Text(
-                  passed
-                      ? 'Uso wako umelinganishwa na picha ya kitambulisho'
-                      : 'Tafadhali jaribu tena na picha nyingine',
+                  subtitle,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.7),
@@ -1304,22 +1424,22 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                   ),
                 ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
 
-                if (_result!.reason != null && !passed) ...[
+                if (_result!.reason != null && !isSuccess) ...[
                   const SizedBox(height: 20),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: DesignTokens.warning.withValues(alpha: 0.1),
+                      color: color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: DesignTokens.warning.withValues(alpha: 0.3),
+                        color: color.withValues(alpha: 0.35),
                       ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.info_outline_rounded,
-                          color: DesignTokens.warning,
+                          color: color,
                           size: 20,
                         ),
                         const SizedBox(width: 12),
@@ -1340,7 +1460,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                 const SizedBox(height: 48),
 
                 // Action buttons
-                if (passed)
+                if (isSuccess)
                   _buildActionButton(
                     label: 'Endelea',
                     icon: Icons.arrow_forward_rounded,

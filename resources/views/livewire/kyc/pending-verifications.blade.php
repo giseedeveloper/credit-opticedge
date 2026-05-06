@@ -307,6 +307,46 @@
                     </div>
                 </div>
 
+                {{-- Face match (FO scan + optional manual override) --}}
+                @if($dcv && filled($dcv->face_match_status))
+                @php
+                    $fmBadge = match($dcv->face_match_status) {
+                        'passed' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+                        'manual_verified' => 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
+                        'review' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+                        'failed' => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+                        default => 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
+                    };
+                @endphp
+                <div>
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Face match</h3>
+                    <div class="rounded-xl border border-gray-100 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/80 p-4 space-y-3">
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <span class="text-[10px] font-bold px-2.5 py-1 rounded-full {{ $fmBadge }}">{{ str_replace('_', ' ', ucfirst($dcv->face_match_status)) }}</span>
+                            @if($dcv->face_match_score !== null)
+                            <span class="text-sm font-black text-gray-800 dark:text-gray-100 tabular-nums">{{ number_format((float) $dcv->face_match_score * 100, 0) }}% match</span>
+                            @endif
+                        </div>
+                        @if($dcv->face_match_reason)
+                        <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{{ $dcv->face_match_reason }}</p>
+                        @endif
+                        @if($dcv->face_match_status === 'manual_verified' && $dcv->faceMatchManualVerifiedBy)
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400">Manual: {{ $dcv->faceMatchManualVerifiedBy->name }} · {{ $dcv->face_match_manual_verified_at?->format('d M Y, H:i') }}</p>
+                        @endif
+                        @can('loans.create')
+                        @if(in_array($dcv->face_match_status, ['review', 'failed'], true))
+                        <flux:button type="button" size="sm" variant="primary"
+                            wire:click="manualVerifyFaceMatch('{{ $dc->id }}')"
+                            wire:confirm="Thibitisha kuwa uso umelingana na kitambulisho (uhakiki wa mkono)?"
+                            class="w-full !bg-sky-600 hover:!bg-sky-700 !text-white border-0">
+                            Thibitisha uso kwa mkono
+                        </flux:button>
+                        @endif
+                        @endcan
+                    </div>
+                </div>
+                @endif
+
                 {{-- Verification History --}}
                 @if($dc->verifications->count())
                 <div>

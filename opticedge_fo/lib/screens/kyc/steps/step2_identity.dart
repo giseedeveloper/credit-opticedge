@@ -307,6 +307,16 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                           idFrontUrl: state.idFrontPhoto?.path,
                           verified: state.faceMatchPassed,
                           matchScore: state.faceMatchScore,
+                          onScannerClosed: () async {
+                            final id = ref.read(kycProvider).customerId;
+                            if (id == null || id.isEmpty) {
+                              return;
+                            }
+                            await ref
+                                .read(kycProvider.notifier)
+                                .syncFaceMatchFromServer(id);
+                            ref.invalidate(customerDetailProvider(id));
+                          },
                         )
                       else
                         PhotoPickerTile(

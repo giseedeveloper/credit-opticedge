@@ -36,6 +36,14 @@ class FaceVerificationResult {
       idFrontUrl: json['id_front_url'] as String?,
     );
   }
+
+  /// Auto-pass from model **or** back-office manual verification (if ever returned on verify).
+  bool get isFaceStepComplete =>
+      passed || status == 'manual_verified';
+
+  bool get isReviewBand => status == 'review';
+
+  bool get isFailedBand => status == 'failed';
 }
 
 /// Status response from face status API

@@ -93,6 +93,48 @@ class PendingVerifications extends Component
         $this->detailCustomerId = null;
     }
 
+    /**
+     * Back-office confirmation when automatic face match is inconclusive (review / failed).
+     */
+    public function manualVerifyFaceMatch(string $customerId): void
+    {
+        abort_unless(auth()->user()->canAccess('loans.create'), 403);
+
+        $customer = Customer::findOrFail($customerId);
+        $verification = $customer->latestKycVerification()->first();
+
+        if (! $verification instanceof Verification) {
+            $this->dispatch('toast', message: 'No KYC verification record found for this customer.', type: 'error');
+
+            return;
+        }
+
+        if ($verification->face_match_status === 'manual_verified') {
+            $this->dispatch('toast', message: 'Face match is already manually verified.', type: 'success');
+
+            return;
+        }
+
+        if (! in_array($verification->face_match_status, ['review', 'failed'], true)) {
+            $this->dispatch('toast', message: 'Face match is not awaiting manual verification.', type: 'error');
+
+            return;
+        }
+
+        $verification->update([
+            'face_match_status' => 'manual_verified',
+            'face_match_manual_verified_by' => auth()->id(),
+            'face_match_manual_verified_at' => now(),
+        ]);
+
+        activity('kyc')
+            ->performedOn($customer)
+            ->causedBy(auth()->user())
+            ->log("Face match manually verified for {$customer->full_name}");
+
+        $this->dispatch('toast', message: 'Face match marked as verified.', type: 'success');
+    }
+
     // ── Stage 1 & 2 Approve ────────────────────────────────────────────
     public function openApproveModal(string $id, int $stage): void
     {
@@ -300,7 +342,7 @@ class PendingVerifications extends Component
 
         $detailCustomer = $this->detailCustomerId
             ? Customer::with([
-                'latestKycVerification',
+                'latestKycVerification.faceMatchManualVerifiedBy',
                 'dealer',
                 'registeredBy',
                 'loans' => fn ($q) => $q->latest()->take(3),

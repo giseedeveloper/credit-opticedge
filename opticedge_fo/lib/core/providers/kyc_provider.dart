@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/constants.dart';
 import '../api/api_client.dart';
 import '../models/customer_model.dart';
+import '../services/face_verification_service.dart';
 import '../models/dashboard_model.dart';
 import '../models/kyc_flow_model.dart';
 import '../utils/kyc_upload_limits.dart';
@@ -35,6 +36,35 @@ String _repaymentValueForApi(String raw) {
     default:
       return 'weekly';
   }
+}
+
+bool _faceMatchAcceptableFromVerification(Map<String, dynamic>? verification) {
+  if (verification == null) {
+    return false;
+  }
+  final raw = verification['face_match'];
+  if (raw is! Map) {
+    return false;
+  }
+  final status = raw['status']?.toString();
+
+  return status == 'passed' || status == 'manual_verified';
+}
+
+double? _faceMatchScoreFromVerification(Map<String, dynamic>? verification) {
+  if (verification == null) {
+    return null;
+  }
+  final raw = verification['face_match'];
+  if (raw is! Map) {
+    return null;
+  }
+  final score = raw['score'];
+  if (score is num) {
+    return score.toDouble();
+  }
+
+  return double.tryParse(score?.toString() ?? '');
 }
 
 String _incomeCycleValueForApi(String raw) {
@@ -1452,6 +1482,10 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         isSubmitting: false,
         maxReachableStep: resumeStep,
         pendingRetryStep: null,
+        faceMatchPassed: _faceMatchAcceptableFromVerification(
+          detail.verification,
+        ),
+        faceMatchScore: _faceMatchScoreFromVerification(detail.verification),
       );
 
       return true;
@@ -1520,6 +1554,27 @@ class KycNotifier extends StateNotifier<KycDraftState> {
 
       return item['code']?.toString() == code;
     });
+  }
+
+  /// Refreshes face match flags from the API (e.g. after scanner closes or manual back-office approval).
+  Future<void> syncFaceMatchFromServer(String customerId) async {
+    if (customerId.isEmpty) {
+      return;
+    }
+
+    try {
+      final status =
+          await FaceVerificationService.instance.getStatus(customerId);
+      final fm = status.faceMatch;
+      final acceptable = fm != null &&
+          (fm.status == 'passed' || fm.status == 'manual_verified');
+      state = state.copyWith(
+        faceMatchPassed: acceptable,
+        faceMatchScore: fm?.score,
+      );
+    } on DioException {
+      // Keep existing draft state on transient network errors.
+    }
   }
 }
 

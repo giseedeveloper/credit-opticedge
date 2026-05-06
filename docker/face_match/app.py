@@ -25,9 +25,10 @@ def _env_float(name: str, default: float) -> float:
         return default
 
 
-# Tunable thresholds (override via container env in production if needed)
-PASS_THRESHOLD = _env_float("FACE_MATCH_PASS_THRESHOLD", 0.80)
-REVIEW_THRESHOLD = _env_float("FACE_MATCH_REVIEW_THRESHOLD", 0.60)
+# Tunable thresholds (override via container env in production if needed).
+# score >= PASS → passed; score >= REVIEW (and < PASS) → review; else failed.
+PASS_THRESHOLD = _env_float("FACE_MATCH_PASS_THRESHOLD", 0.72)
+REVIEW_THRESHOLD = _env_float("FACE_MATCH_REVIEW_THRESHOLD", 0.55)
 MIN_FACE_AREA_RATIO = _env_float("FACE_MATCH_MIN_FACE_AREA_RATIO", 0.045)
 MIN_SHARPNESS = _env_float("FACE_MATCH_MIN_SHARPNESS", 35.0)
 MIN_BRIGHTNESS = _env_float("FACE_MATCH_MIN_BRIGHTNESS", 35.0)

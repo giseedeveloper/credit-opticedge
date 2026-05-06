@@ -1,10 +1,15 @@
 import 'package:dio/dio.dart';
+import 'dart:async';
 import '../../config/constants.dart';
 import '../storage/secure_storage.dart';
 
 class ApiClient {
   ApiClient._();
   static final ApiClient instance = ApiClient._();
+  static final StreamController<void> _sessionExpiredController =
+      StreamController<void>.broadcast();
+  static Stream<void> get sessionExpiredStream =>
+      _sessionExpiredController.stream;
 
   late final Dio _dio;
   bool _initialized = false;
@@ -20,6 +25,18 @@ class ApiClient {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+        },
+      ),
+    );
+
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onError: (error, handler) {
+          final statusCode = error.response?.statusCode;
+          if (statusCode == 401 || statusCode == 403) {
+            _sessionExpiredController.add(null);
+          }
+          handler.next(error);
         },
       ),
     );

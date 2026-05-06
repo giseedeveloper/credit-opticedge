@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
+import 'dart:async';
 import '../api/api_client.dart';
 import '../models/customer_profile.dart';
 import '../storage/secure_storage.dart';
@@ -41,7 +43,17 @@ class PhoneCheckResult {
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier() : super(const AuthState());
+  AuthNotifier() : super(const AuthState()) {
+    _sessionExpiredSub = ApiClient.sessionExpiredStream.listen((_) async {
+      await SecureStorageService.instance.clearAll();
+      state = const AuthState(
+        status: AuthStatus.unauthenticated,
+        error: 'Session expired. Please login again.',
+      );
+    });
+  }
+
+  late final StreamSubscription<void> _sessionExpiredSub;
 
   Future<void> checkAuth() async {
     final token = await SecureStorageService.instance.getToken();
@@ -58,9 +70,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
         status: AuthStatus.authenticated,
         customer: customer,
       );
-    } catch (_) {
-      await SecureStorageService.instance.clearAll();
-      state = state.copyWith(status: AuthStatus.unauthenticated);
+    } catch (e) {
+      if (_isUnauthorizedError(e)) {
+        await SecureStorageService.instance.clearAll();
+        state = state.copyWith(status: AuthStatus.unauthenticated);
+        return;
+      }
+
+      // Keep valid local session during transient network/server errors.
+      final cached = await SecureStorageService.instance.getCustomer();
+      if (cached != null) {
+        state = state.copyWith(
+          status: AuthStatus.authenticated,
+          customer: CustomerProfile.fromJson(cached),
+          error: ApiClient.parseError(e),
+        );
+      } else {
+        state = state.copyWith(
+          status: AuthStatus.unknown,
+          error: ApiClient.parseError(e),
+        );
+      }
     }
   }
 
@@ -114,13 +144,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  bool _handleLoginResponse(dynamic responseData) {
+  Future<bool> _handleLoginResponse(dynamic responseData) async {
     final resData = responseData['data'] as Map<String, dynamic>;
     final token = resData['token'] as String;
     final customerRaw = resData['customer'] as Map<String, dynamic>;
 
-    SecureStorageService.instance.saveToken(token);
-    SecureStorageService.instance.saveCustomer(customerRaw);
+    await SecureStorageService.instance.saveToken(token);
+    await SecureStorageService.instance.saveCustomer(customerRaw);
 
     final customer = CustomerProfile.fromJson(customerRaw);
     state = state.copyWith(
@@ -129,6 +159,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       isLoading: false,
     );
     return true;
+  }
+
+  bool _isUnauthorizedError(dynamic error) {
+    if (error is! DioException) {
+      return false;
+    }
+    final code = error.response?.statusCode;
+    return code == 401 || code == 403;
   }
 
   Future<void> refreshProfile() async {
@@ -147,6 +185,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (_) {}
     await SecureStorageService.instance.clearAll();
     state = const AuthState(status: AuthStatus.unauthenticated);
+  }
+
+  @override
+  void dispose() {
+    _sessionExpiredSub.cancel();
+    super.dispose();
   }
 }
 

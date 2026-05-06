@@ -289,15 +289,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     return Material(
       elevation: 14,
       shadowColor: Colors.black.withValues(alpha: 0.35),
-      borderRadius: BorderRadius.circular(32),
+      borderRadius: BorderRadius.circular(36),
       clipBehavior: Clip.antiAlias,
       color: Colors.transparent,
       child: SizedBox(
-        width: 120,
-        height: 120,
+        width: 172,
+        height: 172,
         child: Image.asset(
-          'assets/images/app_logo.png',
-          fit: BoxFit.cover,
+          AppConstants.appLogoAsset,
+          fit: BoxFit.contain,
           filterQuality: FilterQuality.high,
           gaplessPlayback: true,
           errorBuilder: (_, __, ___) => Container(

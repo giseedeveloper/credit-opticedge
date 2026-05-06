@@ -29,7 +29,7 @@ class CustomerProfile {
 
   factory CustomerProfile.fromJson(Map<String, dynamic> json) {
     return CustomerProfile(
-      id: json['id'] as String,
+      id: json['id']?.toString() ?? '',
       fullName: json['full_name'] as String? ?? '',
       firstName: json['first_name'] as String? ?? '',
       lastName: json['last_name'] as String? ?? '',
@@ -39,8 +39,12 @@ class CustomerProfile {
       gender: json['gender'] as String?,
       nidaNumber: json['nida_number'] as String?,
       headshotUrl: json['headshot_url'] as String?,
-      branch: json['branch'] != null ? BranchInfo.fromJson(json['branch']) : null,
-      vendor: json['vendor'] != null ? VendorInfo.fromJson(json['vendor']) : null,
+      branch: json['branch'] is Map<String, dynamic>
+          ? BranchInfo.fromJson(json['branch'] as Map<String, dynamic>)
+          : null,
+      vendor: json['vendor'] is Map<String, dynamic>
+          ? VendorInfo.fromJson(json['vendor'] as Map<String, dynamic>)
+          : null,
     );
   }
 }
@@ -56,7 +60,7 @@ class BranchInfo {
 
   factory BranchInfo.fromJson(Map<String, dynamic> json) {
     return BranchInfo(
-      id: json['id'] as String,
+      id: json['id']?.toString() ?? '',
       name: json['name'] as String? ?? '',
       phone: json['phone'] as String?,
       region: json['region'] as String?,
@@ -75,7 +79,7 @@ class VendorInfo {
 
   factory VendorInfo.fromJson(Map<String, dynamic> json) {
     return VendorInfo(
-      id: json['id'] as String,
+      id: json['id']?.toString() ?? '',
       name: json['name'] as String? ?? '',
       phone: json['phone'] as String?,
       address: json['address'] as String?,

@@ -31,7 +31,7 @@ class ScheduleItem {
 
   factory ScheduleItem.fromJson(Map<String, dynamic> json) {
     return ScheduleItem(
-      id: json['id'] as String,
+      id: json['id']?.toString() ?? '',
       installmentNumber: (json['installment_number'] as num?)?.toInt() ?? 0,
       amountDue: _d(json['amount_due']),
       principalComponent: _d(json['principal_component']),
@@ -121,9 +121,12 @@ class ScheduleResponse {
       loanNumber: json['loan_number'] as String? ?? '',
       totalInstallments: (json['total_installments'] as num?)?.toInt() ?? 0,
       paidInstallments: (json['paid_installments'] as num?)?.toInt() ?? 0,
-      nextDue: json['next_due'] != null ? ScheduleItem.fromJson(json['next_due']) : null,
+      nextDue: json['next_due'] is Map<String, dynamic>
+          ? ScheduleItem.fromJson(json['next_due'] as Map<String, dynamic>)
+          : null,
       schedule: (json['schedule'] as List<dynamic>?)
-              ?.map((e) => ScheduleItem.fromJson(e as Map<String, dynamic>))
+              ?.whereType<Map<String, dynamic>>()
+              .map(ScheduleItem.fromJson)
               .toList() ??
           [],
     );

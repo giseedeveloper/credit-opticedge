@@ -26,7 +26,7 @@ class TransactionModel {
     if (raw is String) amt = double.tryParse(raw) ?? 0;
 
     return TransactionModel(
-      id: json['id'] as String,
+      id: json['id']?.toString() ?? '',
       reference: json['reference'] as String?,
       type: json['type'] as String?,
       amount: amt,

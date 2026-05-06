@@ -193,15 +193,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         Material(
           elevation: 10,
           shadowColor: Colors.black.withValues(alpha: 0.22),
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(30),
           clipBehavior: Clip.antiAlias,
           color: Colors.transparent,
           child: SizedBox(
-            width: 96,
-            height: 96,
+            width: 132,
+            height: 132,
             child: Image.asset(
-              'assets/images/app_logo.png',
-              fit: BoxFit.cover,
+              AppConstants.appLogoAsset,
+              fit: BoxFit.contain,
               filterQuality: FilterQuality.high,
               gaplessPlayback: true,
               errorBuilder: (_, __, ___) => Container(

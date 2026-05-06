@@ -26,18 +26,18 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    final perms = json['permissions'] as Map<String, dynamic>? ?? {};
+    final perms = _asMap(json['permissions']) ?? const <String, dynamic>{};
     return UserModel(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
       phone: json['phone']?.toString(),
       role: json['role']?.toString(),
-      branch: json['branch'] != null
-          ? BranchInfo.fromJson(json['branch'] as Map<String, dynamic>)
+      branch: _asMap(json['branch']) != null
+          ? BranchInfo.fromJson(_asMap(json['branch'])!)
           : null,
-      dealer: json['dealer'] != null
-          ? DealerInfo.fromJson(json['dealer'] as Map<String, dynamic>)
+      dealer: _asMap(json['dealer']) != null
+          ? DealerInfo.fromJson(_asMap(json['dealer'])!)
           : null,
       avatarUrl: json['avatar_url']?.toString(),
       isActive: json['is_active'] == true,
@@ -69,6 +69,17 @@ class UserModel {
           'is_admin': isAdmin,
         },
       };
+}
+
+Map<String, dynamic>? _asMap(dynamic value) {
+  if (value is Map<String, dynamic>) {
+    return value;
+  }
+  if (value is Map) {
+    return Map<String, dynamic>.from(value);
+  }
+
+  return null;
 }
 
 class BranchInfo {

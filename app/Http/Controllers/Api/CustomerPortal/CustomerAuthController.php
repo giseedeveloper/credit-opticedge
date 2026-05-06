@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -251,6 +252,14 @@ class CustomerAuthController extends Controller
 
     private function mediaUrl(?string $path): ?string
     {
-        return $path ? route('api.kyc.public-media', ['path' => $path]) : null;
+        if (! $path) {
+            return null;
+        }
+
+        return URL::temporarySignedRoute(
+            'api.kyc.public-media',
+            now()->addMinutes(15),
+            ['path' => $path]
+        );
     }
 }

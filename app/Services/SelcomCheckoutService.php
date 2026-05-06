@@ -7,6 +7,7 @@ use App\Models\SelcomPaymentRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -175,6 +176,16 @@ class SelcomCheckoutService
             return false;
         }
 
+        try {
+            $parsedTimestamp = Carbon::parse($timestamp);
+        } catch (\Throwable) {
+            return false;
+        }
+        $allowedSkew = max(30, (int) config('services.selcom.webhook_allowed_skew_seconds', 300));
+        if (now()->diffInSeconds($parsedTimestamp, absolute: true) > $allowedSkew) {
+            return false;
+        }
+
         $signedFields = array_values(array_filter(array_map('trim', explode(',', $signedFieldsHeader))));
         $payload = $request->json()->all();
 
@@ -183,8 +194,19 @@ class SelcomCheckoutService
         }
 
         $expectedDigest = $this->buildDigest($timestamp, $signedFields, $payload);
+        if (! hash_equals($expectedDigest, $providedDigest)) {
+            return false;
+        }
 
-        return hash_equals($expectedDigest, $providedDigest);
+        $replayKeyMaterial = implode('|', [
+            $providedDigest,
+            (string) ($payload['order_id'] ?? ''),
+            (string) ($payload['transid'] ?? ''),
+        ]);
+        $replayTtl = max(60, (int) config('services.selcom.webhook_replay_ttl_seconds', 900));
+        $replayKey = 'selcom:webhook:'.hash('sha256', $replayKeyMaterial);
+
+        return Cache::add($replayKey, true, now()->addSeconds($replayTtl));
     }
 
     /**

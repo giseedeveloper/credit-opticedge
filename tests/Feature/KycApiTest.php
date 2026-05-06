@@ -17,6 +17,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -49,16 +50,30 @@ beforeEach(function () {
     Sanctum::actingAs($this->agent);
 });
 
-it('public media streams public storage files with cors-friendly headers', function () {
+it('public media streams files only with signed urls', function () {
     Storage::disk('public')->put('kyc/headshot/test-headshot.jpg', 'fake-image-bytes');
 
+    $url = URL::temporarySignedRoute(
+        'api.kyc.public-media',
+        now()->addMinutes(5),
+        ['path' => 'kyc/headshot/test-headshot.jpg']
+    );
+
+    $this->get($url)
+        ->assertOk();
+
     $this->get('/api/v1/public-media?path=kyc/headshot/test-headshot.jpg')
-        ->assertOk()
-        ->assertHeader('Access-Control-Allow-Origin', '*');
+        ->assertForbidden();
 });
 
-it('public media rejects invalid traversal paths', function () {
-    $this->get('/api/v1/public-media?path=../.env')->assertNotFound();
+it('public media rejects invalid traversal paths even when signed', function () {
+    $url = URL::temporarySignedRoute(
+        'api.kyc.public-media',
+        now()->addMinutes(5),
+        ['path' => '../.env']
+    );
+
+    $this->get($url)->assertNotFound();
 });
 
 it('returns the simplified three-stage kyc flow contract', function () {
@@ -647,6 +662,14 @@ it('step7 submits application with payment, agreement and signatures', function 
         'paid_at' => now(),
     ]);
 
+    Verification::factory()->create([
+        'customer_id' => $customer->id,
+        'fo_id' => $this->agent->id,
+        'type' => 'kyc',
+        'status' => 'approved',
+        'face_match_status' => 'passed',
+    ]);
+
     $response = $this->postJson("/api/v1/kyc/application/{$customer->id}/step7", [
         'fo_notes' => 'Customer seems genuine',
         'application_source' => 'walk_in',
@@ -903,6 +926,14 @@ it('release asset provisions a loan (with or without stock linkage)', function (
         'kyc_status' => 'approved',
     ]);
 
+    Verification::factory()->create([
+        'customer_id' => $customer->id,
+        'fo_id' => $this->agent->id,
+        'type' => 'kyc',
+        'status' => 'approved',
+        'face_match_status' => 'passed',
+    ]);
+
     $response = $this->postJson("/api/v1/kyc/customers/{$customer->id}/release-asset");
 
     $response->assertOk()
@@ -917,7 +948,7 @@ it('release asset provisions a loan (with or without stock linkage)', function (
         ->and($loan?->status)->toBe('active')
         ->and(RepaymentSchedule::query()->where('loan_id', $loan?->id)->count())->toBeGreaterThan(0);
 
-    expect($this->inventoryUnit->fresh()->status)->toBe('assigned');
+    expect($this->inventoryUnit->fresh()->status)->toBe('sold');
 });
 
 it('release asset works even when no inventory unit is linked', function () {
@@ -950,6 +981,14 @@ it('release asset works even when no inventory unit is linked', function () {
         'asset_release_status' => 'pending',
         'kyc_status' => 'approved',
         'imei_number' => '353456789012345',
+    ]);
+
+    Verification::factory()->create([
+        'customer_id' => $customer->id,
+        'fo_id' => $this->agent->id,
+        'type' => 'kyc',
+        'status' => 'approved',
+        'face_match_status' => 'passed',
     ]);
 
     $this->postJson("/api/v1/kyc/customers/{$customer->id}/release-asset")

@@ -24,6 +24,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -58,10 +59,7 @@ class KycApiController extends Controller
         abort_unless(Storage::disk('public')->exists($path), 404);
 
         return Storage::disk('public')->response($path, null, [
-            'Access-Control-Allow-Origin' => '*',
-            'Access-Control-Allow-Methods' => 'GET, OPTIONS',
-            'Access-Control-Allow-Headers' => 'Origin, Content-Type, Accept, Authorization',
-            'Cache-Control' => 'public, max-age=3600',
+            'Cache-Control' => 'private, max-age=300',
         ]);
     }
 
@@ -872,6 +870,13 @@ class KycApiController extends Controller
             return $this->errorResponse('A successful deposit payment is required before final submission.', 422);
         }
 
+        if (! $this->hasPassedFaceMatch($customer)) {
+            return $this->errorResponse(
+                'Face verification must be passed or manually verified before final submission.',
+                422
+            );
+        }
+
         if ($validated['agreement_decision'] !== 'yes') {
             return $this->errorResponse('Customer must accept the agreement before final submission.', 422);
         }
@@ -1322,6 +1327,13 @@ class KycApiController extends Controller
             return $this->errorResponse('Agreement document must be on file before release.', 422);
         }
 
+        if (! $this->hasPassedFaceMatch($customer)) {
+            return $this->errorResponse(
+                'Face verification must be passed or manually verified before release.',
+                422
+            );
+        }
+
         if ($customer->isAssetReleased()) {
             $loan = $loanProvisioning->provisionForCustomerPortal($customer->fresh());
 
@@ -1340,7 +1352,7 @@ class KycApiController extends Controller
             ]);
 
             if ($customer->inventoryUnit && $customer->inventoryUnit->status !== 'sold') {
-                $customer->inventoryUnit->update(['status' => 'assigned']);
+                $customer->inventoryUnit->update(['status' => 'sold']);
             }
 
             return $loanProvisioning->provision(
@@ -1800,7 +1812,25 @@ class KycApiController extends Controller
 
     private function photoUrl(?string $path): ?string
     {
-        return $path ? route('api.kyc.public-media', ['path' => $path]) : null;
+        if (! $path) {
+            return null;
+        }
+
+        return URL::temporarySignedRoute(
+            'api.kyc.public-media',
+            now()->addMinutes(15),
+            ['path' => $path]
+        );
+    }
+
+    private function hasPassedFaceMatch(Customer $customer): bool
+    {
+        $customer->loadMissing(['latestKycVerification', 'latestVerification']);
+
+        $status = $customer->latestKycVerification?->face_match_status
+            ?? $customer->latestVerification?->face_match_status;
+
+        return in_array((string) $status, ['passed', 'manual_verified'], true);
     }
 
     private function findAgentCustomerOrFail(string $customerId, array $with = []): Customer

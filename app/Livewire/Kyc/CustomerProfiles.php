@@ -223,7 +223,7 @@ class CustomerProfiles extends Component
             ]);
 
             if ($customer->inventoryUnit->status !== 'sold') {
-                $customer->inventoryUnit->update(['status' => 'assigned']);
+                $customer->inventoryUnit->update(['status' => 'sold']);
             }
 
             return app(CustomerLoanProvisioningService::class)

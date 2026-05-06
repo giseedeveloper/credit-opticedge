@@ -45,8 +45,21 @@ class AuthState {
 
 class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier() : super(const AuthState()) {
+    _sessionExpiredSub = ApiClient.sessionExpiredStream.listen((_) async {
+      await SecureStorageService.instance.deleteToken();
+      await SecureStorageService.instance.deleteUser();
+      _patchState(
+        (_) => const AuthState(
+          status: AuthStatus.unauthenticated,
+          canUseBiometricUnlock: false,
+          error: 'Session expired. Please login again.',
+        ),
+      );
+    });
     _init();
   }
+
+  late final StreamSubscription<void> _sessionExpiredSub;
 
   /// Avoid an endless splash if secure storage hangs (seen on some OEM Android builds).
   static const Duration sessionRestoreTimeout = Duration(seconds: 12);
@@ -282,6 +295,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (_) {
       return false;
     }
+  }
+
+  @override
+  void dispose() {
+    _sessionExpiredSub.cancel();
+    super.dispose();
   }
 }
 

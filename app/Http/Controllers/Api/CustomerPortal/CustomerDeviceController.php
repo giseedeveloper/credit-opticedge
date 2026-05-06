@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 
 /**
  * @group Customer Portal — Device
@@ -85,6 +86,14 @@ class CustomerDeviceController extends Controller
 
     private function mediaUrl(?string $path): ?string
     {
-        return $path ? route('api.kyc.public-media', ['path' => $path]) : null;
+        if (! $path) {
+            return null;
+        }
+
+        return URL::temporarySignedRoute(
+            'api.kyc.public-media',
+            now()->addMinutes(15),
+            ['path' => $path]
+        );
     }
 }

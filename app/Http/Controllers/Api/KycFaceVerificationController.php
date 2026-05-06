@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 class KycFaceVerificationController extends Controller
 {
@@ -187,6 +188,14 @@ class KycFaceVerificationController extends Controller
 
     private function photoUrl(?string $path): ?string
     {
-        return $path ? route('api.kyc.public-media', ['path' => $path]) : null;
+        if (! $path) {
+            return null;
+        }
+
+        return URL::temporarySignedRoute(
+            'api.kyc.public-media',
+            now()->addMinutes(15),
+            ['path' => $path]
+        );
     }
 }

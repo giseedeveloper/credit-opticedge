@@ -51,10 +51,20 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+  image_path: "assets/icons/fluent-color/frontoffice_app_icon_fullbleed.png"
+  min_sdk_android: 21
 
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/app_logo.png
+    - "assets/icons/fluent-color/03_opticedge_credit_front_office_app_icon_exact_transparent.png"
     - assets/images/
     - assets/icons/fluent-color/

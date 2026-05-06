@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -15,6 +16,7 @@ import '../models/kyc_flow_model.dart';
 import '../utils/kyc_upload_limits.dart';
 
 const _unset = Object();
+const _pendingSubmissionStorageKey = 'kyc_pending_submission_v1';
 
 bool _isRecoverableNetworkError(Object error) {
   if (error is DioException) {
@@ -489,7 +491,12 @@ class KycDraftState {
 }
 
 class KycNotifier extends StateNotifier<KycDraftState> {
-  KycNotifier() : super(const KycDraftState());
+  KycNotifier() : super(const KycDraftState()) {
+    _restorePendingSubmission();
+  }
+
+  int? _queuedSubmissionStep;
+  Map<String, dynamic>? _queuedSubmissionPayload;
 
   void update(KycDraftState Function(KycDraftState current) updater) {
     state = updater(state);
@@ -563,6 +570,10 @@ class KycNotifier extends StateNotifier<KycDraftState> {
     final step = state.pendingRetryStep;
     if (step == null) {
       return false;
+    }
+    if (_queuedSubmissionStep != null) {
+      await processPendingSubmissionQueue();
+      return state.pendingRetryStep == null;
     }
     switch (step) {
       case 1:
@@ -887,10 +898,23 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       pendingRetryStep: null,
     );
 
+    final usesFaceScanner =
+        state.customerId != null && state.customerId!.isNotEmpty;
+    if (usesFaceScanner && !state.faceMatchPassed) {
+      state = state.copyWith(
+        isSubmitting: false,
+        error:
+            'Thibitisha uso kwanza (skani) hadi uthibitisho uwe passed/kijani.',
+      );
+
+      return false;
+    }
+
+    final skipHeadshotFile = usesFaceScanner && state.faceMatchPassed;
     final uploadErr = KycUploadLimits.validateMany([
       (state.idFrontPhoto, 'ID front photo'),
       (state.idBackPhoto, 'ID back photo'),
-      (state.headshotPhoto, 'Headshot'),
+      if (!skipHeadshotFile) (state.headshotPhoto, 'Headshot'),
       (state.clientFoPhoto, 'Client photo'),
     ]);
     if (uploadErr != null) {
@@ -960,7 +984,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
 
     try {
       final id = state.customerId!;
-      await ApiClient.instance.post('/kyc/application/$id/step3', data: {
+      final payload = {
         'phone': state.phone,
         'phone_country': state.phoneCountry,
         if (state.altPhone.isNotEmpty) 'alt_phone': state.altPhone,
@@ -970,7 +994,10 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         if (state.landmark.isNotEmpty) 'landmark': state.landmark,
         if (state.region.isNotEmpty) 'region': state.region,
         if (state.district.isNotEmpty) 'district': state.district,
-      });
+      };
+      await ApiClient.instance
+          .post('/kyc/application/$id/step3', data: payload);
+      await _clearPendingSubmission();
       state = state.copyWith(
         isSubmitting: false,
         stepSaved: true,
@@ -982,6 +1009,22 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       await _saveDraft();
       return true;
     } catch (error) {
+      if (_isRecoverableNetworkError(error)) {
+        await _queuePendingSubmission(3, {
+          'customer_id': state.customerId,
+          'data': {
+            'phone': state.phone,
+            'phone_country': state.phoneCountry,
+            if (state.altPhone.isNotEmpty) 'alt_phone': state.altPhone,
+            'alt_phone_country': state.altPhoneCountry,
+            if (state.email.isNotEmpty) 'email': state.email,
+            'branch_id': state.branchId,
+            if (state.landmark.isNotEmpty) 'landmark': state.landmark,
+            if (state.region.isNotEmpty) 'region': state.region,
+            if (state.district.isNotEmpty) 'district': state.district,
+          },
+        });
+      }
       state = state.copyWith(
         isSubmitting: false,
         error: ApiClient.instance.parseError(error),
@@ -1054,7 +1097,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
 
     try {
       final id = state.customerId!;
-      await ApiClient.instance.post('/kyc/application/$id/step5', data: {
+      final payload = {
         'nok_name': state.nokName,
         'nok_phone': state.nokPhone,
         'nok_phone_country': state.nokPhoneCountry,
@@ -1064,7 +1107,10 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         'nok2_phone_country': state.nok2PhoneCountry,
         if (state.nok2Relationship.isNotEmpty)
           'nok2_relationship': state.nok2Relationship,
-      });
+      };
+      await ApiClient.instance
+          .post('/kyc/application/$id/step5', data: payload);
+      await _clearPendingSubmission();
       state = state.copyWith(
         isSubmitting: false,
         stepSaved: true,
@@ -1075,6 +1121,22 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       await _saveDraft();
       return true;
     } catch (error) {
+      if (_isRecoverableNetworkError(error)) {
+        await _queuePendingSubmission(5, {
+          'customer_id': state.customerId,
+          'data': {
+            'nok_name': state.nokName,
+            'nok_phone': state.nokPhone,
+            'nok_phone_country': state.nokPhoneCountry,
+            'nok_relationship': state.nokRelationship,
+            if (state.nok2Name.isNotEmpty) 'nok2_name': state.nok2Name,
+            if (state.nok2Phone.isNotEmpty) 'nok2_phone': state.nok2Phone,
+            'nok2_phone_country': state.nok2PhoneCountry,
+            if (state.nok2Relationship.isNotEmpty)
+              'nok2_relationship': state.nok2Relationship,
+          },
+        });
+      }
       state = state.copyWith(
         isSubmitting: false,
         error: ApiClient.instance.parseError(error),
@@ -1095,11 +1157,14 @@ class KycNotifier extends StateNotifier<KycDraftState> {
 
     try {
       final id = state.customerId!;
-      await ApiClient.instance.post('/kyc/application/$id/step6', data: {
+      final payload = {
         'terms_accepted': state.termsAccepted ? '1' : '0',
         'data_consent_accepted': state.dataConsentAccepted ? '1' : '0',
         'call_consent_accepted': state.callConsentAccepted ? '1' : '0',
-      });
+      };
+      await ApiClient.instance
+          .post('/kyc/application/$id/step6', data: payload);
+      await _clearPendingSubmission();
       state = state.copyWith(
         isSubmitting: false,
         stepSaved: true,
@@ -1112,6 +1177,16 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       await _saveDraft();
       return true;
     } catch (error) {
+      if (_isRecoverableNetworkError(error)) {
+        await _queuePendingSubmission(6, {
+          'customer_id': state.customerId,
+          'data': {
+            'terms_accepted': state.termsAccepted ? '1' : '0',
+            'data_consent_accepted': state.dataConsentAccepted ? '1' : '0',
+            'call_consent_accepted': state.callConsentAccepted ? '1' : '0',
+          },
+        });
+      }
       state = state.copyWith(
         isSubmitting: false,
         error: ApiClient.instance.parseError(error),
@@ -1359,6 +1434,101 @@ class KycNotifier extends StateNotifier<KycDraftState> {
     }
   }
 
+  Future<void> processPendingSubmissionQueue() async {
+    if (_queuedSubmissionStep == null || _queuedSubmissionPayload == null) {
+      return;
+    }
+
+    final step = _queuedSubmissionStep!;
+    final payload = _queuedSubmissionPayload!;
+    final customerId = payload['customer_id']?.toString();
+    if (customerId == null || customerId.isEmpty) {
+      await _clearPendingSubmission();
+      return;
+    }
+
+    try {
+      state = state.copyWith(isSubmitting: true, error: null);
+      switch (step) {
+        case 3:
+          await ApiClient.instance.post('/kyc/application/$customerId/step3',
+              data: payload['data']);
+          break;
+        case 5:
+          await ApiClient.instance.post('/kyc/application/$customerId/step5',
+              data: payload['data']);
+          break;
+        case 6:
+          await ApiClient.instance.post('/kyc/application/$customerId/step6',
+              data: payload['data']);
+          break;
+        default:
+          await _clearPendingSubmission();
+          return;
+      }
+
+      await _clearPendingSubmission();
+      state = state.copyWith(
+        isSubmitting: false,
+        pendingRetryStep: null,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        isSubmitting: false,
+        error: ApiClient.instance.parseError(error),
+      );
+    }
+  }
+
+  Future<void> _restorePendingSubmission() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_pendingSubmissionStorageKey);
+    if (raw == null || raw.isEmpty) {
+      return;
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) {
+        await prefs.remove(_pendingSubmissionStorageKey);
+        return;
+      }
+      final map = Map<String, dynamic>.from(decoded);
+      final step = map['step'];
+      final payload = map['payload'];
+      if (step is int && payload is Map) {
+        _queuedSubmissionStep = step;
+        _queuedSubmissionPayload = Map<String, dynamic>.from(payload);
+        state = state.copyWith(pendingRetryStep: step);
+      } else {
+        await prefs.remove(_pendingSubmissionStorageKey);
+      }
+    } catch (_) {
+      await prefs.remove(_pendingSubmissionStorageKey);
+    }
+  }
+
+  Future<void> _queuePendingSubmission(
+      int step, Map<String, dynamic> payload) async {
+    _queuedSubmissionStep = step;
+    _queuedSubmissionPayload = payload;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _pendingSubmissionStorageKey,
+      jsonEncode({
+        'step': step,
+        'payload': payload,
+      }),
+    );
+  }
+
+  Future<void> _clearPendingSubmission() async {
+    _queuedSubmissionStep = null;
+    _queuedSubmissionPayload = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_pendingSubmissionStorageKey);
+  }
+
   Future<void> _saveDraft() async {
     final prefs = await SharedPreferences.getInstance();
     final key = '${AppConstants.draftPrefix}${state.customerId}';
@@ -1380,6 +1550,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
   }
 
   void reset() {
+    unawaited(_clearPendingSubmission());
     state = const KycDraftState();
   }
 
@@ -1487,6 +1658,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         ),
         faceMatchScore: _faceMatchScoreFromVerification(detail.verification),
       );
+
+      await processPendingSubmissionQueue();
 
       return true;
     } catch (error) {

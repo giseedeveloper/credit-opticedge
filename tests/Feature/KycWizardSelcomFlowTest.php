@@ -161,6 +161,7 @@ it('releases the asset after approved payment and agreement checks are complete'
         'reviewed_by' => $this->fo->id,
         'type' => 'kyc',
         'status' => 'approved',
+        'face_match_status' => 'passed',
         'stage' => 4,
         'reviewed_at' => now()->subMinutes(5),
     ]);
@@ -172,7 +173,7 @@ it('releases the asset after approved payment and agreement checks are complete'
         ->and($customer->fresh()->asset_released_by)->toBe($this->fo->id)
         ->and($customer->fresh()->asset_released_at)->not->toBeNull();
 
-    expect($this->inventoryUnit->fresh()->status)->toBe('assigned');
+    expect($this->inventoryUnit->fresh()->status)->toBe('sold');
 });
 
 function kycWizardFlowSignatureDataUrl(): string

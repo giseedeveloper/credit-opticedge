@@ -6,6 +6,8 @@ class AppConstants {
 
   static const String appName = 'Opticedge FO';
   static const String tagline = 'Fast. Secure. Verified.';
+  static const String appLogoAsset =
+      'assets/icons/fluent-color/03_opticedge_credit_front_office_app_icon_exact_transparent.png';
   static const String _productionBaseUrl =
       'https://credit.opticedgeafrica.net/api/v1';
   static const String _configuredBaseUrl =

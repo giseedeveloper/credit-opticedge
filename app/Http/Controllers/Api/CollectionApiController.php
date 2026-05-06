@@ -28,7 +28,11 @@ class CollectionApiController extends Controller
      */
     public function webhook(Request $request, PaymentProcessingService $paymentService, WebhookValidationService $validator): JsonResponse
     {
-        Log::info('MNO Webhook Payload received', $request->all());
+        $traceId = (string) str()->uuid();
+        Log::info('MNO Webhook Payload received', [
+            'trace_id' => $traceId,
+            'summary' => $this->summarizePayload($request->all()),
+        ]);
 
         $request->validate([
             'transaction_id' => 'required|string',
@@ -40,6 +44,7 @@ class CollectionApiController extends Controller
 
         if (! $validator->verifySignature($request, config('services.collections.webhook_secret'))) {
             Log::warning('Webhook rejected because the signature did not validate.', [
+                'trace_id' => $traceId,
                 'transaction_id' => $request->transaction_id,
             ]);
 
@@ -49,14 +54,21 @@ class CollectionApiController extends Controller
         $loan = Loan::where('loan_number', $request->account_number)->first();
 
         if (! $loan) {
-            Log::warning("Webhook failed: Loan {$request->account_number} not found.");
+            Log::warning('Webhook failed: loan account not found.', [
+                'trace_id' => $traceId,
+                'transaction_id' => $request->transaction_id,
+                'account_number' => $request->account_number,
+            ]);
             $validator->queueForManualReconciliation($request->all(), 'Account/Loan Not Found');
 
             return $this->errorResponse('Invalid account reference', 404);
         }
 
         if (! $validator->validateUniqueReference($request->transaction_id)) {
-            Log::warning("Replay Attack Blocked: Transaction {$request->transaction_id} already exists.");
+            Log::warning('Replay attack blocked: transaction already exists.', [
+                'trace_id' => $traceId,
+                'transaction_id' => $request->transaction_id,
+            ]);
 
             return $this->errorResponse('Duplicate transaction reference', 409);
         }
@@ -82,9 +94,40 @@ class CollectionApiController extends Controller
 
             return $this->errorResponse($e->getMessage(), $status);
         } catch (\Exception $e) {
-            Log::error('Webhook error: '.$e->getMessage());
+            Log::error('Webhook error.', [
+                'trace_id' => $traceId,
+                'message' => $e->getMessage(),
+                'summary' => $this->summarizePayload($request->all()),
+            ]);
 
             return $this->errorResponse($e->getMessage(), 500);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function summarizePayload(array $payload): array
+    {
+        $maskedPhone = function ($value): ?string {
+            $digits = preg_replace('/\D+/', '', (string) $value);
+            if (! $digits) {
+                return null;
+            }
+            if (strlen($digits) <= 4) {
+                return str_repeat('*', strlen($digits));
+            }
+
+            return str_repeat('*', max(0, strlen($digits) - 4)).substr($digits, -4);
+        };
+
+        return [
+            'transaction_id' => $payload['transaction_id'] ?? null,
+            'amount' => $payload['amount'] ?? null,
+            'account_number' => $payload['account_number'] ?? null,
+            'network' => $payload['network'] ?? null,
+            'msisdn' => $maskedPhone($payload['msisdn'] ?? null),
+        ];
     }
 }

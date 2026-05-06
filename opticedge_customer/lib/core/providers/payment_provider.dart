@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 
@@ -50,23 +51,50 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
   PaymentNotifier() : super(const PaymentState());
 
   Timer? _pollTimer;
+  String? _lastIdempotencyKey;
+  String? _lastRequestFingerprint;
+  DateTime? _lastRequestAt;
 
   Future<bool> requestPayment({required double amount, String? phone}) async {
     state = state.copyWith(isRequesting: true, error: null, isCompleted: false);
     try {
+      final normalizedPhone = phone?.trim() ?? '';
+      final requestFingerprint = '${amount.toStringAsFixed(2)}|$normalizedPhone';
+      final now = DateTime.now();
+      final shouldReuseKey = _lastRequestFingerprint == requestFingerprint &&
+          _lastRequestAt != null &&
+          now.difference(_lastRequestAt!).inMinutes < 2;
+      final idempotencyKey = shouldReuseKey
+          ? (_lastIdempotencyKey ?? _generateIdempotencyKey())
+          : _generateIdempotencyKey();
+
+      _lastIdempotencyKey = idempotencyKey;
+      _lastRequestFingerprint = requestFingerprint;
+      _lastRequestAt = now;
+
       final data = <String, dynamic>{'amount': amount};
       if (phone != null && phone.isNotEmpty) data['phone'] = phone;
+      data['idempotency_key'] = idempotencyKey;
 
       final res = await ApiClient.instance.post('/loan/pay', data: data);
       final resData = res.data['data'] as Map<String, dynamic>;
+      final paymentId = resData['payment_id']?.toString();
 
       state = state.copyWith(
         isRequesting: false,
-        paymentId: resData['payment_id'] as String?,
+        paymentId: paymentId,
         orderId: resData['order_id'] as String?,
         amount: amount,
         statusMessage: 'Payment request sent. Check your phone.',
       );
+
+      if (paymentId == null || paymentId.isEmpty) {
+        state = state.copyWith(
+          isPolling: false,
+          error: 'Payment request received but missing payment reference. Please try again.',
+        );
+        return false;
+      }
 
       _startPolling();
       return true;
@@ -87,6 +115,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       if (state.paymentId == null || !mounted) {
         timer.cancel();
+        state = state.copyWith(isPolling: false);
         return;
       }
 
@@ -119,7 +148,15 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
 
   void reset() {
     _pollTimer?.cancel();
+    _lastIdempotencyKey = null;
+    _lastRequestFingerprint = null;
+    _lastRequestAt = null;
     state = const PaymentState();
+  }
+
+  String _generateIdempotencyKey() {
+    final random = Random.secure().nextInt(1 << 32).toRadixString(16);
+    return 'custpay-${DateTime.now().microsecondsSinceEpoch}-$random';
   }
 
   @override

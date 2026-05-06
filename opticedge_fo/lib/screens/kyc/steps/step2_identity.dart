@@ -65,6 +65,24 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
       return;
     }
 
+    final state = ref.read(kycProvider);
+    final usesFaceScanner =
+        state.customerId != null && state.customerId!.isNotEmpty;
+    if (usesFaceScanner && !state.faceMatchPassed) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Thibitisha uso (face verification) hadi uone hali ya kijani — Umepitisha — kabla ya kuendelea.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     _save();
     await ref.read(kycProvider.notifier).submitStep2();
   }
@@ -96,12 +114,18 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(kycProvider);
+    final usesFaceScanner = state.customerId != null &&
+        state.customerId!.isNotEmpty;
+    final headshotOrFaceDone = usesFaceScanner
+        ? state.faceMatchPassed
+        : state.headshotPhoto != null;
     final capturedPhotos = [
       state.idFrontPhoto,
       state.idBackPhoto,
-      state.headshotPhoto,
+      if (!usesFaceScanner) state.headshotPhoto,
       state.clientFoPhoto,
-    ].whereType<Object>().length;
+    ].whereType<Object>().length +
+        (usesFaceScanner && state.faceMatchPassed ? 1 : 0);
     final completedSignals = [
       state.firstName.isNotEmpty,
       state.lastName.isNotEmpty,
@@ -109,7 +133,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
       state.dateOfBirth.isNotEmpty,
       state.idFrontPhoto != null,
       state.idBackPhoto != null,
-      state.headshotPhoto != null,
+      headshotOrFaceDone,
       state.clientFoPhoto != null,
     ].where((item) => item).length;
     final completion = completedSignals / 8;
@@ -277,7 +301,8 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10,
-                    childAspectRatio: 1.05,
+                    // Slightly taller cells so Face Verification tile (2 lines + bar) fits without overflow.
+                    childAspectRatio: 0.92,
                     children: [
                       PhotoPickerTile(
                         label: 'ID Front',
@@ -301,7 +326,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                       if (state.customerId != null &&
                           state.customerId!.isNotEmpty)
                         FaceScannerTile(
-                          label: 'Face Verification',
+                          label: 'Uthibitisho wa uso',
                           required: true,
                           customerId: state.customerId!,
                           idFrontUrl: state.idFrontPhoto?.path,

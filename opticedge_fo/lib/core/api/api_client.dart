@@ -1,11 +1,16 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:async';
 import '../../config/constants.dart';
 import '../storage/secure_storage.dart';
 
 class ApiClient {
   ApiClient._();
   static final ApiClient instance = ApiClient._();
+  static final StreamController<void> _sessionExpiredController =
+      StreamController<void>.broadcast();
+  static Stream<void> get sessionExpiredStream =>
+      _sessionExpiredController.stream;
 
   late Dio _dio;
   bool _initialized = false;
@@ -39,6 +44,10 @@ class ApiClient {
           handler.next(options);
         },
         onError: (error, handler) {
+          final code = error.response?.statusCode;
+          if (code == 401 || code == 403) {
+            _sessionExpiredController.add(null);
+          }
           handler.next(error);
         },
       ),

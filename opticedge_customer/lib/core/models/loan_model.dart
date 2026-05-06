@@ -22,7 +22,7 @@ class LoanReleaseContext {
       cashPrice: LoanModel._toDouble(json['cash_price']),
       depositAmount: LoanModel._toDouble(json['deposit_amount']),
       preferredRepayment: json['preferred_repayment'] as String?,
-      inventoryUnitId: json['inventory_unit_id'] as String?,
+      inventoryUnitId: json['inventory_unit_id']?.toString(),
     );
   }
 }
@@ -117,7 +117,7 @@ class LoanModel {
 
   factory LoanModel.fromJson(Map<String, dynamic> json) {
     return LoanModel(
-      id: json['id'] as String,
+      id: json['id']?.toString() ?? '',
       loanNumber: json['loan_number'] as String? ?? '',
       status: json['status'] as String? ?? 'active',
       principalAmount: _toDouble(json['principal_amount']),
@@ -136,8 +136,10 @@ class LoanModel {
       paidInstallments: (json['paid_installments'] as num?)?.toInt() ?? 0,
       totalInstallments: (json['total_installments'] as num?)?.toInt() ?? 0,
       progressPercent: _toDouble(json['progress_percent']),
-      nextInstallment: json['next_installment'] != null
-          ? NextInstallment.fromJson(json['next_installment'])
+      nextInstallment: json['next_installment'] is Map<String, dynamic>
+          ? NextInstallment.fromJson(
+              json['next_installment'] as Map<String, dynamic>,
+            )
           : null,
       isOverdue: json['is_overdue'] as bool? ?? false,
     );

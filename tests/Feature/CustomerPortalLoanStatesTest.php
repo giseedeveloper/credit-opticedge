@@ -80,7 +80,9 @@ test('payment endpoint blocks released customer whose loan account is not ready 
         ->assertJsonPath(
             'message',
             'Your device has been released, but your loan account is still being prepared.',
-        );
+        )
+        ->assertJsonPath('meta.error_code', 'customer_payment.loan_not_ready')
+        ->assertJsonPath('meta.event', 'customer_payment.pay_failed');
 });
 
 test('customer loan pay persists selcom payment with transid when loan is active', function () {
@@ -109,7 +111,8 @@ test('customer loan pay persists selcom payment with transid when loan is active
         ]);
 
     $response->assertSuccessful()
-        ->assertJsonPath('success', true);
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('meta.event', 'customer_payment.requested');
 
     $paymentId = $response->json('data.payment_id');
     expect($paymentId)->not->toBeNull();
@@ -118,4 +121,42 @@ test('customer loan pay persists selcom payment with transid when loan is active
     expect($row)->not->toBeNull()
         ->and($row->transid)->not->toBeEmpty()
         ->and($row->phone)->toStartWith('255');
+});
+
+test('customer loan pay is idempotent for same idempotency key', function () {
+    $this->customer->update([
+        'cash_price' => 560000,
+        'deposit_amount' => 500,
+        'preferred_repayment' => 'weekly',
+    ]);
+
+    $this->withToken($this->token)
+        ->getJson('/api/v1/customer/loan')
+        ->assertOk()
+        ->assertJsonPath('data.portal_state', 'loan_active');
+
+    $this->mock(SelcomCheckoutService::class, function ($mock) {
+        $mock->shouldReceive('isConfigured')->andReturn(true);
+        $mock->shouldReceive('initiateWalletPush')
+            ->once()
+            ->andReturnUsing(fn (SelcomPaymentRequest $payment) => $payment->fresh());
+    });
+
+    $payload = [
+        'amount' => 10000,
+        'phone' => '0712345678',
+        'idempotency_key' => 'custpay-fixed-key-001',
+    ];
+
+    $first = $this->withToken($this->token)
+        ->postJson('/api/v1/customer/loan/pay', $payload)
+        ->assertSuccessful();
+
+    $second = $this->withToken($this->token)
+        ->postJson('/api/v1/customer/loan/pay', $payload)
+        ->assertSuccessful()
+        ->assertJsonPath('data.idempotent_replay', true)
+        ->assertJsonPath('meta.event', 'customer_payment.idempotent_reused');
+
+    expect($second->json('data.payment_id'))->toBe($first->json('data.payment_id'));
 });

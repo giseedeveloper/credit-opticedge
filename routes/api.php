@@ -35,7 +35,7 @@ Route::prefix('v1')->group(function () {
         ->middleware('throttle:webhooks')
         ->name('api.payments.selcom.webhook');
     Route::get('/public-media', [KycApiController::class, 'publicMedia'])
-        ->middleware('throttle:public-media')
+        ->middleware(['signed', 'throttle:public-media'])
         ->name('api.kyc.public-media');
 
     // ──────────────────────────────────────────────────────────
@@ -133,7 +133,10 @@ Route::prefix('v1')->group(function () {
         Route::prefix('security')->middleware('role:admin')->group(function () {
             Route::post('/mdm/lock/{unit}', [SecurityApiController::class, 'lockDevice']);
             Route::post('/mdm/unlock/{unit}', [SecurityApiController::class, 'unlockDevice']);
+            Route::get('/reconcile/manual', [SecurityApiController::class, 'listManualReconciliations']);
             Route::post('/reconcile/manual', [SecurityApiController::class, 'manualReconciliation']);
+            Route::post('/reconcile/manual/{requestId}/approve', [SecurityApiController::class, 'approveManualReconciliation']);
+            Route::post('/reconcile/manual/{requestId}/reject', [SecurityApiController::class, 'rejectManualReconciliation']);
         });
 
         // Field Recovery API

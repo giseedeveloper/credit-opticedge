@@ -23,7 +23,7 @@ class AppBrandLogo extends StatelessWidget {
         height: size,
         child: Image.asset(
           AppConstants.appLogoAsset,
-          fit: BoxFit.cover,
+          fit: BoxFit.contain,
           filterQuality: FilterQuality.high,
           gaplessPlayback: true,
           errorBuilder: (_, _, _) => Container(

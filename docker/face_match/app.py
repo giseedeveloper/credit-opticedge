@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any, List, Optional, Tuple
 
@@ -10,6 +11,8 @@ from fastapi.responses import JSONResponse
 from insightface.app import FaceAnalysis
 
 app = FastAPI(title="OpticEdge Face Match", version="1.0.0")
+
+_log = logging.getLogger("face_match")
 
 
 _face_app: Optional[FaceAnalysis] = None
@@ -292,6 +295,7 @@ async def match(
         id_img = _read_image(id_front)
         hs_img = _read_image(headshot)
         if id_img is None or hs_img is None:
+            _log.warning("match outcome=review score=0.0 reason=invalid_image")
             return JSONResponse(
                 status_code=400,
                 content={"status": "review", "score": 0.0, "reason": "invalid_image"},
@@ -299,10 +303,18 @@ async def match(
 
         id_emb, id_reason = _best_face_embedding(id_img, role="id_front")
         if id_emb is None:
+            _log.info(
+                "match outcome=review score=0.0 reason=id_front:%s",
+                id_reason,
+            )
             return {"status": "review", "score": 0.0, "reason": f"id_front:{id_reason}"}
 
         hs_emb, hs_reason = _best_face_embedding(hs_img, role="headshot")
         if hs_emb is None:
+            _log.info(
+                "match outcome=review score=0.0 reason=headshot:%s",
+                hs_reason,
+            )
             return {"status": "review", "score": 0.0, "reason": f"headshot:{hs_reason}"}
 
         score = _cosine(id_emb, hs_emb)
@@ -317,8 +329,11 @@ async def match(
         else:
             status = "failed"
 
-        return {"status": status, "score": round(score, 4), "reason": None}
+        rounded = round(score, 4)
+        _log.info("match outcome=%s score=%s", status, rounded)
+        return {"status": status, "score": rounded, "reason": None}
     except Exception:
+        _log.exception("match internal_error")
         return JSONResponse(
             status_code=500,
             content={"status": "review", "score": 0.0, "reason": "internal_error"},

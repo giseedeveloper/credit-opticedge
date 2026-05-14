@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from typing import Any, List, Optional, Tuple
 
 import cv2
@@ -12,7 +13,13 @@ from insightface.app import FaceAnalysis
 
 app = FastAPI(title="OpticEdge Face Match", version="1.0.0")
 
-_log = logging.getLogger("face_match")
+
+def _match_log_line(message: str) -> None:
+    """
+    Uvicorn / Docker only show our custom lines reliably on stderr (unbuffered).
+    The named logger 'face_match' often has no handler under uvicorn, so INFO was invisible.
+    """
+    print(message, file=sys.stderr, flush=True)
 
 
 _face_app: Optional[FaceAnalysis] = None
@@ -295,7 +302,7 @@ async def match(
         id_img = _read_image(id_front)
         hs_img = _read_image(headshot)
         if id_img is None or hs_img is None:
-            _log.warning("match outcome=review score=0.0 reason=invalid_image")
+            _match_log_line("face_match match outcome=review score=0.0 reason=invalid_image")
             return JSONResponse(
                 status_code=400,
                 content={"status": "review", "score": 0.0, "reason": "invalid_image"},
@@ -303,17 +310,15 @@ async def match(
 
         id_emb, id_reason = _best_face_embedding(id_img, role="id_front")
         if id_emb is None:
-            _log.info(
-                "match outcome=review score=0.0 reason=id_front:%s",
-                id_reason,
+            _match_log_line(
+                f"face_match match outcome=review score=0.0 reason=id_front:{id_reason}",
             )
             return {"status": "review", "score": 0.0, "reason": f"id_front:{id_reason}"}
 
         hs_emb, hs_reason = _best_face_embedding(hs_img, role="headshot")
         if hs_emb is None:
-            _log.info(
-                "match outcome=review score=0.0 reason=headshot:%s",
-                hs_reason,
+            _match_log_line(
+                f"face_match match outcome=review score=0.0 reason=headshot:{hs_reason}",
             )
             return {"status": "review", "score": 0.0, "reason": f"headshot:{hs_reason}"}
 
@@ -330,10 +335,11 @@ async def match(
             status = "failed"
 
         rounded = round(score, 4)
-        _log.info("match outcome=%s score=%s", status, rounded)
+        _match_log_line(f"face_match match outcome={status} score={rounded} reason=null")
         return {"status": status, "score": rounded, "reason": None}
     except Exception:
-        _log.exception("match internal_error")
+        logging.exception("face_match internal_error")
+        _match_log_line("face_match match outcome=review score=0.0 reason=internal_error")
         return JSONResponse(
             status_code=500,
             content={"status": "review", "score": 0.0, "reason": "internal_error"},

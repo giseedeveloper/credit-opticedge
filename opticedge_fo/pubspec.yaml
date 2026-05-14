@@ -59,12 +59,15 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   web:
     generate: true
-  image_path: "assets/icons/fluent-color/frontoffice_app_icon_fullbleed.png"
+  image_path: "assets/icons/fluent-color/frontoffice_app_icon_circle.png"
   min_sdk_android: 21
+  adaptive_icon_foreground: "assets/icons/fluent-color/frontoffice_app_icon_circle.png"
+  adaptive_icon_background: "#FFFFFF"
 
 flutter:
   uses-material-design: true
   assets:
     - "assets/icons/fluent-color/03_opticedge_credit_front_office_app_icon_exact_transparent.png"
+    - "assets/icons/fluent-color/frontoffice_app_icon_circle.png"
     - assets/images/
     - assets/icons/fluent-color/

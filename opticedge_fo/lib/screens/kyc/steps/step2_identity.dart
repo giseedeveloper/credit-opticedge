@@ -7,7 +7,7 @@ import '../../../config/design_tokens.dart';
 import '../../../core/providers/customer_provider.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
-import '../../../widgets/common/face_scanner_tile.dart';
+import '../../../widgets/common/face_verification_hero_card.dart';
 import '../../../widgets/common/glass_card.dart';
 import '../../../widgets/common/photo_picker_tile.dart';
 
@@ -293,57 +293,97 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
               subtitle: '',
               child: Column(
                 children: [
-                  _evidenceBanner(capturedPhotos: capturedPhotos),
+                  _evidenceBanner(
+                    capturedPhotos: capturedPhotos,
+                    usesFaceScanner: usesFaceScanner,
+                  ),
                   const SizedBox(height: 14),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    // Slightly taller cells so Face Verification tile (2 lines + bar) fits without overflow.
-                    childAspectRatio: 0.92,
-                    children: [
-                      PhotoPickerTile(
-                        label: 'ID Front',
-                        required: true,
-                        file: state.idFrontPhoto,
-                        onPicked: (file) => ref
-                            .read(kycProvider.notifier)
-                            .update((current) =>
-                                current.copyWith(idFrontPhoto: file)),
-                      ),
-                      PhotoPickerTile(
-                        label: 'ID Back',
-                        required: true,
-                        file: state.idBackPhoto,
-                        onPicked: (file) => ref
-                            .read(kycProvider.notifier)
-                            .update((current) =>
-                                current.copyWith(idBackPhoto: file)),
-                      ),
-                      // Face Scanner Tile for live face verification
-                      if (state.customerId != null &&
-                          state.customerId!.isNotEmpty)
-                        FaceScannerTile(
-                          label: 'Uthibitisho wa uso',
+                  if (usesFaceScanner) ...[
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 0.92,
+                      children: [
+                        PhotoPickerTile(
+                          label: 'ID Front',
                           required: true,
-                          customerId: state.customerId!,
-                          idFrontUrl: state.idFrontPhoto?.path,
-                          verified: state.faceMatchPassed,
-                          matchScore: state.faceMatchScore,
-                          onScannerClosed: () async {
-                            final id = ref.read(kycProvider).customerId;
-                            if (id == null || id.isEmpty) {
-                              return;
-                            }
-                            await ref
-                                .read(kycProvider.notifier)
-                                .syncFaceMatchFromServer(id);
-                            ref.invalidate(customerDetailProvider(id));
-                          },
-                        )
-                      else
+                          file: state.idFrontPhoto,
+                          onPicked: (file) => ref
+                              .read(kycProvider.notifier)
+                              .update((current) =>
+                                  current.copyWith(idFrontPhoto: file)),
+                        ),
+                        PhotoPickerTile(
+                          label: 'ID Back',
+                          required: true,
+                          file: state.idBackPhoto,
+                          onPicked: (file) => ref
+                              .read(kycProvider.notifier)
+                              .update((current) =>
+                                  current.copyWith(idBackPhoto: file)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    FaceVerificationHeroCard(
+                      customerId: state.customerId!,
+                      idFrontUrl: state.idFrontPhoto?.path,
+                      verified: state.faceMatchPassed,
+                      matchScore: state.faceMatchScore,
+                      onScannerClosed: () async {
+                        final id = ref.read(kycProvider).customerId;
+                        if (id == null || id.isEmpty) {
+                          return;
+                        }
+                        await ref
+                            .read(kycProvider.notifier)
+                            .syncFaceMatchFromServer(id);
+                        ref.invalidate(customerDetailProvider(id));
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      height: 132,
+                      width: double.infinity,
+                      child: PhotoPickerTile(
+                        label: 'Client + FO Photo',
+                        file: state.clientFoPhoto,
+                        onPicked: (file) => ref
+                            .read(kycProvider.notifier)
+                            .update((current) =>
+                                current.copyWith(clientFoPhoto: file)),
+                      ),
+                    ),
+                  ] else ...[
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 0.92,
+                      children: [
+                        PhotoPickerTile(
+                          label: 'ID Front',
+                          required: true,
+                          file: state.idFrontPhoto,
+                          onPicked: (file) => ref
+                              .read(kycProvider.notifier)
+                              .update((current) =>
+                                  current.copyWith(idFrontPhoto: file)),
+                        ),
+                        PhotoPickerTile(
+                          label: 'ID Back',
+                          required: true,
+                          file: state.idBackPhoto,
+                          onPicked: (file) => ref
+                              .read(kycProvider.notifier)
+                              .update((current) =>
+                                  current.copyWith(idBackPhoto: file)),
+                        ),
                         PhotoPickerTile(
                           label: 'Headshot Photo',
                           required: true,
@@ -353,16 +393,17 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                               .update((current) =>
                                   current.copyWith(headshotPhoto: file)),
                         ),
-                      PhotoPickerTile(
-                        label: 'Client + FO Photo',
-                        file: state.clientFoPhoto,
-                        onPicked: (file) => ref
-                            .read(kycProvider.notifier)
-                            .update((current) =>
-                                current.copyWith(clientFoPhoto: file)),
-                      ),
-                    ],
-                  ),
+                        PhotoPickerTile(
+                          label: 'Client + FO Photo',
+                          file: state.clientFoPhoto,
+                          onPicked: (file) => ref
+                              .read(kycProvider.notifier)
+                              .update((current) =>
+                                  current.copyWith(clientFoPhoto: file)),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ).animate().fadeIn(delay: 180.ms).slideY(begin: 0.06, end: 0),
@@ -695,7 +736,10 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
     );
   }
 
-  Widget _evidenceBanner({required int capturedPhotos}) {
+  Widget _evidenceBanner({
+    required int capturedPhotos,
+    required bool usesFaceScanner,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(14),
@@ -752,7 +796,9 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Mbele, nyuma, sura, picha mteja + FO.',
+                  usesFaceScanner
+                      ? 'Mbele, nyuma, skani ya uso, mteja + FO.'
+                      : 'Mbele, nyuma, sura, picha mteja + FO.',
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.45,

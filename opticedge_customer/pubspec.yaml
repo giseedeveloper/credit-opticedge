@@ -45,11 +45,14 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   web:
     generate: true
-  image_path: "assets/images/02_opticedge_credit_website_icon_exact_transparent.png"
+  image_path: "assets/images/customer_app_icon_circle.png"
   min_sdk_android: 21
+  adaptive_icon_foreground: "assets/images/customer_app_icon_circle.png"
+  adaptive_icon_background: "#FFFFFF"
 
 flutter:
   uses-material-design: true
   assets:
-    - "assets/images/customer app logo.png"
     - "assets/images/02_opticedge_credit_website_icon_exact_transparent.png"
+    - "assets/images/customer_app_icon_fullbleed.png"
+    - "assets/images/customer_app_icon_circle.png"

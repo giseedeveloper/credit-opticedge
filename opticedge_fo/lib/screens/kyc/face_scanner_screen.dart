@@ -62,6 +62,9 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
 
   bool _isInitialized = false;
   bool _isProcessing = false;
+
+  /// ML Kit is handling a camera frame (separate from [_isProcessing] capture / gallery).
+  bool _isFrameProcessing = false;
   bool _verificationPassed = false;
   String? _error;
   FaceVerificationResult? _result;
@@ -76,10 +79,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   String? _errorInstruction;
 
   // Liveness detection
-  bool _previousEyesOpen = true;
   bool _blinkDetected = false;
-  int _blinkCount = 0;
-  DateTime? _lastBlinkTime;
 
   // Animation controller for scan line
   late final AnimationController _scanLineController;
@@ -89,6 +89,21 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
 
   /// True after ID front is confirmed on server this session (upload or status check).
   bool _idFrontSyncedThisSession = false;
+
+  /// Modern flow: tips before camera permission + preview.
+  bool _preScanAcknowledged = false;
+
+  /// Auto-capture after user stays in [detected] briefly.
+  Timer? _detectedHoldTimer;
+
+  /// Blink: saw eyes closed, then open again.
+  bool _eyesClosedForBlink = false;
+
+  /// When [livenessTurn] started (for timeout skip if yaw never reports).
+  DateTime? _livenessTurnStartedAt;
+
+  /// Head-yaw liveness satisfied (or timed out).
+  bool _turnChallengeMet = false;
 
   @override
   void initState() {
@@ -107,11 +122,10 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
         enableClassification: true,
         enableTracking: true,
         enableLandmarks: false,
-        performanceMode: FaceDetectorMode.fast,
+        // Accurate mode: headEulerAngleY is needed for the "turn head" liveness step.
+        performanceMode: FaceDetectorMode.accurate,
       ),
     );
-
-    _initCamera();
   }
 
   @override
@@ -123,6 +137,8 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
       if (!mounted) return;
       if (state == AppLifecycleState.inactive ||
           state == AppLifecycleState.paused) {
+        _detectedHoldTimer?.cancel();
+        _detectedHoldTimer = null;
         await _safeStopImageStream();
       } else if (state == AppLifecycleState.resumed) {
         await _startImageStream();
@@ -274,13 +290,13 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
 
   void _processImage(CameraImage image) {
     final session = _cameraSession;
-    if (_isProcessing || _cameraDescription == null || !mounted) return;
+    if (_isFrameProcessing || _cameraDescription == null || !mounted) return;
 
-    _isProcessing = true;
+    _isFrameProcessing = true;
 
     final inputImage = _convertToInputImage(image);
     if (inputImage == null) {
-      _isProcessing = false;
+      _isFrameProcessing = false;
       return;
     }
 
@@ -290,14 +306,12 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
       setState(() {
         _faceDetected = faces.length == 1;
 
-        // Error: multiple faces
         if (faces.length > 1) {
           _scanPhase = ScanPhase.error;
           _errorInstruction = 'Nyuso zaidi ya moja zimeonekana. Kuwa pekee.';
           return;
         }
 
-        // Error: no face
         if (faces.isEmpty) {
           _scanPhase = ScanPhase.searching;
           _errorInstruction = null;
@@ -306,69 +320,106 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
 
         final face = faces.first;
 
-        // Eye open probability
         final leftEye = face.leftEyeOpenProbability ?? 0.0;
         final rightEye = face.rightEyeOpenProbability ?? 0.0;
         _eyesOpen = leftEye > 0.5 && rightEye > 0.5;
 
-        // Blink detection for liveness
-        final eyesJustClosed = _previousEyesOpen && !_eyesOpen;
-        final eyesJustOpened = !_previousEyesOpen && _eyesOpen;
-
-        if (eyesJustClosed || eyesJustOpened) {
-          final now = DateTime.now();
-          if (_lastBlinkTime != null &&
-              now.difference(_lastBlinkTime!).inMilliseconds < 500) {
-            _blinkCount++;
-            if (_blinkCount >= 2) {
-              _blinkDetected = true;
-            }
-          }
-          _lastBlinkTime = now;
-        }
-        _previousEyesOpen = _eyesOpen;
-
-        // Center check (face should be in center 60% of frame)
         final centerX = face.boundingBox.center.dx;
         final frameWidth = image.width.toDouble();
         _faceCentered =
             centerX >= frameWidth * 0.2 && centerX <= frameWidth * 0.8;
 
-        // Face size check (too far or too close)
         final faceArea = face.boundingBox.width * face.boundingBox.height;
         final frameArea = frameWidth * image.height.toDouble();
         final faceRatio = faceArea / frameArea;
 
-        // Smart phase transitions
         if (!_faceCentered) {
           _scanPhase = ScanPhase.error;
           _errorInstruction = 'Leta uso katikati ya frame.';
-        } else if (faceRatio < 0.05) {
+          return;
+        }
+        if (faceRatio < 0.05) {
           _scanPhase = ScanPhase.error;
           _errorInstruction = 'Uso uko mbali sana. Karibia kidogo.';
-        } else if (faceRatio > 0.4) {
+          return;
+        }
+        if (faceRatio > 0.4) {
           _scanPhase = ScanPhase.error;
           _errorInstruction = 'Uso uko karibu sana. Kaa mbali kidogo.';
-        } else if (!_eyesOpen && _scanPhase != ScanPhase.livenessBlink) {
+          return;
+        }
+
+        // During blink step only, allow eyes closed without "open your eyes" error.
+        if (!_eyesOpen && _scanPhase != ScanPhase.livenessBlink) {
           _scanPhase = ScanPhase.error;
           _errorInstruction = 'Fungua macho yako.';
-        } else if (_faceDetected && _faceCentered && _eyesOpen) {
-          // Good position - check liveness
-          if (!_blinkDetected) {
-            _scanPhase = ScanPhase.livenessBlink;
-            _errorInstruction = null;
+          return;
+        }
+
+        // --- Liveness: blink → turn → ready (auto-capture) ---
+        if (!_blinkDetected) {
+          _scanPhase = ScanPhase.livenessBlink;
+          _errorInstruction = null;
+          _livenessTurnStartedAt = null;
+          _turnChallengeMet = false;
+
+          final leftClosed = leftEye < 0.28;
+          final rightClosed = rightEye < 0.28;
+          if (leftClosed && rightClosed) {
+            _eyesClosedForBlink = true;
+          }
+          if (_eyesClosedForBlink && leftEye > 0.55 && rightEye > 0.55) {
+            _blinkDetected = true;
+            _eyesClosedForBlink = false;
+          }
+          return;
+        }
+
+        if (!_turnChallengeMet) {
+          _scanPhase = ScanPhase.livenessTurn;
+          _errorInstruction = null;
+          _livenessTurnStartedAt ??= DateTime.now();
+
+          final yaw = face.headEulerAngleY;
+          final timedOut = DateTime.now().difference(_livenessTurnStartedAt!) >
+              const Duration(seconds: 8);
+          if (yaw != null && yaw.abs() >= 12) {
+            _turnChallengeMet = true;
+          } else if (timedOut) {
+            _turnChallengeMet = true;
           } else {
-            _scanPhase = ScanPhase.detected;
-            _errorInstruction = null;
+            return;
           }
         }
+
+        _scanPhase = ScanPhase.detected;
+        _errorInstruction = null;
       });
     }).catchError((_) {
       // Silently ignore errors
     }).whenComplete(() {
-      if (mounted && session == _cameraSession) {
-        _isProcessing = false;
+      if (!mounted || session != _cameraSession) {
+        return;
       }
+
+      _isFrameProcessing = false;
+
+      if (_scanPhase != ScanPhase.detected || _result != null || _error != null) {
+        _detectedHoldTimer?.cancel();
+        _detectedHoldTimer = null;
+      } else {
+        _detectedHoldTimer ??= Timer(const Duration(milliseconds: 750), () {
+          if (!mounted || session != _cameraSession) {
+            return;
+          }
+          if (_scanPhase != ScanPhase.detected || _result != null || _error != null) {
+            return;
+          }
+          unawaited(_captureAndVerify());
+        });
+      }
+
+      // Note: [_isProcessing] is reserved for capture / gallery UX.
     });
   }
 
@@ -442,6 +493,9 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   }
 
   Future<void> _captureAndVerify() async {
+    _detectedHoldTimer?.cancel();
+    _detectedHoldTimer = null;
+
     final controller = _cameraController;
     if (controller == null || !controller.value.isInitialized) return;
 
@@ -574,17 +628,20 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
       _verificationPassed = false;
       _error = null;
       _isProcessing = false;
+      _isFrameProcessing = false;
       _faceDetected = false;
       _eyesOpen = false;
       _faceCentered = false;
-      // Reset smart scanning state
       _scanPhase = ScanPhase.searching;
       _errorInstruction = null;
       _blinkDetected = false;
-      _blinkCount = 0;
-      _previousEyesOpen = true;
+      _eyesClosedForBlink = false;
+      _turnChallengeMet = false;
+      _livenessTurnStartedAt = null;
     });
 
+    _detectedHoldTimer?.cancel();
+    _detectedHoldTimer = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         unawaited(_startImageStream());
@@ -595,6 +652,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _detectedHoldTimer?.cancel();
     _scanLineController.dispose();
     _cameraController?.dispose();
     _faceDetector.close();
@@ -610,10 +668,165 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   }
 
   Widget _buildBody() {
+    if (!_preScanAcknowledged) {
+      return _buildPreScanOnboarding();
+    }
     if (_error != null) return _buildError();
     if (_result != null) return _buildResult();
     if (!_isInitialized) return _buildLoading();
     return _buildCameraPreview(context);
+  }
+
+  Widget _buildPreScanOnboarding() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [DesignTokens.heroStart, DesignTokens.heroEnd],
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconButton(
+                onPressed: () => context.pop(false),
+                style: IconButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.white.withValues(alpha: 0.1),
+                ),
+                icon: const Icon(Icons.close_rounded),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Tayari kwa skani ya uso',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.5,
+                  height: 1.15,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Tutakusanya selfie ya moja kwa moja na kulinganisha na picha ya kitambulisho.',
+                style: TextStyle(
+                  fontSize: 15,
+                  height: 1.45,
+                  color: Colors.white.withValues(alpha: 0.78),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 28),
+              _preScanTip(
+                Icons.wb_sunny_outlined,
+                'Mwanga mzuri',
+                'Epuka kivuli kali nyuma ya uso; mwanga wa kawaida wa ndani au nje ni bora.',
+              ),
+              const SizedBox(height: 14),
+              _preScanTip(
+                Icons.person_outline_rounded,
+                'Mtu mmoja',
+                'Hakikisha ni mteja pekee anayeonekana kwenye skrini.',
+              ),
+              const SizedBox(height: 14),
+              _preScanTip(
+                Icons.auto_fix_high_rounded,
+                'Hatua tatu',
+                'Kunyaza macho, kugeuza kichwa kidogo, kisha picha inachukuliwa kiotomatiki.',
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: AppConstants.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onPressed: () async {
+                    setState(() => _preScanAcknowledged = true);
+                    await _initCamera();
+                  },
+                  child: const Text(
+                    'Anza skani',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: TextButton(
+                  onPressed: () => context.pop(false),
+                  child: Text(
+                    'Rudi nyuma',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.75),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _preScanTip(IconData icon, String title, String body) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          ),
+          child: Icon(icon, color: AppConstants.primaryLight, size: 24),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                body,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.72),
+                  fontSize: 13,
+                  height: 1.4,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildLoading() {
@@ -748,27 +961,29 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   }
 
   Color _ringColorForPhase() {
-    final isReady = _scanPhase == ScanPhase.detected;
-    final isError = _scanPhase == ScanPhase.error;
-    if (isError) {
+    if (_scanPhase == ScanPhase.error) {
       return DesignTokens.error;
     }
-    if (isReady) {
+    if (_scanPhase == ScanPhase.detected) {
       return DesignTokens.success;
     }
-    if (_faceDetected) {
+    if (_scanPhase == ScanPhase.livenessBlink ||
+        _scanPhase == ScanPhase.livenessTurn) {
       return AppConstants.primary;
+    }
+    if (_faceDetected) {
+      return AppConstants.primary.withValues(alpha: 0.85);
     }
     return Colors.white.withValues(alpha: 0.88);
   }
 
   Widget _buildCameraPreview(BuildContext context) {
-    final canCapture = _scanPhase == ScanPhase.detected ||
-        _scanPhase == ScanPhase.livenessBlink;
+    final canCapture = _scanPhase == ScanPhase.detected;
     final size = MediaQuery.sizeOf(context);
     final faceRect = _faceGuideRect(size);
     final ringColor = _ringColorForPhase();
     final isReady = _scanPhase == ScanPhase.detected;
+    final topInset = MediaQuery.paddingOf(context).top;
 
     return Stack(
       fit: StackFit.expand,
@@ -789,13 +1004,23 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
             painter: _FaceGuideRingPainter(
               faceOval: faceRect,
               ringColor: ringColor,
-              strokeWidth: isReady ? 3 : 2,
+              strokeWidth: isReady ? 3.2 : 2,
             ),
           ),
         ),
         if (_scanPhase == ScanPhase.searching ||
-            _scanPhase == ScanPhase.detected)
+            _scanPhase == ScanPhase.livenessBlink ||
+            _scanPhase == ScanPhase.livenessTurn ||
+            _scanPhase == ScanPhase.error)
           _buildAnimatedScanLine(faceRect),
+        Positioned(
+          top: topInset + 54,
+          left: 18,
+          right: 18,
+          child: IgnorePointer(
+            child: _buildFloatingHeroInstruction(),
+          ),
+        ),
         Positioned(
           top: 0,
           left: 0,
@@ -825,12 +1050,56 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
             return CustomPaint(
               painter: _ScanLinePainter(
                 position: yPosition,
-                color: _scanPhase == ScanPhase.detected
-                    ? DesignTokens.success.withValues(alpha: 0.75)
+                color: _scanPhase == ScanPhase.error
+                    ? DesignTokens.error.withValues(alpha: 0.75)
                     : AppConstants.primary.withValues(alpha: 0.75),
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  /// Large, glanceable instruction under the top bar (banking-app style).
+  Widget _buildFloatingHeroInstruction() {
+    final (icon, text, color) = _getInstructionForPhase();
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                text,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.96),
+                  fontSize: 16,
+                  height: 1.25,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -855,69 +1124,25 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Smart instruction text
-            _buildSmartInstruction(),
-
-            const SizedBox(height: 24),
-
-            // Progress indicators
             _buildProgressIndicators(),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 22),
 
-            // Capture button row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Gallery button
-                _buildCircleButton(
-                  icon: Icons.photo_library_rounded,
-                  onPressed: _isProcessing ? null : _pickFromGallery,
-                ),
+            _buildCaptureButton(canCapture),
 
-                const SizedBox(width: 24),
-
-                // Capture button
-                _buildCaptureButton(canCapture),
-              ],
+            const SizedBox(height: 10),
+            Text(
+              'Menyu juu: chagua gallery ikiwa kamera ina shida.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.45),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                height: 1.35,
+              ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSmartInstruction() {
-    final (icon, text, color) = _getInstructionForPhase();
-
-    return AnimatedContainer(
-      duration: 300.ms,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 10),
-          Flexible(
-            child: Text(
-              text,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -939,8 +1164,8 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
           Colors.white
         ),
       ScanPhase.detected => (
-          Icons.check_circle_rounded,
-          'Kaa bila kutikisika.',
+          Icons.auto_awesome_rounded,
+          'Tayari! Picha inachukuliwa kiotomatiki…',
           DesignTokens.success
         ),
       ScanPhase.livenessBlink => (
@@ -972,19 +1197,28 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   }
 
   Widget _buildProgressIndicators() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildProgressStep('Uso', _faceDetected, Icons.face_rounded),
-        _buildProgressConnector(_faceDetected),
-        _buildProgressStep('Macho', _eyesOpen, Icons.visibility_rounded),
-        _buildProgressConnector(_eyesOpen),
-        _buildProgressStep(
-            'Kati', _faceCentered, Icons.center_focus_strong_rounded),
-        _buildProgressConnector(_faceCentered && _blinkDetected),
-        _buildProgressStep(
-            'Liveness', _blinkDetected, Icons.fingerprint_rounded),
-      ],
+    final framingOk = _faceDetected &&
+        _faceCentered &&
+        (_eyesOpen || _scanPhase == ScanPhase.livenessBlink);
+    final blinkOk = _blinkDetected;
+    final turnOk = _turnChallengeMet;
+    final ready = _scanPhase == ScanPhase.detected;
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildProgressStep('Uso', framingOk, Icons.face_retouching_natural_rounded),
+          _buildProgressConnector(framingOk),
+          _buildProgressStep('Blink', blinkOk, Icons.remove_red_eye_outlined),
+          _buildProgressConnector(blinkOk),
+          _buildProgressStep('Geuza', turnOk, Icons.sync_alt_rounded),
+          _buildProgressConnector(turnOk),
+          _buildProgressStep('Skani', ready, Icons.verified_outlined),
+        ],
+      ),
     );
   }
 
@@ -1088,38 +1322,6 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     );
   }
 
-  Widget _buildCircleButton({
-    required IconData icon,
-    VoidCallback? onPressed,
-  }) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: onPressed != null
-              ? Colors.black.withValues(alpha: 0.5)
-              : Colors.black.withValues(alpha: 0.3),
-          border: Border.all(
-            color: onPressed != null
-                ? Colors.white.withValues(alpha: 0.2)
-                : Colors.white.withValues(alpha: 0.1),
-            width: 1.5,
-          ),
-        ),
-        child: Icon(
-          icon,
-          color: onPressed != null
-              ? Colors.white
-              : Colors.white.withValues(alpha: 0.3),
-          size: 24,
-        ),
-      ),
-    );
-  }
-
   Widget _buildTopBar() {
     final canSwitch = _availableCameras.length > 1;
     return SafeArea(
@@ -1155,37 +1357,80 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                 ),
               ),
             ),
-            const Spacer(),
+            Expanded(
+              child: Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 9,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.38),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.14),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.face_retouching_natural_rounded,
+                            color: AppConstants.primary,
+                            size: 18,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Uthibitishaji wa Uso',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             ClipRRect(
               borderRadius: BorderRadius.circular(22),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.38),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.14),
+                child: Material(
+                  color: Colors.transparent,
+                  child: PopupMenuButton<String>(
+                    enabled: !_isProcessing,
+                    color: Colors.white,
+                    icon: Icon(
+                      Icons.more_horiz_rounded,
+                      color: _isProcessing
+                          ? Colors.white.withValues(alpha: 0.35)
+                          : Colors.white,
                     ),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.face_retouching_natural_rounded,
-                        color: AppConstants.primary,
-                        size: 18,
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Uthibitishaji wa Uso',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.2,
+                    position: PopupMenuPosition.under,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    onSelected: (value) {
+                      if (value == 'gallery') {
+                        unawaited(_pickFromGallery());
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem<String>(
+                        value: 'gallery',
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(Icons.photo_library_outlined),
+                          title: Text('Chagua kutoka gallery'),
                         ),
                       ),
                     ],
@@ -1193,7 +1438,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                 ),
               ),
             ),
-            const Spacer(),
+            const SizedBox(width: 6),
             if (canSwitch)
               ClipRRect(
                 borderRadius: BorderRadius.circular(22),
@@ -1202,7 +1447,9 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: _isSwitchingCamera ? null : () => unawaited(_switchCamera()),
+                      onTap: _isSwitchingCamera
+                          ? null
+                          : () => unawaited(_switchCamera()),
                       child: Container(
                         padding: const EdgeInsets.all(11),
                         decoration: BoxDecoration(

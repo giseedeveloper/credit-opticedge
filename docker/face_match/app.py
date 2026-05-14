@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -25,14 +25,31 @@ def _env_float(name: str, default: float) -> float:
         return default
 
 
-# Tunable thresholds (override via container env in production if needed).
-# score >= PASS → passed; score >= REVIEW (and < PASS) → review; else failed.
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+# Headshot / live selfie — stricter quality (defaults match previous behaviour).
 PASS_THRESHOLD = _env_float("FACE_MATCH_PASS_THRESHOLD", 0.72)
 REVIEW_THRESHOLD = _env_float("FACE_MATCH_REVIEW_THRESHOLD", 0.55)
 MIN_FACE_AREA_RATIO = _env_float("FACE_MATCH_MIN_FACE_AREA_RATIO", 0.045)
 MIN_SHARPNESS = _env_float("FACE_MATCH_MIN_SHARPNESS", 35.0)
 MIN_BRIGHTNESS = _env_float("FACE_MATCH_MIN_BRIGHTNESS", 35.0)
 MAX_BRIGHTNESS = _env_float("FACE_MATCH_MAX_BRIGHTNESS", 225.0)
+
+# ID document (full card scan) — relaxed + ROI pipeline (NIDA-style prints, hologram noise).
+ID_MIN_FACE_AREA_RATIO = _env_float("FACE_MATCH_ID_MIN_FACE_AREA_RATIO", 0.012)
+ID_MIN_SHARPNESS = _env_float("FACE_MATCH_ID_MIN_SHARPNESS", 18.0)
+ID_MIN_BRIGHTNESS = _env_float("FACE_MATCH_ID_MIN_BRIGHTNESS", 22.0)
+ID_MAX_BRIGHTNESS = _env_float("FACE_MATCH_ID_MAX_BRIGHTNESS", 238.0)
+# If max(h, w) is below this, upscale before detection (helps tiny portrait on card).
+ID_UPSCALE_MIN_EDGE = _env_int("FACE_MATCH_ID_UPSCALE_MIN_EDGE", 960)
 
 
 @app.get("/health")
@@ -80,9 +97,26 @@ def _crop_from_bbox(img: np.ndarray, face: Any) -> Optional[np.ndarray]:
     return img[y1:y2, x1:x2]
 
 
-def _quality_reason(img: np.ndarray, face: Any) -> Optional[str]:
+def _face_quality_params(role: str) -> tuple[float, float, float, float]:
+    if role == "id_front":
+        return (
+            ID_MIN_FACE_AREA_RATIO,
+            ID_MIN_SHARPNESS,
+            ID_MIN_BRIGHTNESS,
+            ID_MAX_BRIGHTNESS,
+        )
+    return (
+        MIN_FACE_AREA_RATIO,
+        MIN_SHARPNESS,
+        MIN_BRIGHTNESS,
+        MAX_BRIGHTNESS,
+    )
+
+
+def _quality_reason(img: np.ndarray, face: Any, role: str) -> Optional[str]:
+    min_ratio, min_sharp, min_bright, max_bright = _face_quality_params(role)
     ratio = _face_area_ratio(face, img)
-    if ratio < MIN_FACE_AREA_RATIO:
+    if ratio < min_ratio:
         return "face_too_small"
 
     crop = _crop_from_bbox(img, face)
@@ -91,42 +125,155 @@ def _quality_reason(img: np.ndarray, face: Any) -> Optional[str]:
 
     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
     sharpness = float(cv2.Laplacian(gray, cv2.CV_64F).var())
-    if sharpness < MIN_SHARPNESS:
+    if sharpness < min_sharp:
         return "image_blurry"
 
     brightness = float(gray.mean())
-    if brightness < MIN_BRIGHTNESS:
+    if brightness < min_bright:
         return "image_too_dark"
-    if brightness > MAX_BRIGHTNESS:
+    if brightness > max_bright:
         return "image_too_bright"
 
     return None
 
 
-def _best_face_embedding(img: np.ndarray, role: str) -> Tuple[Optional[np.ndarray], str]:
+def _face_rank(face: Any, img: np.ndarray) -> float:
+    """Prefer large, high-confidence detections (stable across ID vs selfie)."""
+    area = _face_area_ratio(face, img)
+    det = float(getattr(face, "det_score", 0.0) or 0.0)
+    if det <= 0.0:
+        det = 0.75
+    return area * (0.25 + det)
+
+
+def _roi_xywh(img: np.ndarray, fx0: float, fy0: float, fx1: float, fy1: float) -> np.ndarray:
+    """Crop by fractions of width/height (0..1). Clamped to valid bounds."""
+    h, w = img.shape[:2]
+    x0 = int(max(0, min(w - 1, round(fx0 * w))))
+    x1 = int(max(x0 + 1, min(w, round(fx1 * w))))
+    y0 = int(max(0, min(h - 1, round(fy0 * h))))
+    y1 = int(max(y0 + 1, min(h, round(fy1 * h))))
+    return img[y0:y1, x0:x1]
+
+
+def _enhance_id_image(img: np.ndarray) -> np.ndarray:
+    """CLAHE on luminance + mild unsharp mask — typical for document scans."""
+    if img is None or img.size == 0:
+        return img
+    lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    l_ch, a_ch, b_ch = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=2.2, tileGridSize=(8, 8))
+    l2 = clahe.apply(l_ch)
+    merged = cv2.merge((l2, a_ch, b_ch))
+    out = cv2.cvtColor(merged, cv2.COLOR_LAB2BGR)
+    blurred = cv2.GaussianBlur(out, (0, 0), sigmaX=1.0)
+    out = cv2.addWeighted(out, 1.28, blurred, -0.28, 0)
+    return out
+
+
+def _maybe_upscale_for_id(img: np.ndarray) -> np.ndarray:
+    """Upscale small scans so the portrait occupies more pixels for buffalo_l."""
+    if img is None or img.size == 0:
+        return img
+    h, w = img.shape[:2]
+    m = max(h, w)
+    if m < ID_UPSCALE_MIN_EDGE and m > 0:
+        scale = min(2.4, (ID_UPSCALE_MIN_EDGE / float(m)) * 0.98)
+        nw = max(1, int(round(w * scale)))
+        nh = max(1, int(round(h * scale)))
+        return cv2.resize(img, (nw, nh), interpolation=cv2.INTER_CUBIC)
+    return img
+
+
+def _id_front_candidate_images(id_img: np.ndarray) -> List[Tuple[str, np.ndarray]]:
+    """
+    Multiple crops — NIDA-style cards usually place portrait on left;
+    some layouts use right or centered upper region.
+    """
+    out: List[Tuple[str, np.ndarray]] = []
+    if id_img is None or id_img.size == 0:
+        return out
+
+    enhanced = _enhance_id_image(id_img)
+
+    def add(label: str, im: np.ndarray) -> None:
+        if im is None or im.size == 0 or im.shape[0] < 48 or im.shape[1] < 48:
+            return
+        out.append((label, im))
+
+    add("full_enhanced", _maybe_upscale_for_id(enhanced))
+    add("full_raw", _maybe_upscale_for_id(np.ascontiguousarray(id_img)))
+
+    # Portrait ROIs on enhanced image (fractions of W x H).
+    rois: List[Tuple[str, float, float, float, float]] = [
+        ("roi_left", 0.02, 0.08, 0.44, 0.82),
+        ("roi_right", 0.54, 0.08, 0.99, 0.82),
+        ("roi_center", 0.20, 0.10, 0.82, 0.78),
+        ("roi_upper", 0.08, 0.04, 0.92, 0.55),
+    ]
+    for label, fx0, fy0, fx1, fy1 in rois:
+        crop = _roi_xywh(enhanced, fx0, fy0, fx1, fy1)
+        add(label, _maybe_upscale_for_id(crop))
+
+    return out
+
+
+def _best_face_embedding_single(
+    img: np.ndarray, role: str
+) -> Tuple[Optional[np.ndarray], str, float]:
+    """
+    One forward pass: detect, quality gate, return embedding + rank of chosen face.
+    On failure, rank is -1.0.
+    """
     faces = _get_face_app().get(img)
     if not faces:
-        return None, "no_face_detected"
+        return None, "no_face_detected", -1.0
 
-    # Headshot should be a single person frame.
     if role == "headshot" and len(faces) > 1:
-        return None, "multiple_faces_detected"
+        return None, "multiple_faces_detected", -1.0
 
-    # Pick the largest face by bbox area.
-    def area(f):
-        x1, y1, x2, y2 = f.bbox
-        return max(0.0, (x2 - x1)) * max(0.0, (y2 - y1))
+    best = max(faces, key=lambda f: _face_rank(f, img))
+    rank = _face_rank(best, img)
 
-    best = max(faces, key=area)
-
-    quality_error = _quality_reason(img, best)
+    quality_error = _quality_reason(img, best, role)
     if quality_error is not None:
-        return None, quality_error
+        return None, quality_error, -1.0
 
     emb = getattr(best, "embedding", None)
     if emb is None:
-        return None, "embedding_unavailable"
-    return emb.astype(np.float32), "ok"
+        return None, "embedding_unavailable", -1.0
+    return emb.astype(np.float32), "ok", rank
+
+
+def _best_face_embedding_id_document(id_img: np.ndarray) -> Tuple[Optional[np.ndarray], str]:
+    """
+    Try several crops / enhancements and keep the strongest usable embedding.
+    Mirrors how production KYC stacks survive noisy ID scans.
+    """
+    last_reason = "no_face_detected"
+    best_emb: Optional[np.ndarray] = None
+    best_rank = -1.0
+
+    for _label, cand in _id_front_candidate_images(id_img):
+        emb, reason, rank = _best_face_embedding_single(cand, role="id_front")
+        if emb is None:
+            last_reason = reason
+            continue
+        if rank > best_rank:
+            best_rank = rank
+            best_emb = emb
+            last_reason = "ok"
+
+    if best_emb is not None:
+        return best_emb, "ok"
+    return None, last_reason
+
+
+def _best_face_embedding(img: np.ndarray, role: str) -> Tuple[Optional[np.ndarray], str]:
+    if role == "id_front":
+        return _best_face_embedding_id_document(img)
+    emb, reason, _rank = _best_face_embedding_single(img, role)
+    return emb, reason
 
 
 def _cosine(a: np.ndarray, b: np.ndarray) -> float:
@@ -163,7 +310,6 @@ async def match(
         # Normalize to 0..1 (cosine can be [-1,1] but for face embeddings it’s usually [0,1])
         score = max(0.0, min(1.0, score))
 
-        # Conservative thresholds: keep "review" lane wide to avoid false rejects
         if score >= PASS_THRESHOLD:
             status = "passed"
         elif score >= REVIEW_THRESHOLD:
@@ -172,9 +318,8 @@ async def match(
             status = "failed"
 
         return {"status": status, "score": round(score, 4), "reason": None}
-    except Exception as e:
+    except Exception:
         return JSONResponse(
             status_code=500,
             content={"status": "review", "score": 0.0, "reason": "internal_error"},
         )
-

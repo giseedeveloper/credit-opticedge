@@ -6,6 +6,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class FaceMatchService
 {
@@ -21,6 +22,8 @@ class FaceMatchService
         $endpoint = config('services.face_match.url');
 
         if (! is_string($endpoint) || trim($endpoint) === '') {
+            Log::warning('face_match.match skipped: FACE_MATCH_URL is not configured');
+
             return [
                 'status' => 'review',
                 'score' => 0.0,
@@ -54,13 +57,26 @@ class FaceMatchService
                 'score' => $score,
                 'reason' => $reason,
             ];
-        } catch (ConnectionException) {
+        } catch (ConnectionException $e) {
+            Log::warning('face_match.match connection failed', [
+                'endpoint' => $endpoint,
+                'message' => $e->getMessage(),
+            ]);
+
             return [
                 'status' => 'review',
                 'score' => 0.0,
                 'reason' => 'Face match service is unreachable.',
             ];
-        } catch (RequestException) {
+        } catch (RequestException $e) {
+            $body = $e->response ? substr((string) $e->response->body(), 0, 800) : null;
+            Log::warning('face_match.match http error', [
+                'endpoint' => $endpoint,
+                'http_status' => $e->response?->status(),
+                'body_preview' => $body,
+                'message' => $e->getMessage(),
+            ]);
+
             return [
                 'status' => 'review',
                 'score' => 0.0,

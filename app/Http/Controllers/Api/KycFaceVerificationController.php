@@ -10,6 +10,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
@@ -105,6 +106,15 @@ class KycFaceVerificationController extends Controller
             new UploadedFile($idFrontFile, basename($idFrontFile), null, null, true),
             new UploadedFile($headshotFile, basename($headshotFile), null, null, true),
         );
+
+        if ($result['status'] !== 'passed' || $result['reason'] !== null) {
+            Log::info('kyc.face_verify.result', [
+                'customer_id' => $customerId,
+                'status' => $result['status'],
+                'score' => $result['score'],
+                'reason' => $result['reason'],
+            ]);
+        }
 
         $verification = Verification::firstOrCreate(
             ['customer_id' => $customer->id, 'type' => 'kyc'],

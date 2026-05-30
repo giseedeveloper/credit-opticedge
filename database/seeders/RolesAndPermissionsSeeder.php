@@ -10,14 +10,86 @@ use Spatie\Permission\PermissionRegistrar;
 class RolesAndPermissionsSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * @var array<string, list<string>>
      */
+    private const array RolePermissionMatrix = [
+        'front-officer' => [
+            'dashboard.view',
+            'loans.view',
+            'loans.create',
+            'devices.view',
+            'staff.view',
+        ],
+        'supervisor' => [
+            'dashboard.view',
+            'loans.view',
+            'loans.create',
+            'loans.approve',
+            'devices.view',
+            'returned_devices.view',
+            'staff.view',
+            'reports.view',
+        ],
+        'manager' => [
+            'dashboard.view',
+            'loans.view',
+            'loans.create',
+            'loans.approve',
+            'loans.export',
+            'devices.view',
+            'returned_devices.view',
+            'staff.view',
+            'reports.view',
+            'reports.export',
+        ],
+        'back-officer' => [
+            'dashboard.view',
+            'loans.view',
+            'loans.create',
+            'loans.edit',
+            'devices.view',
+            'staff.view',
+            'accounting.view',
+        ],
+        'accountant' => [
+            'dashboard.view',
+            'accounting.view',
+            'accounting.export',
+            'reports.view',
+            'reports.export',
+            'reconciliation.view',
+        ],
+        'dealer' => [
+            'dashboard.view',
+            'loans.view',
+            'devices.view',
+            'sales.view',
+        ],
+        'owner' => [
+            'dashboard.all',
+            'loans.all',
+            'devices.all',
+            'staff.all',
+            'reports.all',
+            'access.all',
+            'settings.all',
+        ],
+        'admin' => [
+            'dashboard.all',
+            'loans.all',
+            'devices.all',
+            'staff.all',
+            'reports.all',
+            'access.all',
+            'settings.all',
+            'accounting.all',
+        ],
+    ];
+
     public function run(): void
     {
-        // Reset cached roles and permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // High-resolution modules
         $modules = [
             'Dashboard', 'Accounting', 'SMS Campaign', 'Payment analytics', 'Loans',
             'Products', 'Calculator', 'Devices', 'Returned devices', 'Financial plans',
@@ -25,23 +97,18 @@ class RolesAndPermissionsSeeder extends Seeder
             'Reconciliation', 'Access', 'Account', 'Settings',
         ];
 
-        // Specific actions
         $actions = ['view', 'create', 'edit', 'delete', 'approve', 'export'];
 
-        // Create Permissions
         foreach ($modules as $mod) {
             $slug = strtolower(str_replace(' ', '_', $mod));
 
-            // Generic matrix
             foreach ($actions as $action) {
-                Permission::firstOrCreate(['name' => "{$slug}.{$action}"]);
+                Permission::firstOrCreate(['name' => "{$slug}.{$action}", 'guard_name' => 'web']);
             }
 
-            // "all" macro permission per module
-            Permission::firstOrCreate(['name' => "{$slug}.all"]);
+            Permission::firstOrCreate(['name' => "{$slug}.all", 'guard_name' => 'web']);
         }
 
-        // Roles To Initialize
         $roles = [
             'accountant' => 'Accountant privileges',
             'back-officer' => 'BO Privileges',
@@ -54,12 +121,37 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
 
         foreach ($roles as $name => $description) {
-            $role = Role::firstOrCreate(['name' => $name]);
+            $role = Role::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
             if (empty($role->description)) {
                 $role->update(['description' => $description]);
             }
         }
 
-        // We can optionally assign initial grants here, but for now we rely on the API/UI.
+        foreach (self::RolePermissionMatrix as $roleName => $permissionNames) {
+            $role = Role::where('name', $roleName)->where('guard_name', 'web')->first();
+
+            if (! $role) {
+                continue;
+            }
+
+            $resolved = collect($permissionNames)
+                ->flatMap(function (string $name): array {
+                    if (str_ends_with($name, '.all')) {
+                        $module = str_replace('.all', '', $name);
+
+                        return Permission::query()
+                            ->where('name', 'like', "{$module}.%")
+                            ->pluck('name')
+                            ->all();
+                    }
+
+                    return Permission::where('name', $name)->exists() ? [$name] : [];
+                })
+                ->unique()
+                ->values()
+                ->all();
+
+            $role->syncPermissions($resolved);
+        }
     }
 }

@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "opticedge_fo (iOS Simulator)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}",
+      "toolArgs": ["-d", "ios"],
+      "preLaunchTask": "Start iOS Simulator"
+    },
+    {
+      "name": "opticedge_fo (pick device)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "Start iOS Simulator"
+    }
+  ]
+}

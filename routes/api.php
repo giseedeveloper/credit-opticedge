@@ -13,8 +13,10 @@ use App\Http\Controllers\Api\CustomerPortal\CustomerPaymentController;
 use App\Http\Controllers\Api\FinanceApiController;
 use App\Http\Controllers\Api\FraudApiController;
 use App\Http\Controllers\Api\KycApiController;
+use App\Http\Controllers\Api\KycApprovalApiController;
 use App\Http\Controllers\Api\KycFaceVerificationController;
 use App\Http\Controllers\Api\RecoveryApiController;
+use App\Http\Controllers\Api\RefurbishmentApiController;
 use App\Http\Controllers\Api\RoleApiController;
 use App\Http\Controllers\Api\SecurityApiController;
 use App\Http\Controllers\Api\SelcomWebhookController;
@@ -23,8 +25,8 @@ use App\Http\Controllers\Api\StockApiController;
 use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Facades\Excel;
 
-// Version 1 API
-Route::prefix('v1')->group(function () {
+// Version 1 API (legacy clients — Deprecation headers via api.version middleware)
+Route::prefix('v1')->middleware(['api.version:1'])->group(function () {
 
     // Auth Routes
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:api-login');
@@ -43,6 +45,7 @@ Route::prefix('v1')->group(function () {
     // ──────────────────────────────────────────────────────────
     Route::prefix('customer')->group(function () {
         Route::post('/check-phone', [CustomerAuthController::class, 'checkPhone'])->middleware('throttle:api-login');
+        Route::post('/kyc-status', [CustomerAuthController::class, 'kycStatus'])->middleware('throttle:api-login');
         Route::post('/set-pin', [CustomerAuthController::class, 'setPin'])->middleware('throttle:api-login');
         Route::post('/login', [CustomerAuthController::class, 'login'])->middleware('throttle:api-login');
 
@@ -76,6 +79,20 @@ Route::prefix('v1')->group(function () {
             Route::get('/customers', [KycApiController::class, 'myCustomers']);
             Route::get('/customers/{id}', [KycApiController::class, 'customerDetail']);
         });
+
+        Route::prefix('kyc/approvals')
+            ->middleware('permission:loans.create')
+            ->group(function () {
+                Route::get('/pending', [KycApprovalApiController::class, 'index']);
+                Route::get('/customers/{customer}', [KycApprovalApiController::class, 'show']);
+                Route::post('/customers/{customer}/stages/{stage}/approve', [KycApprovalApiController::class, 'approveStage'])
+                    ->whereNumber('stage');
+                Route::post('/customers/{customer}/stages/{stage}/reject', [KycApprovalApiController::class, 'rejectStage'])
+                    ->whereNumber('stage');
+                Route::post('/customers/{customer}/confirmation-call', [KycApprovalApiController::class, 'recordConfirmationCall']);
+                Route::post('/customers/{customer}/nok-call', [KycApprovalApiController::class, 'recordNokCall']);
+                Route::post('/customers/{customer}/face-match/manual-verify', [KycApprovalApiController::class, 'manualVerifyFaceMatch']);
+            });
 
         Route::prefix('kyc/customers')
             ->middleware('permission:loans.create')
@@ -127,6 +144,10 @@ Route::prefix('v1')->group(function () {
         Route::prefix('stock')->middleware('permission:devices.view')->group(function () {
             Route::get('/search', [StockApiController::class, 'search']);
             Route::get('/vendor-list', [StockApiController::class, 'vendorStock']);
+        });
+
+        Route::prefix('refurbishment')->middleware('permission:devices.view')->group(function () {
+            Route::post('/units/{unit}/refurbish', [RefurbishmentApiController::class, 'refurbishDevice']);
         });
 
         // HQ Admin Security & Risk Ops

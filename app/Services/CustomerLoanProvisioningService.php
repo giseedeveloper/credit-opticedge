@@ -12,6 +12,7 @@ class CustomerLoanProvisioningService
 {
     public function __construct(
         private LoanCalculatorService $loanCalculator,
+        private LoanProvisioningGuard $provisioningGuard,
     ) {}
 
     /**
@@ -75,10 +76,7 @@ class CustomerLoanProvisioningService
 
     public function canProvision(Customer $customer): bool
     {
-        return $customer->isAssetReleased()
-            && filled($customer->cash_price)
-            && filled($customer->preferred_repayment)
-            && $customer->cash_price > 0;
+        return $this->provisioningGuard->canProvision($customer, LoanProvisioningGuard::CHANNEL_RELEASE);
     }
 
     public function provision(Customer $customer, ?User $actor = null): Loan
@@ -89,9 +87,7 @@ class CustomerLoanProvisioningService
             return $existingLoan;
         }
 
-        if (! $this->canProvision($customer)) {
-            throw new InvalidArgumentException('Customer is not ready for automatic loan provisioning.');
-        }
+        $this->provisioningGuard->assertCanProvision($customer, LoanProvisioningGuard::CHANNEL_RELEASE);
 
         $customer->loadMissing(['inventoryUnit', 'assetReleasedBy']);
 

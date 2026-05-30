@@ -16,15 +16,15 @@ class RefurbishmentApiController extends Controller
     /**
      * Circular economy trigger receiving replacement LCDs + Batteries OPEX data.
      */
-    public function refurbishDevice(Request $request, string $unitId, RefurbishmentService $refurbService): JsonResponse
+    public function refurbishDevice(Request $request, string $unit, RefurbishmentService $refurbService): JsonResponse
     {
         $request->validate([
             'part_cost' => 'required|numeric|min:0',
             'grading' => 'required|string|in:Brand New,Grade A,Grade B,Grade C,Faulty',
-            'notes' => 'required|string|max:500'
+            'notes' => 'required|string|max:500',
         ]);
 
-        $unit = InventoryUnit::findOrFail($unitId);
+        $unit = InventoryUnit::findOrFail($unit);
 
         $freshUnit = $refurbService->processRefurbishment(
             $unit,

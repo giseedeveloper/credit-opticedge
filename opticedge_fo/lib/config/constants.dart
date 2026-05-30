@@ -6,10 +6,16 @@ class AppConstants {
 
   static const String appName = 'Opticedge FO';
   static const String tagline = 'Fast. Secure. Verified.';
-  static const String appLogoAsset =
-      'assets/icons/fluent-color/03_opticedge_credit_front_office_app_icon_exact_transparent.png';
+  static const String appLogoAsset = 'assets/images/opticedge_app_logo.png';
+
+  /// Brand blue from Opticedge Africa logo (#0072BC).
+  static const Color brandBlue = Color(0xFF0072BC);
   static const String _productionBaseUrl =
       'https://credit.opticedgeafrica.net/api/v1';
+
+  /// TLS SHA-256 (cert DER) for credit.opticedgeafrica.net.
+  static const String productionCertSha256 =
+      '9aee56891d6d8451d74cc2ad139a8576648e8ce63d3d3d813fa419ee31d1ae48ff';
   static const String _configuredBaseUrl =
       String.fromEnvironment('API_BASE_URL', defaultValue: '');
 

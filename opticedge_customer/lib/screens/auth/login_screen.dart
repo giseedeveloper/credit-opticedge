@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
 import '../../config/customer_colors.dart';
 import '../../config/design_tokens.dart';
@@ -78,9 +79,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (!_phoneKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     try {
-      final result = await ref
-          .read(authProvider.notifier)
-          .checkPhone(_phoneCtrl.text.trim());
+      final phone = _phoneCtrl.text.trim();
+      final result = await ref.read(authProvider.notifier).checkPhone(phone);
+
+      if (result.isKycInProgress) {
+        if (!mounted) return;
+        context.go(
+          '/kyc-tracking?phone=${Uri.encodeComponent(phone)}',
+        );
+        return;
+      }
+
       setState(() {
         _isPhoneStep = false;
         _hasPin = result.hasPin;
@@ -332,7 +341,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               onPressed: _checkPhone,
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
+            Center(
+              child: TextButton(
+                onPressed: () => context.go('/kyc-tracking'),
+                child: Text(
+                  'Fuatilia maombi yako (KYC)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppConstants.primary,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
             _securityNote(theme, cc),
           ],
         ),
@@ -486,6 +509,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               icon: isNewPin ? Icons.lock_open_rounded : Icons.login_rounded,
               onPressed: _submitPin,
             ),
+
+            if (!isNewPin) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: auth.isLoading
+                    ? null
+                    : () async {
+                        final ok = await ref
+                            .read(authProvider.notifier)
+                            .unlockWithBiometrics();
+                        if (ok && context.mounted) {
+                          context.go('/home');
+                        }
+                      },
+                icon: const Icon(Icons.fingerprint_rounded),
+                label: const Text('Ingia kwa alama za kidole'),
+              ),
+            ],
 
             const SizedBox(height: 20),
             _securityNote(theme, cc),

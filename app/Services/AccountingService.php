@@ -110,18 +110,33 @@ class AccountingService
         $loan = $transaction->loan;
         $customer = $transaction->customer;
 
+        $amount = round((float) $transaction->amount, 2);
+        $vatRate = (float) config('app.default_vat_rate', 0);
+        $vatAmount = $vatRate > 0 ? round($amount * ($vatRate / (100 + $vatRate)), 2) : 0.0;
+
         return [
             'receipt_number' => $transaction->reference,
             'date' => $transaction->transacted_at->toDateTimeString(),
-            'amount' => (float) $transaction->amount,
-            'vat' => 0,
+            'amount' => $amount,
+            'vat_rate_percent' => $vatRate,
+            'vat' => $vatAmount,
+            'net_amount' => round($amount - $vatAmount, 2),
             'customer_name' => $customer?->full_name ?? 'N/A',
             'customer_phone' => $customer?->phone ?? 'N/A',
             'loan_number' => $loan?->loan_number ?? 'N/A',
             'payment_channel' => $transaction->channel,
-            'tin' => config('app.company_tin', ''),
-            'vrn' => config('app.company_vrn', ''),
+            'tin' => config('app.company_tin', env('COMPANY_TIN', '')),
+            'vrn' => config('app.company_vrn', env('COMPANY_VRN', '')),
+            'efd_required' => filter_var(env('TRA_EFD_ENABLED', false), FILTER_VALIDATE_BOOL),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function issueTraFiscalReceipt(Transaction $transaction): array
+    {
+        return app(TraFiscalReceiptService::class)->issueForTransaction($transaction);
     }
 
     /**

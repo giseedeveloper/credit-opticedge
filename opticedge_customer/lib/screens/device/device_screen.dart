@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/constants.dart';
 import '../../config/customer_colors.dart';
@@ -316,17 +317,37 @@ class _DeviceScreenState extends ConsumerState<DeviceScreen> {
                 size: 16,
                 color: AppConstants.textHint,
               ),
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Mkataba utafunguliwa hivi karibuni'),
-                  ),
-                );
-              },
+              onTap: () => _openAgreement(context, d['agreement']),
             ),
           ),
       ],
     );
+  }
+
+  Future<void> _openAgreement(
+    BuildContext context,
+    dynamic agreement,
+  ) async {
+    if (agreement is! Map) {
+      return;
+    }
+    final url = agreement['file_url']?.toString();
+    if (url == null || url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Mkataba haupatikani kwa sasa.')),
+      );
+      return;
+    }
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      return;
+    }
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Imeshindwa kufungua mkataba.')),
+      );
+    }
   }
 
   String _fmtAmount(dynamic v) {

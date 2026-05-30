@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
+import '../services/portal_offline_cache.dart';
 import '../models/loan_model.dart';
 import '../models/schedule_model.dart';
 import '../models/transaction_model.dart';
@@ -53,17 +54,34 @@ class LoanNotifier extends StateNotifier<LoanState> {
         state = const LoanState(isLoading: false);
         return;
       }
-      final payload = LoanPortalPayload.fromJson(data as Map<String, dynamic>);
-      state = LoanState(
-        loan: payload.loan,
-        releaseContext: payload.release,
-        portalState: payload.portalState,
-        statusMessage: payload.portalMessage,
-        isLoading: false,
-      );
+      final map = data as Map<String, dynamic>;
+      await PortalOfflineCache.saveLoan(map);
+      _applyLoanPayload(map);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: ApiClient.parseError(e));
+      final cached = await PortalOfflineCache.loadLoan();
+      if (cached != null) {
+        _applyLoanPayload(cached, offline: true);
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          error: ApiClient.parseError(e),
+        );
+      }
     }
+  }
+
+  void _applyLoanPayload(Map<String, dynamic> data, {bool offline = false}) {
+    final payload = LoanPortalPayload.fromJson(data);
+    state = LoanState(
+      loan: payload.loan,
+      releaseContext: payload.release,
+      portalState: payload.portalState,
+      statusMessage: offline
+          ? '${payload.portalMessage ?? ''} (hifadhi ya nje ya mtandao)'
+              .trim()
+          : payload.portalMessage,
+      isLoading: false,
+    );
   }
 }
 
@@ -102,16 +120,30 @@ class ScheduleNotifier extends StateNotifier<ScheduleState> {
         state = const ScheduleState();
         return;
       }
-      final payload = SchedulePortalPayload.fromJson(data as Map<String, dynamic>);
-      state = ScheduleState(
-        schedule: payload.schedule,
-        releaseContext: payload.release,
-        portalState: payload.portalState,
-        statusMessage: payload.portalMessage,
-      );
+      final map = data as Map<String, dynamic>;
+      await PortalOfflineCache.saveSchedule(map);
+      _applySchedulePayload(map);
     } catch (e) {
-      state = ScheduleState(error: ApiClient.parseError(e));
+      final cached = await PortalOfflineCache.loadSchedule();
+      if (cached != null) {
+        _applySchedulePayload(cached, offline: true);
+      } else {
+        state = ScheduleState(error: ApiClient.parseError(e));
+      }
     }
+  }
+
+  void _applySchedulePayload(Map<String, dynamic> data, {bool offline = false}) {
+    final payload = SchedulePortalPayload.fromJson(data);
+    state = ScheduleState(
+      schedule: payload.schedule,
+      releaseContext: payload.release,
+      portalState: payload.portalState,
+      statusMessage: offline
+          ? '${payload.portalMessage ?? ''} (hifadhi ya nje ya mtandao)'
+              .trim()
+          : payload.portalMessage,
+    );
   }
 }
 

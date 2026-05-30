@@ -116,7 +116,7 @@ class AuthController extends Controller
         $user = $request->user()->load('dealer');
         $primaryRole = $user->primaryRoleName() ?? $user->role;
 
-        $canRegister = $user->canAccess('loans.create');
+        $apiPermissions = $user->getAllPermissions()->pluck('name')->values()->all();
 
         return $this->successResponse([
             'id' => $user->id,
@@ -132,8 +132,13 @@ class AuthController extends Controller
             'branch' => null,
             'avatar_url' => $user->avatar_url,
             'is_active' => $user->is_active,
+            'api_permissions' => $apiPermissions,
             'permissions' => [
-                'can_register_customers' => $canRegister,
+                'can_register_customers' => $user->canAccess('loans.create'),
+                'can_view_stock' => $user->canAccess('devices.view'),
+                'can_view_staff_metrics' => $user->canAccess('staff.view'),
+                'can_view_recovery' => $user->canAccess('returned_devices.view'),
+                'can_view_reports' => $user->canAccess('reports.view'),
                 'is_admin' => $user->isAdmin(),
             ],
         ], 'Profile retrieved.');

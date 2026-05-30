@@ -51,6 +51,7 @@ test('released customer with enough terms is auto-provisioned for the customer p
         'cash_price' => 560000,
         'deposit_amount' => 500,
         'preferred_repayment' => 'weekly',
+        'deposit_payment_status' => 'completed',
     ]);
 
     $this->withToken($this->token)
@@ -90,6 +91,7 @@ test('customer loan pay persists selcom payment with transid when loan is active
         'cash_price' => 560000,
         'deposit_amount' => 500,
         'preferred_repayment' => 'weekly',
+        'deposit_payment_status' => 'completed',
     ]);
 
     $this->withToken($this->token)
@@ -128,6 +130,7 @@ test('customer loan pay is idempotent for same idempotency key', function () {
         'cash_price' => 560000,
         'deposit_amount' => 500,
         'preferred_repayment' => 'weekly',
+        'deposit_payment_status' => 'completed',
     ]);
 
     $this->withToken($this->token)

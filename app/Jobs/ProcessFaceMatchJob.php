@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Customer;
 use App\Models\Verification;
+use App\Services\FaceMatchCoordinator;
 use App\Services\FaceMatchService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -39,7 +40,7 @@ class ProcessFaceMatchJob implements ShouldQueue
             return;
         }
 
-        if ($verification->face_match_status === 'manual_verified') {
+        if (app(FaceMatchCoordinator::class)->shouldSkipAsyncRun($verification)) {
             return;
         }
 

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../config/constants.dart';
 import '../../config/design_tokens.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../widgets/common/app_logo.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -286,34 +287,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Widget _buildLogo() {
-    return Material(
+    return const AppLogo(
+      size: 168,
+      borderRadius: 32,
       elevation: 14,
-      shadowColor: Colors.black.withValues(alpha: 0.35),
-      borderRadius: BorderRadius.circular(36),
-      clipBehavior: Clip.antiAlias,
-      color: Colors.transparent,
-      child: SizedBox(
-        width: 172,
-        height: 172,
-        child: Image.asset(
-          AppConstants.appLogoAsset,
-          fit: BoxFit.contain,
-          filterQuality: FilterQuality.high,
-          gaplessPlayback: true,
-          errorBuilder: (_, __, ___) => Container(
-            color: Colors.white.withValues(alpha: 0.2),
-            alignment: Alignment.center,
-            child: const Text(
-              'OE',
-              style: TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
-      ),
+      showShadow: true,
     );
   }
 }

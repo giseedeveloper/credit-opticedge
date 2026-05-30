@@ -15,8 +15,8 @@
         <div class="flex items-start gap-4">
             <x-fluent-icon name="chart-bar-square" size="lg" />
             <div>
-            <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Executive Dashboard</h1>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Live credit portfolio intelligence &amp; market velocity.</p>
+            <h1 class="text-2xl font-extrabold tracking-tight text-brand-charcoal dark:text-white">Executive Dashboard</h1>
+            <p class="mt-1 text-sm font-medium text-zinc-600 dark:text-gray-400">Live credit portfolio intelligence &amp; market velocity.</p>
             </div>
         </div>
         <div class="flex items-center gap-3">
@@ -36,10 +36,10 @@
         $actions = [
             ['label' => 'New Loan',      'icon' => 'plus-circle',       'href' => route('credit.panel'),    'color' => 'bg-oe hover:bg-oe-hover text-white'],
             ['label' => 'KYC Register',  'icon' => 'identification',    'href' => route('kyc.wizard'),      'color' => 'bg-oe hover:bg-oe-hover text-white'],
-            ['label' => 'View Loans',    'icon' => 'document-text',     'href' => route('credit.panel'),    'color' => 'bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-zinc-700'],
-            ['label' => 'IMEI Search',   'icon' => 'magnifying-glass',  'href' => route('stock.imei'),      'color' => 'bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-zinc-700'],
-            ['label' => 'Schedules',     'icon' => 'calendar-days',     'href' => route('credit.schedules'),'color' => 'bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-zinc-700'],
-            ['label' => 'Collections',   'icon' => 'banknotes',         'href' => route('financials.collections'),'color' => 'bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-zinc-700'],
+            ['label' => 'View Loans',    'icon' => 'document-text',     'href' => route('credit.panel'),    'color' => 'bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-brand-charcoal dark:text-gray-200 border border-zinc-200/80 dark:border-zinc-700 ring-1 ring-black/5'],
+            ['label' => 'IMEI Search',   'icon' => 'magnifying-glass',  'href' => route('stock.imei'),      'color' => 'bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-brand-charcoal dark:text-gray-200 border border-zinc-200/80 dark:border-zinc-700 ring-1 ring-black/5'],
+            ['label' => 'Schedules',     'icon' => 'calendar-days',     'href' => route('credit.schedules'),'color' => 'bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-brand-charcoal dark:text-gray-200 border border-zinc-200/80 dark:border-zinc-700 ring-1 ring-black/5'],
+            ['label' => 'Collections',   'icon' => 'banknotes',         'href' => route('financials.collections'),'color' => 'bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-brand-charcoal dark:text-gray-200 border border-zinc-200/80 dark:border-zinc-700 ring-1 ring-black/5'],
         ];
         @endphp
         @foreach($actions as $action)

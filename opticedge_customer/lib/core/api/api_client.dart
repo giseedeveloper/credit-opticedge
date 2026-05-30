@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'dart:async';
 import '../../config/constants.dart';
 import '../storage/secure_storage.dart';
+import 'certificate_pinning.dart';
 
 class ApiClient {
   ApiClient._();
@@ -28,6 +29,8 @@ class ApiClient {
         },
       ),
     );
+
+    CertificatePinning.applyIfConfigured(_dio);
 
     _dio.interceptors.add(
       InterceptorsWrapper(

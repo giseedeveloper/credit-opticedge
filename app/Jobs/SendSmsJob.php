@@ -2,10 +2,10 @@
 
 namespace App\Jobs;
 
+use App\Services\Integrations\IntegrationGatewayManager;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use RuntimeException;
 use Throwable;
 
 class SendSmsJob implements ShouldQueue
@@ -27,21 +27,14 @@ class SendSmsJob implements ShouldQueue
     /**
      * Execute the job — integrate with your SMS gateway here.
      */
-    public function handle(): void
+    public function handle(IntegrationGatewayManager $gateways): void
     {
-        $gateway = config('services.sms.driver', 'log');
+        $gateway = $gateways->sms();
+        $sent = $gateway->send($this->phone, $this->message, $this->meta);
 
-        if ($gateway === 'log') {
-            Log::channel('sms')->info('SMS sent', [
-                'phone' => $this->phone,
-                'message' => $this->message,
-                'meta' => $this->meta,
-            ]);
-
-            return;
+        if (! $sent) {
+            throw new \RuntimeException("SMS gateway [{$gateway->driverName()}] returned failure.");
         }
-
-        throw new RuntimeException("SMS gateway driver [{$gateway}] is not implemented.");
     }
 
     public function failed(Throwable $exception): void

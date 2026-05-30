@@ -9,7 +9,12 @@ class UserModel {
   final String? avatarUrl;
   final bool isActive;
   final bool canRegisterCustomers;
+  final bool canViewStock;
+  final bool canViewStaffMetrics;
+  final bool canViewRecovery;
+  final bool canViewReports;
   final bool isAdmin;
+  final List<String> apiPermissions;
 
   const UserModel({
     required this.id,
@@ -22,7 +27,12 @@ class UserModel {
     this.avatarUrl,
     this.isActive = true,
     this.canRegisterCustomers = false,
+    this.canViewStock = false,
+    this.canViewStaffMetrics = false,
+    this.canViewRecovery = false,
+    this.canViewReports = false,
     this.isAdmin = false,
+    this.apiPermissions = const [],
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -42,7 +52,15 @@ class UserModel {
       avatarUrl: json['avatar_url']?.toString(),
       isActive: json['is_active'] == true,
       canRegisterCustomers: perms['can_register_customers'] == true,
+      canViewStock: perms['can_view_stock'] == true,
+      canViewStaffMetrics: perms['can_view_staff_metrics'] == true,
+      canViewRecovery: perms['can_view_recovery'] == true,
+      canViewReports: perms['can_view_reports'] == true,
       isAdmin: perms['is_admin'] == true,
+      apiPermissions: (json['api_permissions'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
     );
   }
 
@@ -64,8 +82,13 @@ class UserModel {
         'dealer': dealer?.toJson(),
         'avatar_url': avatarUrl,
         'is_active': isActive,
+        'api_permissions': apiPermissions,
         'permissions': {
           'can_register_customers': canRegisterCustomers,
+          'can_view_stock': canViewStock,
+          'can_view_staff_metrics': canViewStaffMetrics,
+          'can_view_recovery': canViewRecovery,
+          'can_view_reports': canViewReports,
           'is_admin': isAdmin,
         },
       };

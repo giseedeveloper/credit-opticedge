@@ -6,6 +6,7 @@ import '../../config/constants.dart';
 import '../../config/customer_colors.dart';
 import '../../core/api/api_client.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/services/biometric_service.dart';
 import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/premium_glass_background.dart';
 
@@ -204,6 +205,9 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ),
                 const SizedBox(height: 18),
+
+                const _BiometricUnlockTile(),
+                const SizedBox(height: 10),
 
                 // Change PIN
                 _buildActionTile(
@@ -482,6 +486,111 @@ class _SectionCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           ...children,
+        ],
+      ),
+    );
+  }
+}
+
+class _BiometricUnlockTile extends ConsumerStatefulWidget {
+  const _BiometricUnlockTile();
+
+  @override
+  ConsumerState<_BiometricUnlockTile> createState() =>
+      _BiometricUnlockTileState();
+}
+
+class _BiometricUnlockTileState extends ConsumerState<_BiometricUnlockTile> {
+  bool _loading = true;
+  bool _available = false;
+  bool _enabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final available = await BiometricService.instance.isAvailable;
+    final enabled =
+        await ref.read(authProvider.notifier).isBiometricUnlockEnabled();
+    if (mounted) {
+      setState(() {
+        _available = available;
+        _enabled = enabled;
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading || !_available) {
+      return const SizedBox.shrink();
+    }
+
+    final cc = CustomerColors.of(context);
+
+    return GlassCard.surface(
+      context,
+      borderRadius: BorderRadius.circular(20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: cc.primarySurface,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.fingerprint_rounded,
+              color: AppConstants.primary,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ingia kwa alama za kidole',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: cc.textPrimary,
+                  ),
+                ),
+                Text(
+                  'Tumia kidole au uso badala ya PIN kila wakati',
+                  style: TextStyle(fontSize: 12, color: cc.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: _enabled,
+            activeTrackColor: AppConstants.primary.withValues(alpha: 0.45),
+            onChanged: (value) async {
+              if (value) {
+                final ok = await BiometricService.instance.authenticate(
+                  reason: 'Thibitisha ili kuwasha kuingia kwa alama za kidole',
+                );
+                if (!ok) {
+                  return;
+                }
+              }
+              await ref
+                  .read(authProvider.notifier)
+                  .setBiometricUnlockEnabled(value);
+              if (mounted) {
+                setState(() => _enabled = value);
+              }
+            },
+          ),
         ],
       ),
     );

@@ -9,12 +9,13 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
-    /* Brand (aligned with login) */
+    /* Brand — shared with landing, login, and HQ console */
     --color-brand-charcoal: #2d3748;
     --color-brand-orange: #f58220;
     --color-brand-orange-hover: #e67818;
+    --color-brand-canvas: #eef0f4;
 
     /* Short tokens for Tailwind utilities: bg-oe, text-oe, hover:bg-oe-hover, etc. */
     --color-oe: #f58220;
@@ -46,16 +47,16 @@
     --color-warning:       #f59e0b;
     --color-warning-light: #fef3c7;
 
-    /* ── Layout surfaces (login-aligned slate canvas) ── */
-    --color-page:           #f8fafc;
+    /* ── Layout surfaces (landing / login canvas) ── */
+    --color-page:           #eef0f4;
     --color-surface:        #ffffff;
-    --color-border:         #e2e8f0;
-    --color-sidebar:        #f1f5f9;
-    --color-sidebar-border: #e2e8f0;
+    --color-border:         #e4e4e7;
+    --color-sidebar:        #ffffff;
+    --color-sidebar-border: #e4e4e7;
 
     /* ── Typography ── */
-    --color-text:  #1e293b;
-    --color-muted: #64748b;
+    --color-text:  #2d3748;
+    --color-muted: #71717a;
 
     /* ── Accent (Flux) ── */
     --color-accent:              var(--color-brand-orange);
@@ -91,15 +92,68 @@
     body {
         background-color: var(--color-page);
         color: var(--color-text);
+        font-family: var(--font-sans);
     }
 }
 
-/* Desktop app-shell scrolling:
+/* HQ console: align legacy gray/slate utilities with landing palette (light mode) */
+@layer base {
+    html:not(.dark) #app-shell-main .text-gray-900,
+    html:not(.dark) #app-shell-main .text-slate-900,
+    html:not(.dark) #app-shell-main .text-slate-800 {
+        color: var(--color-brand-charcoal);
+    }
+
+    html:not(.dark) #app-shell-main .text-gray-700,
+    html:not(.dark) #app-shell-main .text-gray-600,
+    html:not(.dark) #app-shell-main .text-gray-500,
+    html:not(.dark) #app-shell-main .text-slate-700,
+    html:not(.dark) #app-shell-main .text-slate-600,
+    html:not(.dark) #app-shell-main .text-slate-500,
+    html:not(.dark) #app-shell-main .text-slate-400 {
+        color: var(--color-muted);
+    }
+
+    html:not(.dark) #app-shell-main .border-gray-100,
+    html:not(.dark) #app-shell-main .border-gray-200,
+    html:not(.dark) #app-shell-main .border-slate-100,
+    html:not(.dark) #app-shell-main .border-slate-200,
+    html:not(.dark) #app-shell-main .border-zinc-100 {
+        border-color: var(--color-border);
+    }
+
+    html:not(.dark) #app-shell-main .bg-gray-50,
+    html:not(.dark) #app-shell-main .bg-slate-50 {
+        background-color: color-mix(in srgb, var(--color-page) 42%, white);
+    }
+
+    html:not(.dark) #app-shell-main .hover\:bg-gray-50:hover,
+    html:not(.dark) #app-shell-main .hover\:bg-slate-50:hover,
+    html:not(.dark) #app-shell-main .hover\:bg-slate-100:hover {
+        background-color: color-mix(in srgb, var(--color-page) 55%, white);
+    }
+}
+
+@layer components {
+    .oe-console-card {
+        @apply rounded-2xl border border-zinc-200/80 bg-white shadow-sm ring-1 ring-black/5;
+    }
+
+    .oe-nav-link-active {
+        @apply bg-brand-orange/12 font-semibold text-brand-charcoal ring-1 ring-brand-orange/25 shadow-sm;
+    }
+
+    .oe-nav-link {
+        @apply text-zinc-600 hover:bg-zinc-100/95 hover:text-zinc-900;
+    }
+}
+
+/* Desktop app-shell scrolling (dashboard only — not marketing/landing pages):
    - Prevent full-page scroll (keeps sidebar visually fixed)
    - Scroll only the main column; sidebar nav scrolls internally */
 @media (min-width: 1024px) {
-    html,
-    body {
+    html:has(#app-shell-main),
+    body:has(#app-shell-main) {
         height: 100%;
         overflow: hidden;
     }
@@ -127,7 +181,14 @@
 input:focus[data-flux-control],
 textarea:focus[data-flux-control],
 select:focus[data-flux-control] {
-    @apply outline-hidden ring-2 ring-[#F58220]/35 ring-offset-2 ring-offset-white;
+    @apply outline-hidden ring-2 ring-brand-orange/35 ring-offset-2 ring-offset-white;
+}
+
+html:not(.dark) input:focus[data-flux-control],
+html:not(.dark) textarea:focus[data-flux-control],
+html:not(.dark) select:focus[data-flux-control] {
+    @apply ring-black/10;
+    border-color: #09090b;
 }
 
 /* \[:where(&)\]:size-4 {

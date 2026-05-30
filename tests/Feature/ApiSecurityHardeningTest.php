@@ -78,7 +78,7 @@ it('prevents one agent from editing another agent kyc draft', function () {
     Sanctum::actingAs($otherAgent);
 
     $this->postJson("/api/v1/kyc/application/{$draft->id}/step2", [])
-        ->assertNotFound();
+        ->assertForbidden();
 });
 
 it('requires loan view permission before settlement quote exposure', function () {

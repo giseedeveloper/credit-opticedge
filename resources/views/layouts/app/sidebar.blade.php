@@ -31,25 +31,25 @@
                 inset: 0;
                 z-index: 20;
                 pointer-events: none;
-                background: color-mix(in srgb, var(--color-page, #f8fafc) 22%, transparent);
+                background: color-mix(in srgb, var(--color-page, #eef0f4) 22%, transparent);
             }
             .dark #app-shell-main.is-livewire-navigating::before {
                 background: color-mix(in srgb, #09090b 18%, transparent);
             }
         </style>
     </head>
-    <body class="min-h-screen bg-page text-slate-800 antialiased font-sans selection:bg-[#F58220]/25 selection:text-[#2D3748] lg:h-screen lg:overflow-hidden lg:flex">
+    <body class="min-h-screen bg-page font-sans text-brand-charcoal antialiased selection:bg-brand-orange/20 lg:flex lg:h-screen lg:overflow-hidden">
 
         {{-- Sidebar: stashable mobile + custom Alpine icon-only collapse desktop --}}
         <flux:sidebar stashable sticky
-            class="app-shell-sidebar border-e border-slate-200/90 flex flex-col p-0 shadow-sm bg-[var(--color-sidebar)]"
+            class="app-shell-sidebar flex flex-col border-e border-zinc-200/90 bg-[var(--color-sidebar)] p-0 shadow-sm ring-1 ring-black/5"
             x-data
         >
             {{-- Mobile close --}}
-            <flux:sidebar.toggle class="lg:hidden absolute top-3 right-3 text-slate-400 hover:text-slate-700 z-10 cursor-pointer" icon="x-mark" />
+            <flux:sidebar.toggle class="absolute top-3 right-3 z-10 cursor-pointer text-zinc-400 hover:text-brand-charcoal lg:hidden" icon="x-mark" />
 
             {{-- Brand: full wordmark expanded; compact monogram when collapsed (64px rail) --}}
-            <div class="shrink-0 border-b border-slate-200/90 bg-white/60 backdrop-blur-sm"
+            <div class="shrink-0 border-b border-zinc-200/90 bg-white/80 backdrop-blur-sm"
                  :class="$store.sidebar.open ? 'px-3 py-4' : 'px-0 py-3'">
                 <div x-show="$store.sidebar.open" x-transition.opacity class="px-1">
                     <x-brand.wordmark class="text-lg sm:text-xl" />
@@ -57,9 +57,9 @@
                 <div x-show="!$store.sidebar.open" x-cloak class="flex w-full justify-center px-0">
                     <a href="{{ route('dashboard') }}" wire:navigate
                        title="{{ __('Opticedge Credit') }}"
-                       class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-[#2D3748] shadow-sm ring-1 ring-slate-900/10 transition-colors hover:bg-[#1e293b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F58220]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-sidebar)]">
+                       class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-brand-charcoal shadow-sm ring-1 ring-black/10 transition-colors hover:bg-zinc-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-orange/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-sidebar)]">
                         <span class="sr-only">{{ __('Opticedge Credit') }}</span>
-                        <span class="text-[15px] font-black leading-none text-[#F58220]" aria-hidden="true">O</span>
+                        <span class="text-[15px] font-black leading-none text-brand-orange" aria-hidden="true">O</span>
                     </a>
                 </div>
             </div>
@@ -99,6 +99,7 @@
                         ['href'=>route('dealers.index'),'label'=>'Dealers','icon'=>'building-office-2','ability'=>'dealers.view','active'=>request()->routeIs('dealers.*')],
                         ['href'=>route('staff.index'),'label'=>'Staff Management','icon'=>'users','ability'=>'staff.view','active'=>request()->routeIs('staff.*')],
                         ['href'=>route('access'),'label'=>'Roles & Permissions','icon'=>'key','ability'=>'access.view','active'=>request()->routeIs('access')],
+                        ['href'=>route('settings.integrations'),'label'=>'Integrations','icon'=>'puzzle-piece','ability'=>'settings.view','active'=>request()->routeIs('settings.integrations')],
                         ['href'=>route('settings.health'),'label'=>'System Health','icon'=>'heart','ability'=>'settings.view','active'=>request()->routeIs('settings.health')],
                     ]],
                 ];
@@ -120,14 +121,14 @@
 
                 @foreach($navGroups as $group)
                 <div class="relative"
-                     :class="$store.sidebar.open ? 'rounded-xl border border-slate-200/90 bg-white/80 p-1.5 shadow-sm backdrop-blur-sm' : ''">
+                     :class="$store.sidebar.open ? 'rounded-xl border border-zinc-200/80 bg-white/90 p-1.5 shadow-sm ring-1 ring-black/5 backdrop-blur-sm' : ''">
 
                     {{-- EXPANDED: section label --}}
                     <div x-show="$store.sidebar.open" x-transition.opacity
                          class="flex items-center gap-2 px-2.5 pb-1.5 pt-1.5">
-                        <flux:icon :name="$group['icon']" class="size-4 shrink-0 {{ $group['active'] ? 'text-[#F58220]' : 'text-slate-400' }}" />
+                        <flux:icon :name="$group['icon']" class="size-4 shrink-0 {{ $group['active'] ? 'text-brand-orange' : 'text-zinc-400' }}" />
                         <span class="text-[10px] font-bold tracking-widest uppercase truncate
-                              {{ $group['active'] ? 'text-[#F58220]' : 'text-slate-500' }}">
+                              {{ $group['active'] ? 'text-brand-orange' : 'text-zinc-500' }}">
                             {{ $group['label'] }}
                         </span>
                     </div>
@@ -137,11 +138,9 @@
                          class="space-y-0.5 px-1 pb-1">
                         @foreach($group['links'] as $link)
                         <a href="{{ $link['href'] }}" wire:navigate
-                           class="group flex items-center gap-2.5 px-3 py-2 text-[13px] rounded-lg cursor-pointer motion-safe:transition-colors motion-safe:duration-200
-                               {{ $link['active']
-                                   ? 'bg-[#F58220]/12 text-[#2D3748] font-semibold ring-1 ring-[#F58220]/25 shadow-sm'
-                                   : 'text-slate-600 hover:bg-slate-100/95 hover:text-slate-900' }}">
-                            <flux:icon :name="$link['icon']" class="size-[1.125rem] shrink-0 {{ $link['active'] ? 'text-[#F58220]' : 'text-slate-400 group-hover:text-slate-600' }}" />
+                           class="group flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] cursor-pointer motion-safe:transition-colors motion-safe:duration-200
+                               {{ $link['active'] ? 'oe-nav-link-active' : 'oe-nav-link' }}">
+                            <flux:icon :name="$link['icon']" class="size-[1.125rem] shrink-0 {{ $link['active'] ? 'text-brand-orange' : 'text-zinc-400 group-hover:text-zinc-600' }}" />
                             {{ $link['label'] }}
                         </a>
                         @endforeach
@@ -154,25 +153,25 @@
                              @mouseenter="hover = true; ty = $el.getBoundingClientRect().top + $el.getBoundingClientRect().height / 2"
                              @mouseleave="hover = false">
                             <a href="{{ $link['href'] }}" wire:navigate
-                               class="flex items-center justify-center w-full py-2.5 rounded-lg cursor-pointer motion-safe:transition-colors motion-safe:duration-200
+                               class="flex w-full cursor-pointer items-center justify-center rounded-lg py-2.5 motion-safe:transition-colors motion-safe:duration-200
                                    {{ $link['active']
-                                       ? 'bg-[#F58220]/15 text-[#F58220] ring-1 ring-[#F58220]/25 shadow-sm'
-                                       : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800' }}">
-                                <flux:icon :name="$link['icon']" class="size-5 shrink-0 {{ $link['active'] ? 'text-[#F58220]' : 'text-slate-500' }}" />
+                                       ? 'bg-brand-orange/15 text-brand-orange ring-1 ring-brand-orange/25 shadow-sm'
+                                       : 'text-zinc-500 hover:bg-zinc-100 hover:text-brand-charcoal' }}">
+                                <flux:icon :name="$link['icon']" class="size-5 shrink-0 {{ $link['active'] ? 'text-brand-orange' : 'text-zinc-500' }}" />
                             </a>
                             <template x-teleport="body">
                                 <div x-show="hover"
                                      x-transition.opacity.duration.150ms
                                      :style="`top: ${ty}px; left: 72px; transform: translateY(-50%)`"
                                      class="fixed z-[9999] pointer-events-none
-                                            rounded-lg border border-slate-200 bg-white
-                                            px-3 py-1.5 text-[12px] font-medium text-slate-700 shadow-lg whitespace-nowrap">
+                                            rounded-lg border border-zinc-200 bg-white
+                                            px-3 py-1.5 text-[12px] font-medium text-brand-charcoal shadow-lg ring-1 ring-black/5 whitespace-nowrap">
                                     {{ $link['label'] }}
                                 </div>
                             </template>
                         </div>
                         @endforeach
-                        <div class="mx-2 my-1.5 h-px bg-slate-200/90"></div>
+                        <div class="mx-2 my-1.5 h-px bg-zinc-200/90"></div>
                     </div>
 
                 </div>
@@ -182,14 +181,14 @@
         </flux:sidebar>
 
         {{-- Desktop Header --}}
-        <flux:header class="hidden lg:flex h-14 items-center justify-between border-b border-slate-200/90 bg-white/90 px-4 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/80">
+        <flux:header class="hidden h-14 items-center justify-between border-b border-zinc-200/90 bg-white/90 px-4 shadow-sm ring-1 ring-black/5 backdrop-blur-md supports-[backdrop-filter]:bg-white/80 lg:flex">
             {{-- Hamburger toggle --}}
             <button
                 x-data
                 @click="$store.sidebar.toggle()"
                 type="button"
                 :title="$store.sidebar.open ? 'Collapse sidebar' : 'Expand sidebar'"
-                class="flex cursor-pointer flex-col items-center justify-center gap-[4.5px] w-9 h-9 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 motion-safe:transition-colors motion-safe:duration-200 hover:border-[#F58220]/30 hover:bg-[#F58220]/8 hover:text-[#2D3748] active:scale-95"
+                class="flex h-9 w-9 cursor-pointer flex-col items-center justify-center gap-[4.5px] rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-600 motion-safe:transition-colors motion-safe:duration-200 hover:border-brand-orange/30 hover:bg-brand-orange/8 hover:text-brand-charcoal active:scale-95"
             >
                 <span class="block h-[2px] w-[18px] bg-current rounded-full transition-all duration-200"></span>
                 <span class="block h-[2px] bg-current rounded-full transition-all duration-200"
@@ -205,7 +204,7 @@
                     @keydown.window.prevent.ctrl.k="$refs.search.focus()"
                     icon="magnifying-glass"
                     placeholder="Search (Cmd+K)..."
-                    class="w-full border-slate-200 bg-slate-50/90 focus-within:border-[#F58220]"
+                    class="w-full border-zinc-200 bg-zinc-50/90 focus-within:border-black"
                 />
             </div>
 
@@ -216,7 +215,7 @@
                 {{-- User avatar + dropdown --}}
                 <flux:dropdown position="bottom" align="end">
                     <button type="button"
-                        class="flex size-9 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-[#F58220] to-[#e67818] ring-2 ring-[#F58220]/30 motion-safe:transition-all motion-safe:duration-200 hover:ring-[#F58220]/50 hover:shadow-md hover:shadow-[#F58220]/20">
+                        class="flex size-9 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-brand-orange to-brand-orange-hover ring-2 ring-brand-orange/30 motion-safe:transition-all motion-safe:duration-200 hover:shadow-md hover:shadow-brand-orange/20 hover:ring-brand-orange/50">
                         <span class="text-xs font-bold text-white uppercase select-none">
                             {{ implode('', array_map(fn($w) => $w[0], array_slice(explode(' ', auth()->user()->name), 0, 2))) }}
                         </span>
@@ -244,8 +243,8 @@
         </flux:header>
 
         {{-- Mobile Header --}}
-        <flux:header class="lg:hidden border-b border-slate-200/90 bg-white/95 backdrop-blur-md">
-            <flux:sidebar.toggle class="cursor-pointer text-slate-500 hover:text-[#F58220]" icon="bars-2" inset="left" />
+        <flux:header class="border-b border-zinc-200/90 bg-white/95 backdrop-blur-md lg:hidden">
+            <flux:sidebar.toggle class="cursor-pointer text-zinc-500 hover:text-brand-orange" icon="bars-2" inset="left" />
             <div class="ml-2 min-w-0 truncate">
                 <x-brand.wordmark class="text-sm" />
             </div>

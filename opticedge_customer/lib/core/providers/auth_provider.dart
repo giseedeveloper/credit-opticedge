@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api_client.dart';
 import '../models/customer_profile.dart';
+import '../services/biometric_service.dart';
 import '../storage/secure_storage.dart';
+import '../../config/constants.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
@@ -37,9 +40,25 @@ class AuthState {
 
 /// Result of the check-phone step.
 class PhoneCheckResult {
+  final String eligibility;
   final bool hasPin;
   final String customerName;
-  PhoneCheckResult({required this.hasPin, required this.customerName});
+  final String? kycStatus;
+  final int? kycStage;
+  final String? portalMessage;
+
+  const PhoneCheckResult({
+    required this.eligibility,
+    required this.hasPin,
+    required this.customerName,
+    this.kycStatus,
+    this.kycStage,
+    this.portalMessage,
+  });
+
+  bool get isKycInProgress => eligibility == 'kyc_in_progress';
+
+  bool get isPortalActive => eligibility == 'portal_active';
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
@@ -105,8 +124,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final data = res.data['data'] as Map<String, dynamic>;
       state = state.copyWith(isLoading: false);
       return PhoneCheckResult(
-        hasPin: data['has_pin'] as bool,
+        eligibility: data['eligibility']?.toString() ?? 'portal_active',
+        hasPin: data['has_pin'] as bool? ?? false,
         customerName: data['customer_name'] as String? ?? '',
+        kycStatus: data['kyc_status']?.toString(),
+        kycStage: (data['kyc_stage'] as num?)?.toInt(),
+        portalMessage: data['portal_message']?.toString(),
       );
     } catch (e) {
       state = state.copyWith(isLoading: false, error: ApiClient.parseError(e));
@@ -185,6 +208,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (_) {}
     await SecureStorageService.instance.clearAll();
     state = const AuthState(status: AuthStatus.unauthenticated);
+  }
+
+  Future<bool> isBiometricUnlockEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = await SecureStorageService.instance.getToken();
+    return prefs.getBool(AppConstants.biometricEnabledKey) == true &&
+        token != null;
+  }
+
+  Future<void> setBiometricUnlockEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(AppConstants.biometricEnabledKey, enabled);
+  }
+
+  /// Unlock with fingerprint/Face ID when a session token exists.
+  Future<bool> unlockWithBiometrics() async {
+    if (!await isBiometricUnlockEnabled()) {
+      state = state.copyWith(
+        error: 'Washa kuingia kwa alama za kidole kwenye profaili kwanza.',
+      );
+      return false;
+    }
+    final ok = await BiometricService.instance.authenticate(
+      reason: 'Thibitisha ili kuingia kwenye akaunti yako',
+    );
+    if (!ok) {
+      return false;
+    }
+    await checkAuth();
+    return state.status == AuthStatus.authenticated;
   }
 
   @override

@@ -11,6 +11,10 @@ class AppConstants {
   // API
   static const String _productionBaseUrl =
       'https://credit.opticedgeafrica.net/api/v1/customer';
+
+  /// TLS SHA-256 (cert DER) for credit.opticedgeafrica.net — override via dart-define.
+  static const String productionCertSha256 =
+      '9aee56891d6d8451d74cc2ad139a8576648e8ce63d3d3d813fa419ee31d1ae48ff';
   static const String _configuredBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '',
@@ -28,6 +32,7 @@ class AppConstants {
   // Storage keys
   static const String tokenKey = 'customer_auth_token';
   static const String customerKey = 'customer_profile';
+  static const String biometricEnabledKey = 'customer_biometric_enabled';
 
   // ─── Brand Colors (matching FO app) ───────────────────────────────
   static const Color primary = Color(0xFFF36D34);

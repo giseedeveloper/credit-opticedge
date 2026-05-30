@@ -7,6 +7,7 @@ use App\Models\InventoryUnit;
 use App\Models\Loan;
 use App\Services\DocumentService;
 use App\Services\LoanCalculatorService;
+use App\Services\LoanProvisioningGuard;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -130,6 +131,18 @@ class LendingPanel extends Component
         $remaining = $computed['total_payable'];
 
         $customer = Customer::query()->findOrFail($this->newCustomerId);
+
+        try {
+            app(LoanProvisioningGuard::class)->assertCanProvision(
+                $customer,
+                LoanProvisioningGuard::CHANNEL_MANUAL_WEB,
+            );
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('newCustomerId', $e->getMessage());
+
+            return;
+        }
+
         $unit = InventoryUnit::query()->findOrFail($this->newUnitId);
         $dealerId = $customer->dealer_id ?? $unit->dealer_id;
 

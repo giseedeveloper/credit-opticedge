@@ -16,6 +16,7 @@ use App\Livewire\Financials\DailyCollections;
 use App\Livewire\Kyc\CustomerProfiles;
 use App\Livewire\Kyc\PendingVerifications;
 use App\Livewire\Kyc\VerificationWizard;
+use App\Livewire\Settings\IntegrationsHub;
 use App\Livewire\Settings\SystemHealthDashboard;
 use App\Livewire\Staff\StaffManager;
 use App\Livewire\Stock\BrandModelIndex;
@@ -23,7 +24,11 @@ use App\Livewire\Stock\ImeiSearch;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return redirect()->route('login');
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return view('landing');
 })->name('home');
 
 Route::middleware('guest')->group(function () {
@@ -42,6 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Corporate Audits & Maintenance
     Route::get('/audits', AuditLogDashboard::class)->name('audits.logs')->middleware('can:reports.view');
+    Route::get('/integrations', IntegrationsHub::class)->name('settings.integrations')->middleware('can:settings.view');
     Route::get('/health', SystemHealthDashboard::class)->name('settings.health')->middleware('can:settings.view');
 
     // Stock Manager

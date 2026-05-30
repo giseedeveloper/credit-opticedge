@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/push_notification_service.dart';
 import '../storage/secure_storage.dart';
 import '../services/biometric_service.dart';
 
@@ -132,6 +133,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
 
   Future<void> toggleNotifications(bool enabled) async {
     state = state.copyWith(notificationsEnabled: enabled);
+    await PushNotificationService.instance.syncPreference(enabled);
+    await PushNotificationService.instance.initialize(userEnabled: enabled);
     await _save();
   }
 }

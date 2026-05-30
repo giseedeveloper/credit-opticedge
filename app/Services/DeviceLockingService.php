@@ -5,11 +5,15 @@ namespace App\Services;
 use App\Models\InventoryUnit;
 use App\Models\RecoveryTicket;
 use App\Models\RepaymentSchedule;
+use App\Services\Integrations\IntegrationGatewayManager;
 use Illuminate\Support\Facades\Log;
-use RuntimeException;
 
 class DeviceLockingService
 {
+    public function __construct(
+        private IntegrationGatewayManager $gateways,
+    ) {}
+
     /**
      * Lock device via the configured MDM driver.
      */
@@ -114,17 +118,17 @@ class DeviceLockingService
 
     private function sendMdmCommand(string $command, InventoryUnit $unit, string $reason): void
     {
-        $driver = config('services.mdm.driver', 'log');
+        $gateway = $this->gateways->mdm();
+        $ok = $command === 'lock'
+            ? $gateway->lock($unit, $reason)
+            : $gateway->unlock($unit, $reason);
 
-        if ($driver === 'log') {
-            Log::info("MDM {$command} command recorded for {$unit->mdm_id}.", [
+        if (! $ok) {
+            Log::warning("MDM {$command} command failed.", [
+                'driver' => $gateway->driverName(),
                 'inventory_unit_id' => $unit->id,
-                'reason' => $reason,
+                'mdm_id' => $unit->mdm_id,
             ]);
-
-            return;
         }
-
-        throw new RuntimeException("MDM driver [{$driver}] is not implemented.");
     }
 }

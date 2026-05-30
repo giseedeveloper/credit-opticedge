@@ -579,7 +579,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       case 1:
         return submitStep1();
       case 2:
-        return submitStage2();
+        return submitStep2();
       case 3:
         return submitStep3();
       case 4:
@@ -880,6 +880,9 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       await _saveDraft();
       return true;
     } catch (error) {
+      if (_isRecoverableNetworkError(error)) {
+        await _queueStep1MultipartRetry();
+      }
       state = state.copyWith(
         isSubmitting: false,
         error: ApiClient.instance.parseError(error),
@@ -969,6 +972,9 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         error: ApiClient.instance.parseError(error),
         pendingRetryStep: _isRecoverableNetworkError(error) ? 2 : null,
       );
+      if (_isRecoverableNetworkError(error) && state.customerId != null) {
+        await _queueStep2MultipartRetry(state.customerId!);
+      }
       return false;
     }
   }
@@ -1077,6 +1083,9 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       await _saveDraft();
       return true;
     } catch (error) {
+      if (_isRecoverableNetworkError(error) && state.customerId != null) {
+        await _queueStep4MultipartRetry(state.customerId!);
+      }
       state = state.copyWith(
         isSubmitting: false,
         error: ApiClient.instance.parseError(error),
@@ -1196,136 +1205,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
     }
   }
 
-  Future<bool> submitStage2() async {
-    final prevMaxReachable = state.maxReachableStep;
-    state = state.copyWith(
-      isSubmitting: true,
-      error: null,
-      stepSaved: false,
-      pendingRetryStep: null,
-    );
-
-    if (!state.hasDraft) {
-      state = state.copyWith(
-        isSubmitting: false,
-        error: 'Start with device setup before saving customer details.',
-      );
-      return false;
-    }
-
-    final missingPhotos = <String>[
-      if (state.idFrontPhoto == null) 'ID front photo',
-      if (state.idBackPhoto == null) 'ID back photo',
-      if (state.headshotPhoto == null) 'Headshot',
-    ];
-    if (missingPhotos.isNotEmpty) {
-      state = state.copyWith(
-        isSubmitting: false,
-        error: 'Attach ${missingPhotos.join(', ')} before continuing.',
-      );
-      return false;
-    }
-
-    final uploadErr = KycUploadLimits.validateMany([
-      (state.idFrontPhoto, 'ID front photo'),
-      (state.idBackPhoto, 'ID back photo'),
-      (state.headshotPhoto, 'Headshot'),
-      (state.clientFoPhoto, 'Client photo'),
-      (state.businessPhoto, 'Business photo'),
-    ]);
-    if (uploadErr != null) {
-      state = state.copyWith(isSubmitting: false, error: uploadErr);
-      return false;
-    }
-
-    try {
-      final id = state.customerId!;
-      final form = FormData.fromMap({
-        'first_name': state.firstName,
-        if (state.middleName.isNotEmpty) 'middle_name': state.middleName,
-        'last_name': state.lastName,
-        'gender': state.gender,
-        if (state.dateOfBirth.isNotEmpty) 'date_of_birth': state.dateOfBirth,
-        'nida_number': state.nidaNumber,
-        'id_type': state.idType,
-        if (state.idFrontPhoto != null)
-          'id_front_photo': await MultipartFile.fromFile(
-            state.idFrontPhoto!.path,
-            filename: 'id_front.jpg',
-          ),
-        if (state.idBackPhoto != null)
-          'id_back_photo': await MultipartFile.fromFile(
-            state.idBackPhoto!.path,
-            filename: 'id_back.jpg',
-          ),
-        if (state.headshotPhoto != null)
-          'headshot_photo': await MultipartFile.fromFile(
-            state.headshotPhoto!.path,
-            filename: 'headshot.jpg',
-          ),
-        if (state.clientFoPhoto != null)
-          'client_fo_photo': await MultipartFile.fromFile(
-            state.clientFoPhoto!.path,
-            filename: 'client_fo.jpg',
-          ),
-        'phone': state.phone,
-        'phone_country': state.phoneCountry,
-        if (state.altPhone.isNotEmpty) 'alt_phone': state.altPhone,
-        if (state.altPhoneCountry.isNotEmpty)
-          'alt_phone_country': state.altPhoneCountry,
-        if (state.email.isNotEmpty) 'email': state.email,
-        if (state.branchId.isNotEmpty) 'branch_id': state.branchId,
-        if (state.landmark.isNotEmpty) 'landmark': state.landmark,
-        if (state.region.isNotEmpty) 'region': state.region,
-        if (state.district.isNotEmpty) 'district': state.district,
-        if (state.occupation.isNotEmpty) 'occupation': state.occupation,
-        'monthly_income': state.monthlyIncome,
-        'income_payment_cycle':
-            _incomeCycleValueForApi(state.incomePaymentCycle),
-        if (state.durationAtWork.isNotEmpty)
-          'duration_at_work': state.durationAtWork,
-        if (state.businessPhoto != null)
-          'business_photo': await MultipartFile.fromFile(
-            state.businessPhoto!.path,
-            filename: 'business.jpg',
-          ),
-        'nok_name': state.nokName,
-        'nok_phone': state.nokPhone,
-        'nok_phone_country': state.nokPhoneCountry,
-        'nok_relationship': state.nokRelationship,
-        if (state.nok2Name.isNotEmpty) 'nok2_name': state.nok2Name,
-        if (state.nok2Phone.isNotEmpty) 'nok2_phone': state.nok2Phone,
-        if (state.nok2PhoneCountry.isNotEmpty)
-          'nok2_phone_country': state.nok2PhoneCountry,
-        if (state.nok2Relationship.isNotEmpty)
-          'nok2_relationship': state.nok2Relationship,
-        'terms_accepted': state.termsAccepted ? '1' : '0',
-        'data_consent_accepted': state.dataConsentAccepted ? '1' : '0',
-        'call_consent_accepted': state.callConsentAccepted ? '1' : '0',
-      });
-
-      await ApiClient.instance.postForm('/kyc/application/$id/stage2', form);
-      state = state.copyWith(
-        isSubmitting: false,
-        stepSaved: true,
-        currentStep: 7,
-        paymentPhone: state.phone,
-        maxReachableStep: math.max(prevMaxReachable, 7),
-        pendingRetryStep: null,
-      );
-      await loadFinalContext();
-      await _saveDraft();
-      return true;
-    } catch (error) {
-      state = state.copyWith(
-        isSubmitting: false,
-        error: ApiClient.instance.parseError(error),
-        pendingRetryStep: _isRecoverableNetworkError(error) ? 2 : null,
-      );
-      return false;
-    }
-  }
-
   Future<Map<String, dynamic>?> submitStep7() async {
     state = state.copyWith(
       isSubmitting: true,
@@ -1408,6 +1287,9 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       await _clearDraft();
       return res.data['data'] as Map<String, dynamic>;
     } catch (error) {
+      if (_isRecoverableNetworkError(error) && state.customerId != null) {
+        await _queueStep7MultipartRetry(state.customerId!);
+      }
       state = state.copyWith(
         isSubmitting: false,
         error: ApiClient.instance.parseError(error),
@@ -1442,25 +1324,45 @@ class KycNotifier extends StateNotifier<KycDraftState> {
     final step = _queuedSubmissionStep!;
     final payload = _queuedSubmissionPayload!;
     final customerId = payload['customer_id']?.toString();
-    if (customerId == null || customerId.isEmpty) {
+    if (step != 1 && (customerId == null || customerId.isEmpty)) {
       await _clearPendingSubmission();
       return;
     }
 
+    final resolvedCustomerId = customerId ?? '';
+
     try {
       state = state.copyWith(isSubmitting: true, error: null);
       switch (step) {
+        case 2:
+          await _postQueuedStep2Multipart(resolvedCustomerId, payload);
+          break;
         case 3:
-          await ApiClient.instance.post('/kyc/application/$customerId/step3',
-              data: payload['data']);
+          await ApiClient.instance.post(
+            '/kyc/application/$resolvedCustomerId/step3',
+            data: payload['data'],
+          );
           break;
         case 5:
-          await ApiClient.instance.post('/kyc/application/$customerId/step5',
-              data: payload['data']);
+          await ApiClient.instance.post(
+            '/kyc/application/$resolvedCustomerId/step5',
+            data: payload['data'],
+          );
           break;
         case 6:
-          await ApiClient.instance.post('/kyc/application/$customerId/step6',
-              data: payload['data']);
+          await ApiClient.instance.post(
+            '/kyc/application/$resolvedCustomerId/step6',
+            data: payload['data'],
+          );
+          break;
+        case 1:
+          await _postQueuedStep1Multipart(payload);
+          break;
+        case 4:
+          await _postQueuedStep4Multipart(resolvedCustomerId, payload);
+          break;
+        case 7:
+          await _postQueuedStep7Multipart(resolvedCustomerId, payload);
           break;
         default:
           await _clearPendingSubmission();
@@ -1527,6 +1429,199 @@ class KycNotifier extends StateNotifier<KycDraftState> {
     _queuedSubmissionPayload = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_pendingSubmissionStorageKey);
+  }
+
+  Future<void> _queueStep2MultipartRetry(String customerId) async {
+    await _queuePendingSubmission(2, {
+      'customer_id': customerId,
+      'fields': {
+        'first_name': state.firstName,
+        if (state.middleName.isNotEmpty) 'middle_name': state.middleName,
+        'last_name': state.lastName,
+        'gender': state.gender,
+        if (state.dateOfBirth.isNotEmpty) 'date_of_birth': state.dateOfBirth,
+        'nida_number': state.nidaNumber,
+        'id_type': state.idType,
+      },
+      'files': {
+        if (state.idFrontPhoto != null)
+          'id_front_photo': state.idFrontPhoto!.path,
+        if (state.idBackPhoto != null)
+          'id_back_photo': state.idBackPhoto!.path,
+        if (state.headshotPhoto != null)
+          'headshot_photo': state.headshotPhoto!.path,
+        if (state.clientFoPhoto != null)
+          'client_fo_photo': state.clientFoPhoto!.path,
+      },
+    });
+  }
+
+  Future<void> _queueStep1MultipartRetry() async {
+    final accessories = <Map<String, dynamic>>[];
+    if (state.includeScreenProtector) {
+      accessories.add({
+        'code': 'screen_protector',
+        'name': 'Screen Protector',
+        'quantity': 1,
+        'offer_type': 'free',
+      });
+    }
+    if (state.includePhoneCover) {
+      accessories.add({
+        'code': 'phone_cover',
+        'name': 'Phone Cover',
+        'quantity': 1,
+        'offer_type': 'free',
+      });
+    }
+
+    await _queuePendingSubmission(1, {
+      'customer_id': state.customerId,
+      'endpoint': '/kyc/application/step1',
+      'fields': {
+        if (state.customerId != null && state.customerId!.isNotEmpty)
+          'customer_id': state.customerId!,
+        if (state.brandId.isNotEmpty) 'brand_id': state.brandId,
+        if (state.phoneModelId.isNotEmpty) 'phone_model_id': state.phoneModelId,
+        if (state.inventoryUnitId.isNotEmpty)
+          'inventory_unit_id': state.inventoryUnitId,
+        if (state.deviceSpecs.isNotEmpty) 'device_specs': state.deviceSpecs,
+        if (state.imeiNumber.isNotEmpty) 'imei_number': state.imeiNumber,
+        if (state.imei2.isNotEmpty) 'imei_2': state.imei2,
+        if (state.cashPrice.isNotEmpty) 'cash_price': state.cashPrice,
+        'deposit_amount': state.depositAmount,
+        'preferred_repayment': _repaymentForApi(state.preferredRepayment),
+        if (state.loanInterestRate.isNotEmpty)
+          'loan_interest_rate': state.loanInterestRate,
+        if (state.loanInterestType.isNotEmpty)
+          'loan_interest_type': state.loanInterestType,
+        if (state.loanDurationWeeks.isNotEmpty)
+          'loan_duration_weeks': state.loanDurationWeeks,
+        if (state.loanGracePeriodDays.isNotEmpty)
+          'loan_grace_period_days': state.loanGracePeriodDays,
+        if (accessories.isNotEmpty) 'accessories': accessories,
+        if (state.storeOfferNotes.isNotEmpty)
+          'store_offer_notes': state.storeOfferNotes,
+      },
+      'files': {
+        if (state.imeiPhoto != null) 'imei_photo': state.imeiPhoto!.path,
+        if (state.deviceBoxPhoto != null)
+          'device_box_photo': state.deviceBoxPhoto!.path,
+        if (state.devicePhoto != null) 'device_photo': state.devicePhoto!.path,
+      },
+    });
+  }
+
+  Future<void> _queueStep4MultipartRetry(String customerId) async {
+    await _queuePendingSubmission(4, {
+      'customer_id': customerId,
+      'endpoint': '/kyc/application/$customerId/step4',
+      'fields': {
+        if (state.occupation.isNotEmpty) 'occupation': state.occupation,
+        'monthly_income': state.monthlyIncome,
+        'income_payment_cycle':
+            _incomeCycleValueForApi(state.incomePaymentCycle),
+        'is_pep': state.isPep ? '1' : '0',
+        if (state.durationAtWork.isNotEmpty)
+          'duration_at_work': state.durationAtWork,
+      },
+      'files': {
+        if (state.businessPhoto != null)
+          'business_photo': state.businessPhoto!.path,
+      },
+    });
+  }
+
+  Future<void> _queueStep7MultipartRetry(String customerId) async {
+    await _queuePendingSubmission(7, {
+      'customer_id': customerId,
+      'endpoint': '/kyc/application/$customerId/step7',
+      'fields': {
+        if (state.foNotes.isNotEmpty) 'fo_notes': state.foNotes,
+        'application_source': state.applicationSource,
+        'agreement_decision': state.agreementDecision,
+        if (state.paymentPhone.isNotEmpty) 'payment_phone': state.paymentPhone,
+        if (state.loanTermMonths.isNotEmpty)
+          'loan_term_months': state.loanTermMonths,
+        if (state.downpaymentAmount.isNotEmpty)
+          'downpayment_amount': state.downpaymentAmount,
+        'customer_signature': state.customerSignatureData,
+        'fo_signature': state.foSignatureData,
+        if (state.assetHandoverNotes.isNotEmpty)
+          'asset_handover_notes': state.assetHandoverNotes,
+      },
+      'files': {
+        if (state.etrReceiptPhoto != null)
+          'etr_receipt_photo': state.etrReceiptPhoto!.path,
+        if (state.assetHandoverList != null)
+          'asset_handover_list': state.assetHandoverList!.path,
+      },
+    });
+  }
+
+  Future<void> _postQueuedMultipart(
+    String endpoint,
+    Map<String, dynamic> payload,
+  ) async {
+    final fields = payload['fields'];
+    final files = payload['files'];
+    if (fields is! Map) {
+      throw StateError('Invalid queued multipart payload');
+    }
+
+    final map = <String, dynamic>{
+      for (final entry in Map<String, dynamic>.from(fields).entries)
+        entry.key: entry.value,
+    };
+
+    if (files is Map) {
+      for (final entry in Map<String, dynamic>.from(files).entries) {
+        final path = entry.value?.toString();
+        if (path == null || path.isEmpty) {
+          continue;
+        }
+        final file = File(path);
+        if (!await file.exists()) {
+          continue;
+        }
+        map[entry.key] = await MultipartFile.fromFile(
+          path,
+          filename: '${entry.key}.jpg',
+        );
+      }
+    }
+
+    await ApiClient.instance.postForm(endpoint, FormData.fromMap(map));
+  }
+
+  Future<void> _postQueuedStep1Multipart(Map<String, dynamic> payload) async {
+    final endpoint = payload['endpoint']?.toString() ?? '/kyc/application/step1';
+    await _postQueuedMultipart(endpoint, payload);
+  }
+
+  Future<void> _postQueuedStep4Multipart(
+    String customerId,
+    Map<String, dynamic> payload,
+  ) async {
+    final endpoint =
+        payload['endpoint']?.toString() ?? '/kyc/application/$customerId/step4';
+    await _postQueuedMultipart(endpoint, payload);
+  }
+
+  Future<void> _postQueuedStep7Multipart(
+    String customerId,
+    Map<String, dynamic> payload,
+  ) async {
+    final endpoint =
+        payload['endpoint']?.toString() ?? '/kyc/application/$customerId/step7';
+    await _postQueuedMultipart(endpoint, payload);
+  }
+
+  Future<void> _postQueuedStep2Multipart(
+    String customerId,
+    Map<String, dynamic> payload,
+  ) async {
+    await _postQueuedMultipart('/kyc/application/$customerId/step2', payload);
   }
 
   Future<void> _saveDraft() async {
@@ -1817,13 +1912,8 @@ final inventoryUnitsProvider = FutureProvider.family<
       .toList();
 });
 
-final branchesProvider = FutureProvider<List<BranchModel>>((ref) async {
-  final res = await ApiClient.instance.get('/kyc/branches');
-  final list = res.data['data'] as List<dynamic>;
-  return list
-      .map((item) => BranchModel.fromJson(item as Map<String, dynamic>))
-      .toList();
-});
+/// Branches were removed — dealer context replaces branch selection in the wizard.
+final branchesProvider = FutureProvider<List<BranchModel>>((ref) async => []);
 
 final kycProvider = StateNotifierProvider<KycNotifier, KycDraftState>(
   (ref) => KycNotifier(),

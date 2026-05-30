@@ -24,6 +24,14 @@ class FaceMatchService
         if (! is_string($endpoint) || trim($endpoint) === '') {
             Log::warning('face_match.match skipped: FACE_MATCH_URL is not configured');
 
+            if ($this->isRequired()) {
+                return [
+                    'status' => 'failed',
+                    'score' => 0.0,
+                    'reason' => 'Face match service is required but not configured.',
+                ];
+            }
+
             return [
                 'status' => 'review',
                 'score' => 0.0,
@@ -83,5 +91,10 @@ class FaceMatchService
                 'reason' => 'Face match failed. Try manual verification.',
             ];
         }
+    }
+
+    private function isRequired(): bool
+    {
+        return (bool) config('services.face_match.required', false);
     }
 }

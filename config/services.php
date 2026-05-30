@@ -46,10 +46,34 @@ return [
 
     'sms' => [
         'driver' => env('SMS_DRIVER', 'log'),
+        'implemented_drivers' => ['log', 'http', 'beem'],
+        'http' => [
+            'url' => env('SMS_HTTP_URL'),
+            'method' => env('SMS_HTTP_METHOD', 'post'),
+            'api_key' => env('SMS_HTTP_API_KEY'),
+            'api_key_header' => env('SMS_HTTP_API_KEY_HEADER', 'Authorization'),
+            'api_key_prefix' => env('SMS_HTTP_API_KEY_PREFIX', 'Bearer'),
+            'sender_id' => env('SMS_SENDER_ID'),
+        ],
     ],
 
     'mdm' => [
         'driver' => env('MDM_DRIVER', 'log'),
+        'implemented_drivers' => ['log', 'http'],
+        'http' => [
+            'lock_url' => env('MDM_HTTP_LOCK_URL'),
+            'unlock_url' => env('MDM_HTTP_UNLOCK_URL'),
+            'api_key' => env('MDM_HTTP_API_KEY'),
+            'api_key_header' => env('MDM_HTTP_API_KEY_HEADER', 'Authorization'),
+            'api_key_prefix' => env('MDM_HTTP_API_KEY_PREFIX', 'Bearer'),
+        ],
+    ],
+
+    'beem' => [
+        'base_url' => env('BEEM_BASE_URL', 'https://apisms.beem.africa'),
+        'api_key' => env('BEEM_API_KEY'),
+        'secret_key' => env('BEEM_SECRET_KEY'),
+        'sender_id' => env('BEEM_SENDER_ID'),
     ],
 
     'selcom' => [
@@ -63,6 +87,10 @@ return [
 
     'face_match' => [
         'url' => env('FACE_MATCH_URL'),
+        'required' => filter_var(
+            env('FACE_MATCH_REQUIRED', env('APP_ENV') === 'production'),
+            FILTER_VALIDATE_BOOL
+        ),
     ],
 
 ];

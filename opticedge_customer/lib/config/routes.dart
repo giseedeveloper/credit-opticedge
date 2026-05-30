@@ -5,6 +5,7 @@ import 'customer_colors.dart';
 import '../core/providers/auth_provider.dart';
 import '../widgets/common/floating_glass_nav.dart';
 import '../screens/auth/login_screen.dart';
+import '../screens/kyc/kyc_tracking_screen.dart';
 import '../screens/device/device_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/payment/pay_screen.dart';
@@ -27,7 +28,11 @@ class RouterNotifier extends ChangeNotifier {
       return isSplash ? null : '/';
     }
     if (auth.status == AuthStatus.unauthenticated) {
-      return isLogin ? null : '/login';
+      final isKycTrack = state.matchedLocation.startsWith('/kyc-tracking');
+      if (isLogin || isKycTrack) {
+        return null;
+      }
+      return '/login';
     }
     if (auth.status == AuthStatus.authenticated) {
       if (isLogin || isSplash) return '/home';
@@ -50,6 +55,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(
+        path: '/kyc-tracking',
+        builder: (_, state) => KycTrackingScreen(
+          initialPhone: state.uri.queryParameters['phone'],
+        ),
+      ),
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [

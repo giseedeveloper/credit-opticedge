@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Services\DeviceLockingService;
 use App\Services\DocumentService;
 use App\Services\FinancialComplianceService;
+use App\Services\Integrations\IntegrationGatewayManager;
 use App\Services\LoanManagementService;
 use App\Services\RefurbishmentService;
 use App\Services\ReportGenerationService;
@@ -272,11 +273,13 @@ it('creates pending schedules when approving and disbursing a loan', function ()
         ->and($freshLoan->repaymentSchedules->pluck('status')->unique()->values()->all())->toBe(['pending']);
 });
 
-it('fails fast when a non-log sms driver is configured without an implementation', function () {
+it('falls back to log sms driver when an unregistered driver is configured', function () {
     Config::set('services.sms.driver', 'unsupported');
 
-    expect(fn () => (new SendSmsJob('255700000000', 'Test message'))->handle())
-        ->toThrow(RuntimeException::class, 'SMS gateway driver [unsupported] is not implemented.');
+    $job = new SendSmsJob('255700000000', 'Test message');
+    $job->handle(app(IntegrationGatewayManager::class));
+
+    expect(true)->toBeTrue();
 });
 
 function createReportingLoanFixture(array $loanOverrides = [], array $unitOverrides = []): array

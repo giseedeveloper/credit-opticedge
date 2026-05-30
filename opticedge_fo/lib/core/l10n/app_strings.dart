@@ -87,7 +87,10 @@ class S {
   String get biometricLogin => _t('Biometric Login', 'Ingia kwa Alama za Kidole');
   String get biometricSubtitle => _t('Use fingerprint or Face ID to unlock', 'Tumia alama ya kidole au Face ID kufungua');
   String get pushNotifications => _t('Push Notifications', 'Arifa');
-  String get pushNotificationsSubtitle => _t('Receive alerts for KYC updates', 'Pokea arifa za masasisho ya KYC');
+  String get pushNotificationsSubtitle => _t(
+        'In-app preference saved; FCM push when Firebase is configured',
+        'Mapendeleo yamehifadhiwa; arifa za push zitafuatia usanidi wa Firebase',
+      );
   String get privacyPolicy => _t('Privacy Policy', 'Sera ya Faragha');
   String get termsOfService => _t('Terms of Service', 'Masharti ya Huduma');
   String get helpAndSupport => _t('Help & Support', 'Msaada');

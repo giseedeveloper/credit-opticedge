@@ -13,8 +13,11 @@ import '../screens/customers/customer_list_screen.dart';
 import '../screens/customers/customer_detail_screen.dart';
 import '../screens/kyc/kyc_wizard_screen.dart';
 import '../screens/kyc/face_scanner_screen.dart';
+import '../screens/kyc_approvals/kyc_approval_detail_screen.dart';
+import '../screens/kyc_approvals/kyc_approval_queue_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/operations/operations_hub_screen.dart';
 import '../core/l10n/app_strings.dart';
 import '../widgets/common/app_color_icon.dart';
 import '../widgets/common/premium_glass_background.dart';
@@ -62,6 +65,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/dashboard',
             builder: (_, __) => const DashboardScreen(),
+          ),
+          GoRoute(
+            path: '/operations',
+            builder: (_, __) => const OperationsHubScreen(),
           ),
           GoRoute(
             path: '/customers',
@@ -115,6 +122,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 },
               );
             },
+          ),
+          GoRoute(
+            path: '/kyc/approvals',
+            builder: (_, state) {
+              final stage =
+                  int.tryParse(state.uri.queryParameters['stage'] ?? '1') ?? 1;
+              return KycApprovalQueueScreen(initialStage: stage);
+            },
+          ),
+          GoRoute(
+            path: '/kyc/approvals/:id',
+            builder: (_, state) => KycApprovalDetailScreen(
+              customerId: state.pathParameters['id']!,
+            ),
           ),
           GoRoute(
             path: '/kyc/face-scanner/:customerId',

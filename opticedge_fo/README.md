@@ -18,8 +18,12 @@ A modern Flutter KYC mobile app for Field Officers to register and manage custom
 ```bash
 cd opticedge_fo
 flutter pub get
-flutter run
+flutter run       # shows menu: pick [1] iOS, [2] macOS, or [3] Chrome (boot Simulator first for iOS)
+./run.sh --ios    # opens Simulator, then `flutter run` (you still pick device in the menu)
+# If build fails with "iOS 26.4 is not installed": install iOS 26.4 Simulator in Xcode → Settings → Platforms
 ```
+
+**iOS:** minimum deployment **15.5** (required by ML Kit barcode plugin). If `flutter run` only lists macOS/Chrome, boot the simulator first (see `./run.sh` above).
 
 ---
 

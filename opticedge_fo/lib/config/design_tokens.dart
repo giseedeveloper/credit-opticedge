@@ -144,4 +144,73 @@ abstract final class DesignTokens {
         ],
         stops: const [0.0, 0.56, 1.0],
       );
+
+  /// Login — deep navy mesh with warm coral accent (brand + fintech trust)
+  static const Color loginDeep = Color(0xFF050D18);
+  static const Color loginNavy = Color(0xFF0A1A2E);
+  static const Color loginCoralGlow = Color(0xFFFF9A6C);
+  static const Color loginSkyGlow = Color(0xFF5EC8FF);
+
+  static LinearGradient get loginHeroMesh => const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFF061018),
+          Color(0xFF0E2844),
+          Color(0xFF153A5C),
+          Color(0xFF1A3350),
+        ],
+        stops: [0.0, 0.35, 0.72, 1.0],
+      );
+
+  static LinearGradient get loginHeroMeshDark => const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFF030810),
+          Color(0xFF0B1828),
+          Color(0xFF122438),
+          Color(0xFF0E1E32),
+        ],
+        stops: [0.0, 0.4, 0.75, 1.0],
+      );
+
+  static LinearGradient get loginCardAccentBorder => LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          primary.withValues(alpha: 0.55),
+          accentSky.withValues(alpha: 0.35),
+          primaryLight.withValues(alpha: 0.45),
+        ],
+      );
+
+  static LinearGradient get loginCanvasLight => const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFFF8FAFC),
+          Color(0xFFF4F7FB),
+          Color(0xFFEEF2F8),
+        ],
+      );
+
+  /// Dashboard stat card accent washes
+  static LinearGradient statCardSheen(Color accent) => LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          accent.withValues(alpha: 0.22),
+          accent.withValues(alpha: 0.04),
+        ],
+      );
+
+  static LinearGradient get dashboardHeroOverlay => LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.transparent,
+          loginDeep.withValues(alpha: 0.08),
+        ],
+      );
 }

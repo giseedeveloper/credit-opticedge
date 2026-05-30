@@ -34,8 +34,8 @@ class CustomerAuthController extends Controller
 
         $phones = $this->phoneVariants($request->string('phone')->toString());
 
-        $customer = Customer::whereIn('phone', $phones)
-            ->where('asset_release_status', 'released')
+        $customer = Customer::query()
+            ->whereIn('phone', $phones)
             ->first();
 
         if (! $customer) {
@@ -44,10 +44,90 @@ class CustomerAuthController extends Controller
             ]);
         }
 
+        if ($customer->isAssetReleased()) {
+            return $this->successResponse([
+                'eligibility' => 'portal_active',
+                'has_pin' => $customer->pin !== null,
+                'customer_name' => $customer->first_name,
+                'kyc_status' => $customer->kyc_status,
+                'asset_release_status' => $customer->asset_release_status,
+            ], 'Customer found.');
+        }
+
+        if ($this->hasTrackableKyc($customer)) {
+            return $this->successResponse([
+                'eligibility' => 'kyc_in_progress',
+                'has_pin' => false,
+                'customer_name' => $customer->first_name,
+                'kyc_status' => $customer->kyc_status,
+                'kyc_stage' => $customer->kyc_stage,
+                'asset_release_status' => $customer->asset_release_status,
+                'portal_message' => $this->kycProgressMessage($customer),
+            ], 'KYC in progress.');
+        }
+
+        throw ValidationException::withMessages([
+            'phone' => ['Namba hii haipatikani kwenye mfumo wetu.'],
+        ]);
+    }
+
+    /**
+     * Read-only KYC progress for customers waiting on HQ (no portal login yet).
+     */
+    public function kycStatus(Request $request): JsonResponse
+    {
+        $request->validate([
+            'phone' => ['required', 'string', 'min:7', 'max:20'],
+        ]);
+
+        $phones = $this->phoneVariants($request->string('phone')->toString());
+
+        $customer = Customer::query()
+            ->with('latestKycVerification')
+            ->whereIn('phone', $phones)
+            ->first();
+
+        if (! $customer) {
+            throw ValidationException::withMessages([
+                'phone' => ['Namba hii haipatikani kwenye mfumo wetu.'],
+            ]);
+        }
+
+        if ($customer->isAssetReleased()) {
+            return $this->successResponse([
+                'eligibility' => 'portal_active',
+                'kyc_status' => $customer->kyc_status,
+                'kyc_stage' => $customer->kyc_stage,
+                'asset_release_status' => $customer->asset_release_status,
+                'portal_message' => 'Kifaa chako kimetolewa. Unaweza kuingia kwenye programu ya mteja.',
+            ]);
+        }
+
+        if (! $this->hasTrackableKyc($customer)) {
+            throw ValidationException::withMessages([
+                'phone' => ['Hakuna maombi ya KYC yanayoendelea kwa namba hii.'],
+            ]);
+        }
+
+        $verification = $customer->latestKycVerification;
+
         return $this->successResponse([
-            'has_pin' => $customer->pin !== null,
+            'eligibility' => 'kyc_in_progress',
             'customer_name' => $customer->first_name,
-        ], 'Customer found.');
+            'kyc_status' => $customer->kyc_status,
+            'kyc_stage' => $customer->kyc_stage,
+            'asset_release_status' => $customer->asset_release_status,
+            'verification' => $verification ? [
+                'stage' => $verification->stage,
+                'status' => $verification->status,
+                'face_match_status' => $verification->face_match_status,
+                'stage1_status' => $verification->stage1_status,
+                'stage2_status' => $verification->stage2_status,
+                'stage3_status' => $verification->stage3_status,
+                'stage4_status' => $verification->stage4_status,
+            ] : null,
+            'portal_message' => $this->kycProgressMessage($customer),
+        ]);
     }
 
     /**
@@ -261,5 +341,25 @@ class CustomerAuthController extends Controller
             now()->addMinutes(15),
             ['path' => $path]
         );
+    }
+
+    private function hasTrackableKyc(Customer $customer): bool
+    {
+        if ($customer->latestKycVerification()->exists()) {
+            return true;
+        }
+
+        return filled($customer->kyc_status)
+            && ! in_array($customer->kyc_status, ['draft'], true);
+    }
+
+    private function kycProgressMessage(Customer $customer): string
+    {
+        return match ($customer->kyc_status) {
+            'rejected' => 'Maombi yako yamekataliwa. Wasiliana na duka lako kwa msaada.',
+            'approved' => 'KYC imeidhinishwa. Tunasubiri hatua ya kutoa kifaa.',
+            'pending' => 'Maombi yako yako chini ya ukaguzi (hatua '.($customer->kyc_stage ?? 1).').',
+            default => 'Maombi yako yako katika mfumo. Tutakujulisha baada ya ukaguzi.',
+        };
     }
 }

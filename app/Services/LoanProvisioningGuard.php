@@ -31,8 +31,8 @@ class LoanProvisioningGuard
             $reasons[] = 'KYC must be fully approved before a loan can be created.';
         }
 
-        if (! $customer->inventory_unit_id) {
-            $reasons[] = 'Customer must have an assigned inventory unit.';
+        if (! $customer->inventory_unit_id && ! filled($customer->imei_number)) {
+            $reasons[] = 'Customer must have an assigned inventory unit or a captured IMEI.';
         }
 
         if (! $customer->hasSuccessfulDepositPayment()) {

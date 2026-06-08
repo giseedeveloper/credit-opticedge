@@ -19,6 +19,11 @@ use Spatie\Permission\PermissionRegistrar;
 
 use function Pest\Laravel\actingAs;
 
+function kycWizardCatalogDeposit(float $retail): float
+{
+    return round($retail * (float) config('credit.default_deposit_percentage', 15) / 100, 0);
+}
+
 beforeEach(function () {
     app()[PermissionRegistrar::class]->forgetCachedPermissions();
     Permission::firstOrCreate(['name' => 'loans.create', 'guard_name' => 'web']);
@@ -235,7 +240,7 @@ it('creates customer and verification on submit and runs auto-checks', function 
         'draft_reference' => $draftReference,
         'initiated_by' => $this->fo->id,
         'phone' => '255712999888',
-        'amount' => 35000,
+        'amount' => kycWizardCatalogDeposit(450000),
         'status' => 'completed',
         'payment_status' => 'COMPLETED',
         'result' => 'SUCCESS',
@@ -256,16 +261,12 @@ it('creates customer and verification on submit and runs auto-checks', function 
         ->set('imeiNumber', $this->inventoryUnit->imei_1)
         ->set('deviceSpecs', 'Tecno Camon 30 test specs')
         ->set('cashPrice', (string) $this->phoneModel->retail_price)
-        ->set('depositAmount', '35000')
+        ->set('depositAmount', (string) kycWizardCatalogDeposit(450000))
         ->set('preferredRepayment', 'monthly')
         ->set('loanInterestRate', '5.25')
         ->set('loanInterestType', 'reducing_balance')
         ->set('loanDurationWeeks', '52')
         ->set('loanGracePeriodDays', '4')
-        ->set('deviceAccessories', [
-            ['code' => 'screen_protector', 'name' => 'Screen Protector', 'quantity' => 1, 'offer_type' => 'free', 'unit_price' => '', 'notes' => 'Promo gift'],
-            ['code' => 'phone_cover', 'name' => 'Phone Cover', 'quantity' => 1, 'offer_type' => 'charged', 'unit_price' => '15000', 'notes' => 'Premium cover'],
-        ])
         ->set('storeOfferNotes', 'Weekend offer included a free protector.')
         // Step 2
         ->set('firstName', 'Amina')
@@ -319,7 +320,8 @@ it('creates customer and verification on submit and runs auto-checks', function 
         ->and($customer?->serial_number)->toBe($this->inventoryUnit->serial_number)
         ->and($customer?->phone_metadata['phone']['country_iso'])->toBe('TZ')
         ->and($customer?->nok_phone)->toBe('+255754111222')
-        ->and($customer?->device_accessories)->toHaveCount(2)
+        ->and((float) $customer?->cash_price)->toBe(450000.0)
+        ->and((float) $customer?->deposit_amount)->toBe(kycWizardCatalogDeposit(450000))
         ->and($customer?->store_offer_notes)->toBe('Weekend offer included a free protector.')
         ->and((float) $customer?->loan_interest_rate)->toBe(5.25)
         ->and($customer?->loan_interest_type)->toBe('reducing_balance')

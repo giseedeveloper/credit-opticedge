@@ -102,8 +102,10 @@ void main() {
     expect(find.text('Serial Number'), findsNothing);
     expect(find.text('Maendeleo'), findsWidgets);
     expect(find.text('Picha (Scan)'), findsOneWidget);
-    expect(find.text('Stock duukani (pendekezwa)'), findsOneWidget);
+    expect(find.text('Device Price (TZS)'), findsOneWidget);
     expect(find.text('Manual (Mkono)'), findsOneWidget);
+    expect(find.text('Store Extras'), findsNothing);
+    expect(find.text('Device Body'), findsNothing);
   });
 
   testWidgets('Step 2 renders identity confidence and evidence guidance',

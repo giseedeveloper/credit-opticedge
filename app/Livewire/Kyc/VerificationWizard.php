@@ -485,9 +485,11 @@ class VerificationWizard extends Component
             return;
         }
 
+        $catalog = app(KycDeviceCatalogService::class);
         $this->brandId = (string) $phoneModel->brand_id;
-        $this->deviceSpecs = app(KycDeviceCatalogService::class)->buildDeviceSpecs($phoneModel);
+        $this->deviceSpecs = $catalog->buildDeviceSpecs($phoneModel);
         $this->cashPrice = (string) ((float) $phoneModel->retail_price);
+        $this->depositAmount = (string) ($catalog->recommendedDepositForRetailPrice($phoneModel->retail_price) ?? '');
         $this->seedLoanTermsFromDefaults();
     }
 
@@ -503,6 +505,7 @@ class VerificationWizard extends Component
             if ($phoneModel) {
                 $this->deviceSpecs = $catalog->buildDeviceSpecs($phoneModel);
                 $this->cashPrice = (string) ((float) $phoneModel->retail_price);
+                $this->depositAmount = (string) ($catalog->recommendedDepositForRetailPrice($phoneModel->retail_price) ?? '');
             }
 
             $this->seedLoanTermsFromDefaults();
@@ -532,6 +535,7 @@ class VerificationWizard extends Component
         $this->brandId = (string) $phoneModel->brand_id;
         $this->deviceSpecs = $catalog->buildDeviceSpecs($phoneModel);
         $this->cashPrice = (string) ((float) $phoneModel->retail_price);
+        $this->depositAmount = (string) ($catalog->recommendedDepositForRetailPrice($phoneModel->retail_price) ?? '');
         $this->imeiNumber = $unit->imei_1;
         $this->imei2 = $unit->imei_2 ?? '';
         $this->scanFeedbackTone = 'sky';
@@ -670,6 +674,19 @@ class VerificationWizard extends Component
 
     private function validateStepOne(): void
     {
+        if ($this->phoneModelId !== '') {
+            $phoneModel = PhoneModel::query()
+                ->whereKey($this->phoneModelId)
+                ->where('is_active', true)
+                ->first();
+
+            if ($phoneModel) {
+                $catalog = app(KycDeviceCatalogService::class);
+                $this->cashPrice = (string) ((float) $phoneModel->retail_price);
+                $this->depositAmount = (string) ($catalog->recommendedDepositForRetailPrice($phoneModel->retail_price) ?? '');
+            }
+        }
+
         $this->validate($this->step1Rules());
         $this->enforceDeviceSelectionIntegrity(
             app(KycDeviceCatalogService::class),

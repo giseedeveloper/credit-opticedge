@@ -1,7 +1,8 @@
 <?php
 
-test('home route redirects guests to login', function () {
+test('home route shows the public landing page for guests', function () {
     $response = $this->get(route('home'));
 
-    $response->assertRedirect(route('login'));
+    $response->assertOk()
+        ->assertSee('LOGIN', false);
 });

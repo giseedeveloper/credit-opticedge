@@ -149,7 +149,6 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
     final missingPhotos = <String>[
       if (state.imeiPhoto == null) 'IMEI sticker',
       if (state.deviceBoxPhoto == null) 'Device box',
-      if (state.devicePhoto == null) 'Device body',
     ];
     if (missingPhotos.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -202,8 +201,8 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
     final attachedPhotos = [
       state.imeiPhoto,
       state.deviceBoxPhoto,
-      state.devicePhoto,
     ].whereType<Object>().length;
+    final pricingLocked = state.phoneModelId.trim().isNotEmpty;
     final identifierCount = [
       state.phoneModelId.isNotEmpty || state.deviceSpecs.isNotEmpty,
       state.imeiNumber.isNotEmpty,
@@ -222,6 +221,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
             _scanOverviewCard(
               identifierCount: identifierCount,
               attachedPhotos: attachedPhotos,
+              requiredPhotos: 2,
             ).animate().fadeIn(duration: 260.ms).slideY(begin: 0.08, end: 0),
             const SizedBox(height: 18),
             GlassCard.surface(
@@ -239,7 +239,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                   ),
                   const SizedBox(height: 14),
                   GridView.count(
-                    crossAxisCount: 3,
+                    crossAxisCount: 2,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisSpacing: 10,
@@ -269,14 +269,6 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                             await _tryAutofillImeiFromImage(file);
                           }
                         },
-                      ),
-                      PhotoPickerTile(
-                        label: 'Device Body',
-                        required: true,
-                        file: state.devicePhoto,
-                        onPicked: (file) => ref
-                            .read(kycProvider.notifier)
-                            .setPhoto('device', file),
                       ),
                     ],
                   ),
@@ -527,47 +519,6 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Store Extras',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _offerTile(
-                    icon: Icons.shield_outlined,
-                    title: 'Screen Protector',
-                    subtitle: 'Washa kama mteja amepewa.',
-                    selected: state.includeScreenProtector,
-                    onTap: () => ref.read(kycProvider.notifier).update(
-                          (current) => current.copyWith(
-                            includeScreenProtector: !current.includeScreenProtector,
-                          ),
-                        ),
-                  ),
-                  const SizedBox(height: 10),
-                  _offerTile(
-                    icon: Icons.phone_android_outlined,
-                    title: 'Phone Cover',
-                    subtitle: 'Washa kama mteja amepewa.',
-                    selected: state.includePhoneCover,
-                    onTap: () => ref.read(kycProvider.notifier).update(
-                          (current) => current.copyWith(
-                            includePhoneCover: !current.includePhoneCover,
-                          ),
-                        ),
-                  ),
-                ],
-              ),
-            ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.06, end: 0),
-            const SizedBox(height: 16),
-            GlassCard.surface(
-              context,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
                     'Manual (Mkono)',
                     style: TextStyle(
                       fontSize: 13,
@@ -596,9 +547,10 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                       Expanded(
                         child: _field(
                           _cash,
-                          'Cash Price (TZS)',
+                          'Device Price (TZS)',
                           required: true,
                           keyboard: TextInputType.number,
+                          readOnly: pricingLocked,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -608,10 +560,22 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                           'Starting Deposit (TZS)',
                           required: true,
                           keyboard: TextInputType.number,
+                          readOnly: pricingLocked,
                         ),
                       ),
                     ],
                   ),
+                  if (pricingLocked) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Device price and deposit are locked from the selected model.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        height: 1.4,
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ).animate().fadeIn(delay: 130.ms).slideY(begin: 0.06, end: 0),
@@ -633,6 +597,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
   Widget _scanOverviewCard({
     required int identifierCount,
     required int attachedPhotos,
+    required int requiredPhotos,
   }) {
     return Container(
       padding: const EdgeInsets.all(18),
@@ -688,7 +653,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Picha 3/3 · identifiers · bei/deposit',
+                      'Picha $requiredPhotos/$requiredPhotos · identifiers · bei/deposit',
                       style: TextStyle(
                         fontSize: 12,
                         height: 1.45,
@@ -714,7 +679,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
               Expanded(
                 child: _overviewMetric(
                   label: 'Photo Evidence',
-                  value: '$attachedPhotos/3',
+                  value: '$attachedPhotos/$requiredPhotos',
                   iconAsset: AppIconAssets.checklist,
                 ),
               ),
@@ -768,88 +733,6 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
     );
   }
 
-  Widget _offerTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final mutedSurface = isDark
-        ? DesignTokens.darkBorder.withValues(alpha: 0.35)
-        : AppConstants.borderLight;
-    final iconPlate =
-        isDark ? DesignTokens.darkSurfaceElevated : Colors.white;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: AnimatedContainer(
-        duration: 220.ms,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: selected ? AppConstants.primarySurface : mutedSurface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected
-                ? AppConstants.primary
-                : (isDark ? DesignTokens.darkBorder : AppConstants.border),
-            width: selected ? 1.4 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: iconPlate,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                icon,
-                color: selected
-                    ? AppConstants.primary
-                    : theme.textTheme.bodyMedium?.color,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: theme.textTheme.bodyLarge?.color,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 11,
-                      height: 1.45,
-                      color: theme.textTheme.bodyMedium?.color,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Switch(
-              value: selected,
-              onChanged: (_) => onTap(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _label(String text) {
     return Text(
       text,
@@ -867,6 +750,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
     String? hint,
     bool required = false,
     TextInputType keyboard = TextInputType.text,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -876,8 +760,10 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
         TextFormField(
           controller: controller,
           keyboardType: keyboard,
+          readOnly: readOnly,
           decoration: InputDecoration(
             hintText: hint,
+            filled: readOnly,
           ),
           validator: required
               ? (value) {

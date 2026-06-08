@@ -1,4 +1,4 @@
-<div class="flex flex-col gap-6" x-data="imeiSearch()">
+<div class="flex flex-col gap-6" x-data="imeiSearch">
 
     {{-- Toast --}}
     <div x-data="{ show:false, msg:'', type:'success' }"
@@ -283,15 +283,15 @@
 </div>
 
 @script
-<script>
-    function imeiSearch() {
-        return {
+<script data-navigate-once>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('imeiSearch', () => ({
             copy(text) {
                 navigator.clipboard.writeText(text).then(() => {
                     window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Copied: ' + text, type: 'success' } }));
                 });
-            }
-        };
-    }
+            },
+        }));
+    });
 </script>
 @endscript

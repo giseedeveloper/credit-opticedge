@@ -203,16 +203,15 @@
                                 <div class="flex items-start justify-between gap-3">
                                     <div>
                                         <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Picha (Scan)</p>
-                                        <p class="mt-1 text-sm font-black text-gray-900">IMEI Sticker · Device Box · Device Body</p>
+                                        <p class="mt-1 text-sm font-black text-gray-900">IMEI Sticker · Device Box</p>
                                         <p class="mt-1 text-xs text-gray-500">IMEI 1 itasomwa moja kwa moja kutoka kwenye box/sticker ikiwa picha iko clear.</p>
                                     </div>
                                 </div>
 
-                                <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+                                <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
                                     @foreach([
                                         ['imeiPhoto','IMEI / Box Sticker Photo','optional', true],
                                         ['deviceBoxPhoto','Box Photo','optional', true],
-                                        ['devicePhoto','Device Photo','optional', false],
                                     ] as [$field,$label,$hint,$supportsScan])
                                     <div @if($supportsScan) x-data="deviceIdentifierScanner($wire, '{{ $field }}')" @endif>
                                         <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{{ $label }} <span class="text-gray-400 font-normal">({{ $hint }})</span></label>
@@ -312,23 +311,6 @@
                                     <flux:error name="preferredRepayment" />
                                 </flux:field>
 
-                                <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Store Extras</p>
-                                <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                                    <label class="flex items-start gap-3 p-4 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors {{ $includeScreenProtector ? 'border-emerald-300 bg-emerald-50' : '' }}">
-                                        <input type="checkbox" wire:model="includeScreenProtector" class="mt-0.5 w-4 h-4 accent-emerald-600 flex-shrink-0" />
-                                        <div>
-                                            <p class="text-sm font-semibold text-gray-800">Screen Protector</p>
-                                            <p class="text-xs text-gray-500 mt-0.5">Washa kama mteja amepewa protector.</p>
-                                        </div>
-                                    </label>
-                                    <label class="flex items-start gap-3 p-4 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors {{ $includePhoneCover ? 'border-emerald-300 bg-emerald-50' : '' }}">
-                                        <input type="checkbox" wire:model="includePhoneCover" class="mt-0.5 w-4 h-4 accent-emerald-600 flex-shrink-0" />
-                                        <div>
-                                            <p class="text-sm font-semibold text-gray-800">Phone Cover</p>
-                                            <p class="text-xs text-gray-500 mt-0.5">Washa kama mteja amepewa cover.</p>
-                                        </div>
-                                    </label>
-                                </div>
                             </div>
 
                             <div class="rounded-2xl border border-gray-100 bg-white/80 p-4 shadow-sm space-y-4">
@@ -348,16 +330,22 @@
                             </div>
 
                             <div class="rounded-2xl border border-gray-100 bg-white/80 p-4 shadow-sm space-y-4">
-                                <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Cash Price & Starting Deposit</p>
+                                <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Device Price & Starting Deposit</p>
                                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     <flux:field>
-                                        <flux:label>Cash Price (TZS) <span class="text-red-500">*</span></flux:label>
-                                        <flux:input wire:model="cashPrice" type="number" min="1" placeholder="e.g. 450000" />
+                                        <flux:label>Device Price (TZS) <span class="text-red-500">*</span></flux:label>
+                                        <flux:input wire:model="cashPrice" type="number" min="1" placeholder="e.g. 450000" :readonly="$phoneModelId !== ''" />
+                                        @if($phoneModelId !== '')
+                                        <p class="mt-1 text-xs text-gray-500">Locked from catalog when a model is selected.</p>
+                                        @endif
                                         <flux:error name="cashPrice" />
                                     </flux:field>
                                     <flux:field>
                                         <flux:label>Deposit / Down Payment (TZS) <span class="text-red-500">*</span></flux:label>
-                                        <flux:input wire:model="depositAmount" type="number" min="0" placeholder="e.g. 50000" />
+                                        <flux:input wire:model="depositAmount" type="number" min="0" placeholder="e.g. 50000" :readonly="$phoneModelId !== ''" />
+                                        @if($phoneModelId !== '')
+                                        <p class="mt-1 text-xs text-gray-500">Auto-calculated from the selected model.</p>
+                                        @endif
                                         <flux:error name="depositAmount" />
                                     </flux:field>
                                 </div>

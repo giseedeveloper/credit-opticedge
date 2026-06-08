@@ -26,7 +26,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
   late TextEditingController _nida;
   late TextEditingController _dob;
 
-  final _idTypes = const ['nida', 'voters_id', 'passport', 'driving_license'];
+  final _idTypes = const ['nida', 'voter_card', 'passport', 'driving_license'];
   final _genders = const ['male', 'female'];
 
   @override
@@ -263,7 +263,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                             ? 'National identity'
                             : type == 'passport'
                                 ? 'Travel document'
-                                : type == 'voters_id'
+                                : type == 'voter_card'
                                     ? 'Voter registration'
                                     : 'Driver identity',
                         icon: _idTypeIcon(type),
@@ -961,7 +961,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
 
   String _idTypeTitle(String value) {
     switch (value) {
-      case 'voters_id':
+      case 'voter_card':
         return 'Voter ID';
       case 'driving_license':
         return 'Driving License';
@@ -974,7 +974,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
 
   IconData _idTypeIcon(String value) {
     switch (value) {
-      case 'voters_id':
+      case 'voter_card':
         return Icons.how_to_vote_outlined;
       case 'driving_license':
         return Icons.directions_car_outlined;

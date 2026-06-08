@@ -604,6 +604,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       inventorySearch: '',
       deviceSpecs: '',
       cashPrice: '',
+      depositAmount: '',
       loanInterestRate: '',
       loanInterestType: 'flat',
       loanDurationWeeks: '',
@@ -618,6 +619,7 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         inventoryUnitId: '',
         deviceSpecs: '',
         cashPrice: '',
+        depositAmount: '',
         loanInterestRate: '',
         loanInterestType: 'flat',
         loanDurationWeeks: '',
@@ -633,6 +635,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         inventoryUnitId: '',
         deviceSpecs: model.deviceSpecs,
         cashPrice: model.retailPrice?.toString() ?? '',
+        depositAmount: model.recommendedDeposit?.toString() ??
+            _fallbackDepositForRetail(model.retailPrice),
       ),
       interestRate: model.recommendedInterestRate,
       interestType: model.recommendedInterestType,
@@ -654,6 +658,8 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         inventoryUnitId: unit.id,
         deviceSpecs: unit.deviceSpecs,
         cashPrice: unit.recommendedCashPrice?.toString() ?? state.cashPrice,
+        depositAmount: unit.recommendedDeposit?.toString() ??
+            _fallbackDepositForRetail(unit.recommendedCashPrice),
         imeiNumber: unit.imei1,
         imei2: unit.imei2 ?? '',
       ),
@@ -662,6 +668,14 @@ class KycNotifier extends StateNotifier<KycDraftState> {
       durationWeeks: unit.recommendedDurationWeeks,
       gracePeriodDays: unit.recommendedGracePeriodDays,
     );
+  }
+
+  String _fallbackDepositForRetail(num? retailPrice) {
+    if (retailPrice == null || retailPrice <= 0) {
+      return '';
+    }
+
+    return (retailPrice * 0.15).round().toString();
   }
 
   KycDraftState _applyRecommendedTerms(
@@ -799,7 +813,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
     final uploadErr = KycUploadLimits.validateMany([
       (state.imeiPhoto, 'IMEI photo'),
       (state.deviceBoxPhoto, 'Device box photo'),
-      (state.devicePhoto, 'Device photo'),
     ]);
     if (uploadErr != null) {
       state = state.copyWith(isSubmitting: false, error: uploadErr);
@@ -807,24 +820,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
     }
 
     try {
-      final accessories = <Map<String, dynamic>>[];
-      if (state.includeScreenProtector) {
-        accessories.add({
-          'code': 'screen_protector',
-          'name': 'Screen Protector',
-          'quantity': 1,
-          'offer_type': 'free',
-        });
-      }
-      if (state.includePhoneCover) {
-        accessories.add({
-          'code': 'phone_cover',
-          'name': 'Phone Cover',
-          'quantity': 1,
-          'offer_type': 'free',
-        });
-      }
-
       final form = FormData.fromMap({
         if (state.customerId != null && state.customerId!.isNotEmpty)
           'customer_id': state.customerId!,
@@ -846,7 +841,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
           'loan_duration_weeks': state.loanDurationWeeks,
         if (state.loanGracePeriodDays.isNotEmpty)
           'loan_grace_period_days': state.loanGracePeriodDays,
-        if (accessories.isNotEmpty) 'accessories': accessories,
         if (state.storeOfferNotes.isNotEmpty)
           'store_offer_notes': state.storeOfferNotes,
         if (state.imeiPhoto != null)
@@ -858,11 +852,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
           'device_box_photo': await MultipartFile.fromFile(
             state.deviceBoxPhoto!.path,
             filename: 'box.jpg',
-          ),
-        if (state.devicePhoto != null)
-          'device_photo': await MultipartFile.fromFile(
-            state.devicePhoto!.path,
-            filename: 'device.jpg',
           ),
       });
 
@@ -1457,24 +1446,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
   }
 
   Future<void> _queueStep1MultipartRetry() async {
-    final accessories = <Map<String, dynamic>>[];
-    if (state.includeScreenProtector) {
-      accessories.add({
-        'code': 'screen_protector',
-        'name': 'Screen Protector',
-        'quantity': 1,
-        'offer_type': 'free',
-      });
-    }
-    if (state.includePhoneCover) {
-      accessories.add({
-        'code': 'phone_cover',
-        'name': 'Phone Cover',
-        'quantity': 1,
-        'offer_type': 'free',
-      });
-    }
-
     await _queuePendingSubmission(1, {
       'customer_id': state.customerId,
       'endpoint': '/kyc/application/step1',
@@ -1499,7 +1470,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
           'loan_duration_weeks': state.loanDurationWeeks,
         if (state.loanGracePeriodDays.isNotEmpty)
           'loan_grace_period_days': state.loanGracePeriodDays,
-        if (accessories.isNotEmpty) 'accessories': accessories,
         if (state.storeOfferNotes.isNotEmpty)
           'store_offer_notes': state.storeOfferNotes,
       },
@@ -1507,7 +1477,6 @@ class KycNotifier extends StateNotifier<KycDraftState> {
         if (state.imeiPhoto != null) 'imei_photo': state.imeiPhoto!.path,
         if (state.deviceBoxPhoto != null)
           'device_box_photo': state.deviceBoxPhoto!.path,
-        if (state.devicePhoto != null) 'device_photo': state.devicePhoto!.path,
       },
     });
   }

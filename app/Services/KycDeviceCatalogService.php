@@ -127,6 +127,17 @@ class KycDeviceCatalogService
             ->first();
     }
 
+    public function recommendedDepositForRetailPrice(float|int|string|null $retailPrice): ?float
+    {
+        if ($retailPrice === null || (float) $retailPrice <= 0) {
+            return null;
+        }
+
+        $percentage = (float) config('credit.default_deposit_percentage', 15);
+
+        return round(((float) $retailPrice) * $percentage / 100, 0);
+    }
+
     public function buildDeviceSpecs(PhoneModel $phoneModel): string
     {
         $parts = [

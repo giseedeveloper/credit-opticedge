@@ -21,6 +21,11 @@ use Illuminate\Support\Facades\URL;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\PermissionRegistrar;
 
+function kycCatalogDeposit(float $retail): float
+{
+    return round($retail * (float) config('credit.default_deposit_percentage', 15) / 100, 0);
+}
+
 beforeEach(function () {
     app()[PermissionRegistrar::class]->forgetCachedPermissions();
     Storage::fake('public');
@@ -89,6 +94,30 @@ it('returns the simplified three-stage kyc flow contract', function () {
 
 // ─── Step 1: Device ───────────────────────────────────────────────────────────
 
+it('device models expose catalog device price and recommended deposit', function () {
+    $response = $this->getJson('/api/v1/kyc/application/device/models?brand_id='.$this->brand->id)
+        ->assertOk();
+
+    expect((float) $response->json('data.0.retail_price'))->toBe(380000.0)
+        ->and((float) $response->json('data.0.recommended_deposit'))->toBe(kycCatalogDeposit(380000));
+});
+
+it('step1 locks device price and deposit when a phone model is selected', function () {
+    $this->postJson('/api/v1/kyc/application/step1', [
+        'brand_id' => $this->brand->id,
+        'phone_model_id' => $this->phoneModel->id,
+        'inventory_unit_id' => $this->inventoryUnit->id,
+        'cash_price' => 1,
+        'deposit_amount' => 1,
+        'preferred_repayment' => 'weekly',
+    ])->assertOk();
+
+    $draft = Customer::query()->latest()->first();
+
+    expect((float) $draft?->cash_price)->toBe(380000.0)
+        ->and((float) $draft?->deposit_amount)->toBe(kycCatalogDeposit(380000));
+});
+
 it('step1 creates a draft customer and returns customer_id', function () {
     $response = $this->postJson('/api/v1/kyc/application/step1', [
         'brand_id' => $this->brand->id,
@@ -122,6 +151,8 @@ it('step1 creates a draft customer and returns customer_id', function () {
     expect($draft)->not->toBeNull()
         ->and($draft?->device_accessories)->toHaveCount(2)
         ->and($draft?->store_offer_notes)->toBe('Weekend promo included a free protector.')
+        ->and((float) $draft?->cash_price)->toBe(380000.0)
+        ->and((float) $draft?->deposit_amount)->toBe(kycCatalogDeposit(380000))
         ->and((float) $draft?->loan_interest_rate)->toBe(4.25)
         ->and($draft?->loan_interest_type)->toBe('flat')
         ->and($draft?->loan_duration_weeks)->toBe(40)
@@ -169,7 +200,7 @@ it('step1 with customer_id updates the existing draft in place', function () {
 
     $fresh = Customer::query()->findOrFail($customerId);
 
-    expect((float) $fresh->deposit_amount)->toBe(75000.0)
+    expect((float) $fresh->deposit_amount)->toBe(kycCatalogDeposit(380000))
         ->and($fresh->nida_number)->toBe($nida)
         ->and($fresh->first_name)->toBe('Amina');
 });

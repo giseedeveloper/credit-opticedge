@@ -503,6 +503,7 @@ trait ManagesKycSupport
      *     imei_2: ?string,
      *     serial_number: ?string,
      *     cash_price: string|float|int,
+     *     deposit_amount: float,
      *     device_scan_metadata: array<string, mixed>|null
      * }
      */
@@ -545,11 +546,17 @@ trait ManagesKycSupport
             ]);
         }
 
-        $cashPrice = $validated['cash_price'] ?? $phoneModel?->retail_price;
+        if ($phoneModel) {
+            $cashPrice = (float) $phoneModel->retail_price;
+            $depositAmount = (float) ($catalog->recommendedDepositForRetailPrice($phoneModel->retail_price) ?? 0);
+        } else {
+            $cashPrice = (float) ($validated['cash_price'] ?? 0);
+            $depositAmount = (float) $validated['deposit_amount'];
+        }
 
-        if ((float) $validated['deposit_amount'] > (float) $cashPrice) {
+        if ($depositAmount > $cashPrice) {
             throw ValidationException::withMessages([
-                'deposit_amount' => 'Deposit cannot be greater than the device cash price.',
+                'deposit_amount' => 'Deposit cannot be greater than the device price.',
             ]);
         }
 
@@ -637,6 +644,7 @@ trait ManagesKycSupport
             'imei_2' => $imei2 ?: null,
             'serial_number' => $serialNumber ?: null,
             'cash_price' => $cashPrice,
+            'deposit_amount' => $depositAmount,
             'device_scan_metadata' => $scanMetadata,
         ];
     }

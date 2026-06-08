@@ -50,6 +50,7 @@ class DeviceModelOption {
   final String brandName;
   final String name;
   final num? retailPrice;
+  final num? recommendedDeposit;
   final String deviceSpecs;
   final Map<String, dynamic> specifications;
   final num? recommendedInterestRate;
@@ -63,6 +64,7 @@ class DeviceModelOption {
     required this.brandName,
     required this.name,
     required this.retailPrice,
+    this.recommendedDeposit,
     required this.deviceSpecs,
     this.specifications = const {},
     this.recommendedInterestRate,
@@ -92,6 +94,7 @@ class DeviceModelOption {
         brandName: json['brand_name']?.toString() ?? '',
         name: json['name']?.toString() ?? '',
         retailPrice: _nullableNum(json['retail_price']),
+        recommendedDeposit: _nullableNum(json['recommended_deposit']),
         deviceSpecs: json['device_specs']?.toString() ?? '',
         specifications: _specificationsMap(json['specifications']),
         recommendedInterestRate: _nullableNum(recommendedTerms['interest_rate']),
@@ -112,6 +115,7 @@ class InventoryUnitOption {
   final String modelName;
   final String deviceSpecs;
   final num? recommendedCashPrice;
+  final num? recommendedDeposit;
   final String imei1;
   final String? imei2;
   final String? serialNumber;
@@ -128,6 +132,7 @@ class InventoryUnitOption {
     required this.modelName,
     required this.deviceSpecs,
     required this.recommendedCashPrice,
+    this.recommendedDeposit,
     required this.imei1,
     this.imei2,
     this.serialNumber,
@@ -162,6 +167,7 @@ class InventoryUnitOption {
         modelName: json['model_name']?.toString() ?? '',
         deviceSpecs: json['device_specs']?.toString() ?? '',
         recommendedCashPrice: _nullableNum(json['recommended_cash_price']),
+        recommendedDeposit: _nullableNum(json['recommended_deposit']),
         imei1: json['imei_1']?.toString() ?? '',
         imei2: json['imei_2']?.toString(),
         serialNumber: json['serial_number']?.toString(),

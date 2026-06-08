@@ -14,4 +14,10 @@ return [
         'repayment_frequency' => env('CREDIT_DEFAULT_REPAYMENT_FREQUENCY', 'monthly'),
         'grace_period_days' => (int) env('CREDIT_DEFAULT_GRACE_PERIOD_DAYS', 3),
     ],
+
+    /*
+    | Starting deposit (DP) as a percentage of catalog device price when a
+    | phone model is selected during KYC Stage 1.
+    */
+    'default_deposit_percentage' => (float) env('CREDIT_DEFAULT_DEPOSIT_PERCENTAGE', 15),
 ];

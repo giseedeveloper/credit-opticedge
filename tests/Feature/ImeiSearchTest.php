@@ -26,7 +26,8 @@ test('finds customer by imei including digit-only variant', function () {
         ->test(ImeiSearch::class)
         ->set('query', '12345 67890 12345')
         ->call('search')
-        ->assertSee('0712345678');
+        ->assertSee('0712345678')
+        ->assertSet('profile.match', 'customer');
 });
 
 test('shows inventory when no customer exists for imei', function () {
@@ -44,8 +45,9 @@ test('shows inventory when no customer exists for imei', function () {
         ->test(ImeiSearch::class)
         ->set('query', '555555555555555')
         ->call('search')
-        ->assertSee('Stock unit matched')
-        ->assertSee('Test Counter TZ');
+        ->assertSee('Stock unit matched — no customer KYC yet')
+        ->assertSee('Test Counter TZ')
+        ->assertSet('profile.match', 'inventory_only');
 });
 
 test('resolves customer linked to inventory unit by id', function () {

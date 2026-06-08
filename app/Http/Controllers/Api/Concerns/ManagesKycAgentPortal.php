@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\Concerns;
 
 use App\Http\Requests\Api\Kyc\HandoverChecklistRequest;
+use App\Http\Requests\Api\Kyc\PreHandoverChecklistRequest;
 use App\Models\Customer;
 use App\Services\CustomerLoanProvisioningService;
 use App\Services\KycStageFlowService;
+use App\Services\PreHandoverChecklistService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -302,6 +304,35 @@ trait ManagesKycAgentPortal
         ], 'Handover checklist uploaded.');
     }
 
+    public function submitPreHandoverChecklist(
+        string $customerId,
+        PreHandoverChecklistRequest $request,
+        PreHandoverChecklistService $checklistService,
+    ): JsonResponse {
+        $customer = $this->findAgentCustomerOrFail($customerId, ['inventoryUnit', 'assetReleasedBy']);
+
+        if ($customer->isAssetReleased()) {
+            return $this->errorResponse('Asset already released; checklist cannot be changed.', 422);
+        }
+
+        $checklist = $checklistService->complete(
+            $customer,
+            $request->validated(),
+            auth()->user(),
+        );
+
+        activity('kyc')
+            ->performedOn($customer)
+            ->causedBy(auth()->user())
+            ->withProperties(['pre_handover_checklist' => $checklist])
+            ->log('Pre-handover checklist completed via FO app');
+
+        return $this->successResponse([
+            'release' => $this->serializeReleaseSummary($customer->fresh(['inventoryUnit', 'assetReleasedBy'])),
+            'pre_handover_checklist' => $checklist,
+        ], 'Pre-handover checklist saved.');
+    }
+
     public function releaseAsset(string $customerId, CustomerLoanProvisioningService $loanProvisioning): JsonResponse
     {
         $customer = $this->findAgentCustomerOrFail($customerId, ['inventoryUnit', 'assetReleasedBy', 'agreementDocument']);
@@ -324,6 +355,13 @@ trait ManagesKycAgentPortal
 
         if (! $customer->hasAssetHandoverRecord()) {
             return $this->errorResponse('Asset handover checklist is required before release.', 422);
+        }
+
+        if (! $customer->hasCompletedPreHandoverChecklist()) {
+            return $this->errorResponse(
+                'Complete the pre-handover checklist (unbox, boot, MDM lock) before release.',
+                422
+            );
         }
 
         if (! filled($customer->agreement_document_id)) {

@@ -668,6 +668,7 @@
                                 ['label' => 'Customer signature captured', 'done' => filled($dc->customer_signature_path)],
                                 ['label' => 'FO signature captured', 'done' => filled($dc->fo_signature_path)],
                                 ['label' => 'Handover list uploaded', 'done' => $dc->hasAssetHandoverRecord()],
+                                ['label' => 'Pre-handover checklist (unbox / boot / MDM)', 'done' => $dc->hasCompletedPreHandoverChecklist()],
                                 ['label' => 'Linked stock unit selected', 'done' => filled($dc->inventory_unit_id)],
                             ] as $check)
                             <div class="flex items-center gap-3 rounded-xl bg-white px-3 py-2 text-xs dark:bg-zinc-900">

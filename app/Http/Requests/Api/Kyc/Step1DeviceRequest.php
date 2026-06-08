@@ -20,7 +20,7 @@ class Step1DeviceRequest extends KycAgentRequest
             'serial_number' => ['nullable', 'string', 'max:60'],
             'cash_price' => ['required_without:phone_model_id', 'nullable', 'numeric', 'min:1'],
             'deposit_amount' => ['required', 'numeric', 'min:0'],
-            'preferred_repayment' => ['required', 'in:weekly,biweekly,monthly'],
+            'preferred_repayment' => ['required', 'in:daily,weekly,biweekly,monthly'],
             'loan_interest_rate' => ['nullable', 'numeric', 'min:0'],
             'loan_interest_type' => ['nullable', 'in:flat,reducing_balance'],
             'loan_duration_weeks' => ['nullable', 'integer', 'min:1', 'max:260'],

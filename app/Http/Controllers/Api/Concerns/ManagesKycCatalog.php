@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api\Concerns;
 
 use App\Services\CustomerLoanProvisioningService;
+use App\Services\KycDeviceCatalogMatcher;
 use App\Services\KycDeviceCatalogService;
+use App\Services\KycIdentityDocumentRules;
+use App\Services\KycLoanPreviewService;
 use App\Services\KycPhoneService;
 use App\Services\KycStageFlowService;
 use App\Traits\ApiResponse;
@@ -62,7 +65,7 @@ trait ManagesKycCatalog
     ): JsonResponse {
         $request->validate([
             'brand_id' => ['nullable', 'uuid', 'exists:brands,id'],
-            'preferred_repayment' => ['nullable', 'in:weekly,biweekly,monthly'],
+            'preferred_repayment' => ['nullable', 'in:daily,weekly,biweekly,monthly'],
         ]);
 
         $recommendedTerms = $loanProvisioning->defaultTerms(
@@ -94,7 +97,7 @@ trait ManagesKycCatalog
         $request->validate([
             'phone_model_id' => ['nullable', 'exists:phone_models,id'],
             'search' => ['nullable', 'string', 'max:100'],
-            'preferred_repayment' => ['nullable', 'in:weekly,biweekly,monthly'],
+            'preferred_repayment' => ['nullable', 'in:daily,weekly,biweekly,monthly'],
         ]);
 
         $recommendedTerms = $loanProvisioning->defaultTerms(
@@ -127,6 +130,52 @@ trait ManagesKycCatalog
     public function stageFlow(KycStageFlowService $stageFlow): JsonResponse
     {
         return $this->successResponse($stageFlow->contract(), 'KYC stage flow retrieved.');
+    }
+
+    public function deviceMatchScan(Request $request, KycDeviceCatalogMatcher $matcher): JsonResponse
+    {
+        $validated = $request->validate([
+            'detected_model_text' => ['nullable', 'string', 'max:255'],
+            'detected_model_code' => ['nullable', 'string', 'max:80'],
+            'detected_ram' => ['nullable', 'string', 'max:20'],
+            'detected_storage' => ['nullable', 'string', 'max:20'],
+            'raw_text' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        $match = $matcher->matchFromScan($validated);
+
+        return $this->successResponse($match, 'Device scan match evaluated.');
+    }
+
+    public function loanPreview(Request $request, KycLoanPreviewService $previewService): JsonResponse
+    {
+        $validated = $request->validate([
+            'cash_price' => ['required', 'numeric', 'min:1'],
+            'deposit_amount' => ['nullable', 'numeric', 'min:0'],
+            'preferred_repayment' => ['nullable', 'in:daily,weekly,biweekly,monthly'],
+            'interest_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'interest_type' => ['nullable', 'in:flat,reducing_balance'],
+            'duration_weeks' => ['nullable', 'integer', 'min:1', 'max:260'],
+        ]);
+
+        return $this->successResponse(
+            $previewService->preview($validated),
+            'Loan preview calculated.'
+        );
+    }
+
+    public function identityDocumentRules(KycIdentityDocumentRules $identityRules): JsonResponse
+    {
+        return $this->successResponse([
+            'id_types' => collect($identityRules->supportedIdTypes())
+                ->map(fn (string $type): array => [
+                    'code' => $type,
+                    'label' => $identityRules->documentNumberLabel($type),
+                    'hint' => $identityRules->documentNumberHint($type),
+                    'max_length' => $identityRules->documentNumberMaxLength($type),
+                ])
+                ->values(),
+        ], 'Identity document rules retrieved.');
     }
 
     /**

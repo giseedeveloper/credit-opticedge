@@ -120,6 +120,10 @@ class _DetailViewState extends ConsumerState<_DetailView>
 
   bool _releasing = false;
   bool _uploadingHandover = false;
+  bool _submittingPreHandover = false;
+  bool _deviceUnboxed = false;
+  bool _deviceBootVerified = false;
+  bool _mdmLockConfirmed = false;
   Timer? _detailPollTimer;
 
   CustomerDetail get customer => widget.customer;
@@ -297,6 +301,56 @@ class _DetailViewState extends ConsumerState<_DetailView>
     } finally {
       if (mounted) {
         setState(() => _uploadingHandover = false);
+      }
+    }
+  }
+
+  Future<void> _submitPreHandoverChecklist() async {
+    if (!_deviceUnboxed || !_deviceBootVerified || !_mdmLockConfirmed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Thibitisha unbox, boot, na MDM lock kabla ya kuendelea.',
+          ),
+          backgroundColor: AppConstants.warning,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _submittingPreHandover = true);
+    try {
+      await ApiClient.instance.post(
+        '/kyc/customers/${widget.customerId}/pre-handover-checklist',
+        data: {
+          'device_unboxed': true,
+          'device_boot_verified': true,
+          'mdm_lock_confirmed': true,
+        },
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pre-handover checklist imekamilika.'),
+          backgroundColor: AppConstants.success,
+        ),
+      );
+      ref.invalidate(customerDetailProvider(widget.customerId));
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ApiClient.instance.parseError(e)),
+          backgroundColor: AppConstants.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _submittingPreHandover = false);
       }
     }
   }
@@ -1066,6 +1120,86 @@ class _DetailViewState extends ConsumerState<_DetailView>
         _infoRow('Released By', release?.releasedBy),
         _infoRow('Inventory Unit', release?.inventoryUnitId),
         _infoRow('Inventory Status', release?.inventoryUnitStatus),
+        if ((release?.inventoryMdmId?.isNotEmpty ?? false)) ...[
+          _infoRow('MDM ID', release?.inventoryMdmId),
+          _infoRow('MDM Lock Status', release?.inventoryLockStatus),
+        ],
+        if (!isReleased) ...[
+          const SizedBox(height: 12),
+          if (release?.preHandoverChecklist.isComplete ?? false)
+            _statusTile(
+              title: 'Pre-handover checklist complete',
+              subtitle:
+                  'Unbox, boot, na MDM lock zimethibitishwa.${release?.preHandoverChecklist.mdmLockStatus != null ? ' MDM: ${release!.preHandoverChecklist.mdmLockStatus}.' : ''}',
+              color: AppConstants.success,
+              icon: Icons.fact_check_outlined,
+            )
+          else ...[
+            Text(
+              'Kabla ya release, thibitisha hatua hizi mbele ya mteja:',
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.4,
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
+            ),
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              value: _deviceUnboxed,
+              onChanged: _submittingPreHandover
+                  ? null
+                  : (value) => setState(() => _deviceUnboxed = value == true),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Device imefunguliwa (unbox) mbele ya mteja',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ),
+            CheckboxListTile(
+              value: _deviceBootVerified,
+              onChanged: _submittingPreHandover
+                  ? null
+                  : (value) =>
+                      setState(() => _deviceBootVerified = value == true),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Device imeboot na inaonyesha screen ya kawaida',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ),
+            CheckboxListTile(
+              value: _mdmLockConfirmed,
+              onChanged: _submittingPreHandover
+                  ? null
+                  : (value) =>
+                      setState(() => _mdmLockConfirmed = value == true),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'MDM lock imewekwa kwenye kifaa',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                (release?.inventoryMdmId?.isNotEmpty ?? false)
+                    ? 'MDM ID: ${release!.inventoryMdmId}'
+                    : 'Hakuna MDM ID kwenye stock — lock itaruka mpaka MDM iunganishwe.',
+                style: const TextStyle(fontSize: 11),
+              ),
+            ),
+            const SizedBox(height: 8),
+            AppButton(
+              label: 'Thibitisha pre-handover checklist',
+              icon: Icons.verified_outlined,
+              isLoading: _submittingPreHandover,
+              outlined: true,
+              width: double.infinity,
+              onPressed:
+                  _submittingPreHandover ? null : _submitPreHandoverChecklist,
+            ),
+          ],
+        ],
         if (canRelease && !isReleased) ...[
           const SizedBox(height: 8),
           AppButton(

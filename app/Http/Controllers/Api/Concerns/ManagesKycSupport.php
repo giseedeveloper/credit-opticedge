@@ -12,6 +12,7 @@ use App\Services\IMEITrackingService;
 use App\Services\KycAccessoryOfferService;
 use App\Services\KycDeviceCatalogService;
 use App\Services\KycPhoneService;
+use App\Services\PreHandoverChecklistService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -343,6 +344,10 @@ trait ManagesKycSupport
             $blockers[] = 'Handover checklist upload is required.';
         }
 
+        if (! $customer->hasCompletedPreHandoverChecklist()) {
+            $blockers[] = 'Pre-handover checklist (unbox, boot, MDM lock) must be completed.';
+        }
+
         if (! filled($customer->agreement_document_id)) {
             $blockers[] = 'Agreement document is not linked to this application.';
         }
@@ -365,8 +370,12 @@ trait ManagesKycSupport
             'released_by' => $customer->assetReleasedBy?->name,
             'can_release_asset' => $customer->isReadyForAssetRelease(),
             'eligibility_blockers' => $this->releaseEligibilityBlockers($customer),
+            'pre_handover_checklist' => app(PreHandoverChecklistService::class)
+                ->checklist($customer),
             'inventory_unit_id' => $customer->inventory_unit_id,
             'inventory_unit_status' => $customer->inventoryUnit?->status,
+            'inventory_mdm_id' => $customer->inventoryUnit?->mdm_id,
+            'inventory_lock_status' => $customer->inventoryUnit?->lock_status,
             'loan_terms' => $this->serializeLoanTerms($customer),
         ];
     }

@@ -203,6 +203,12 @@ class CustomerProfiles extends Component
             return;
         }
 
+        if (! $customer->hasCompletedPreHandoverChecklist()) {
+            $this->dispatch('toast', message: 'Complete the pre-handover checklist (unbox, boot, MDM lock) before release.', type: 'error');
+
+            return;
+        }
+
         if ($customer->isAssetReleased()) {
             $this->dispatch('toast', message: 'This asset was already released.', type: 'success');
 

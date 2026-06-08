@@ -9,7 +9,7 @@ import '../../../config/constants.dart';
 import '../../../config/design_tokens.dart';
 import '../../../core/models/kyc_flow_model.dart';
 import '../../../core/providers/kyc_provider.dart';
-import '../../../core/utils/imei_scan.dart';
+import '../../../core/utils/device_scan.dart';
 import '../../../widgets/common/app_button.dart';
 import '../../../widgets/common/app_color_icon.dart';
 import '../../../widgets/common/glass_card.dart';
@@ -30,7 +30,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
   late final TextEditingController _deposit;
   bool _scanningImei = false;
 
-  final _repaymentOptions = const ['weekly', 'bi-weekly', 'monthly'];
+  final _repaymentOptions = const ['daily', 'weekly', 'bi-weekly', 'monthly'];
 
   @override
   void initState() {
@@ -86,31 +86,33 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
 
   Future<void> _tryAutofillImeiFromImage(File file) async {
     if (_scanningImei) return;
-    final current = ref.read(kycProvider);
-    if (current.imeiNumber.trim().isNotEmpty) {
-      return; // don't override a manual entry
-    }
 
     setState(() => _scanningImei = true);
     try {
-      final result = await ImeiScan.extractImei(file);
+      final hints = await DeviceScan.extractHints(file);
       if (!mounted) return;
 
-      if (result?.imei != null && result!.imei.isNotEmpty) {
-        ref.read(kycProvider.notifier).update((state) {
-          return state.copyWith(
-            imeiNumber: result.imei,
-            imei2: state.imei2.trim().isEmpty && (result.imei2 ?? '').isNotEmpty
-                ? result.imei2
-                : state.imei2,
-          );
-        });
+      final message =
+          await ref.read(kycProvider.notifier).applyDeviceScanHints(hints);
+      if (!mounted) {
+        return;
+      }
+      _syncControllers(ref.read(kycProvider));
+
+      if (message != null && message.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppConstants.success,
+          ),
+        );
+      } else if (hints.imei?.imei.isNotEmpty == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              (result.imei2 ?? '').isNotEmpty
-                  ? 'IMEI 1 & IMEI 2 auto-filled (${result.source}).'
-                  : 'IMEI 1 auto-filled (${result.source}).',
+              (hints.imei?.imei2 ?? '').isNotEmpty
+                  ? 'IMEI 1 & IMEI 2 auto-filled (${hints.imei!.source}).'
+                  : 'IMEI 1 auto-filled (${hints.imei!.source}).',
             ),
             backgroundColor: AppConstants.success,
           ),
@@ -119,7 +121,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Scan failed. Please type IMEI 1 manually (ensure photo is clear).',
+              'Scan finished. Enter IMEI manually if it was not detected.',
             ),
             backgroundColor: AppConstants.warning,
           ),
@@ -186,6 +188,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(kycProvider);
+    final loanPreviewAsync = ref.watch(kycLoanPreviewProvider);
     final brandsAsync = ref.watch(deviceBrandsProvider);
     final modelsAsync = ref.watch(
       deviceModelsProvider(
@@ -579,6 +582,76 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                 ],
               ),
             ).animate().fadeIn(delay: 130.ms).slideY(begin: 0.06, end: 0),
+            loanPreviewAsync.when(
+              data: (preview) {
+                if (preview == null) {
+                  return const SizedBox.shrink();
+                }
+
+                final installment = preview['installment_amount'];
+                final totalPayable = preview['total_payable'];
+                final financed = preview['financed_principal'];
+                final count = preview['installment_count'];
+                final frequency =
+                    preview['repayment_frequency']?.toString() ?? 'weekly';
+
+                return Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: GlassCard.surface(
+                    context,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Loan Preview',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _previewMetric(
+                                'Financed',
+                                'TZS ${_formatAmount(financed)}',
+                              ),
+                            ),
+                            Expanded(
+                              child: _previewMetric(
+                                '${_sentence(frequency)} pay',
+                                'TZS ${_formatAmount(installment)}',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _previewMetric(
+                                'Total payable',
+                                'TZS ${_formatAmount(totalPayable)}',
+                              ),
+                            ),
+                            Expanded(
+                              child: _previewMetric(
+                                'Payments',
+                                '${count ?? '-'} × ${_sentence(frequency)}',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
             const SizedBox(height: 30),
             AppButton(
               label: 'Save & Continue',
@@ -784,7 +857,46 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
       return value;
     }
 
+    if (value == 'biweekly') {
+      return 'Bi-weekly';
+    }
+
     return value[0].toUpperCase() + value.substring(1);
+  }
+
+  String _formatAmount(Object? value) {
+    final parsed = value is num
+        ? value.toDouble()
+        : double.tryParse(value?.toString() ?? '') ?? 0;
+
+    return parsed.round().toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (match) => '${match[1]},',
+        );
+  }
+
+  Widget _previewMetric(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            color: AppConstants.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: AppConstants.textPrimary,
+          ),
+        ),
+      ],
+    );
   }
 
   // Stock linking UI removed.

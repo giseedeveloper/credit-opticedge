@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\PreHandoverChecklistService;
 use Database\Factories\CustomerFactory;
 use Illuminate\Auth\Authenticatable as AuthenticatableTrait;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -215,6 +216,11 @@ class Customer extends Model implements Authenticatable, HasMedia
         return filled($this->asset_handover_list_path);
     }
 
+    public function hasCompletedPreHandoverChecklist(): bool
+    {
+        return app(PreHandoverChecklistService::class)->isComplete($this);
+    }
+
     public function isAssetReleased(): bool
     {
         return $this->asset_release_status === 'released';
@@ -227,6 +233,7 @@ class Customer extends Model implements Authenticatable, HasMedia
             && $this->hasAcceptedAgreement()
             && $this->hasCapturedSignatures()
             && $this->hasAssetHandoverRecord()
+            && $this->hasCompletedPreHandoverChecklist()
             && filled($this->agreement_document_id)
             && ! $this->isAssetReleased();
     }

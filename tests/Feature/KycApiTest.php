@@ -39,7 +39,12 @@ beforeEach(function () {
         'brand_id' => $this->brand->id,
         'name' => 'Galaxy A15',
         'retail_price' => 380000,
-        'specifications' => ['ram' => '6GB', 'storage' => '128GB', 'color' => 'Blue'],
+        'specifications' => [
+            'model_code' => 'SM-A155F',
+            'ram' => '6GB',
+            'storage' => '128GB',
+            'color' => 'Blue',
+        ],
     ]);
     $this->inventoryUnit = InventoryUnit::factory()->create([
         'phone_model_id' => $this->phoneModel->id,
@@ -100,6 +105,54 @@ it('device models expose catalog device price and recommended deposit', function
 
     expect((float) $response->json('data.0.retail_price'))->toBe(380000.0)
         ->and((float) $response->json('data.0.recommended_deposit'))->toBe(kycCatalogDeposit(380000));
+});
+
+it('device match scan auto-selects catalog model from ocr hints', function () {
+    $this->postJson('/api/v1/kyc/application/device/match-scan', [
+        'detected_model_text' => 'Samsung Galaxy A15',
+        'detected_model_code' => 'SM-A155F',
+        'detected_ram' => '6GB',
+        'detected_storage' => '128GB',
+        'raw_text' => 'Samsung Galaxy A15 SM-A155F 6GB 128GB',
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.phone_model_id', (string) $this->phoneModel->id)
+        ->assertJsonPath('data.brand_id', (string) $this->brand->id)
+        ->assertJsonPath('data.auto_selected', true);
+});
+
+it('loan preview supports daily repayment cycle', function () {
+    $response = $this->postJson('/api/v1/kyc/application/loan-preview', [
+        'cash_price' => 380000,
+        'deposit_amount' => kycCatalogDeposit(380000),
+        'preferred_repayment' => 'daily',
+        'duration_weeks' => 12,
+        'interest_rate' => 20,
+        'interest_type' => 'flat',
+    ])->assertOk();
+
+    expect($response->json('data.repayment_frequency'))->toBe('daily')
+        ->and($response->json('data.installment_count'))->toBe(84)
+        ->and((float) $response->json('data.installment_amount'))->toBeGreaterThan(0);
+});
+
+it('identity rules endpoint returns dynamic document metadata', function () {
+    $this->getJson('/api/v1/kyc/application/identity-rules')
+        ->assertOk()
+        ->assertJsonFragment(['code' => 'voter_card', 'label' => 'Voter card number'])
+        ->assertJsonFragment(['code' => 'nida', 'max_length' => 20]);
+});
+
+it('step1 accepts daily preferred repayment', function () {
+    $this->postJson('/api/v1/kyc/application/step1', [
+        'brand_id' => $this->brand->id,
+        'phone_model_id' => $this->phoneModel->id,
+        'inventory_unit_id' => $this->inventoryUnit->id,
+        'deposit_amount' => 50000,
+        'preferred_repayment' => 'daily',
+    ])->assertOk();
+
+    expect(Customer::query()->latest()->value('preferred_repayment'))->toBe('daily');
 });
 
 it('step1 locks device price and deposit when a phone model is selected', function () {
@@ -374,6 +427,42 @@ it('step2 saves customer identity details', function () {
     $response->assertOk()->assertJsonPath('data.step', 2);
     expect($draft->fresh()->first_name)->toBe('Amina');
     expect($draft->fresh()->nida_number)->toBe($nida);
+});
+
+it('step2 validates voter card number format dynamically', function () {
+    $draft = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'first_name' => '_draft_',
+        'last_name' => '_draft_',
+        'phone' => '_draft_'.uniqid(),
+        'nida_number' => null,
+    ]);
+
+    $this->postJson("/api/v1/kyc/application/{$draft->id}/step2", [
+        'first_name' => 'Asha',
+        'last_name' => 'Mwalimu',
+        'gender' => 'female',
+        'nida_number' => 'short',
+        'id_type' => 'voter_card',
+        'id_front_photo' => UploadedFile::fake()->image('id.jpg'),
+        'id_back_photo' => UploadedFile::fake()->image('id.jpg'),
+        'headshot_photo' => UploadedFile::fake()->image('selfie.jpg'),
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['nida_number']);
+
+    $this->postJson("/api/v1/kyc/application/{$draft->id}/step2", [
+        'first_name' => 'Asha',
+        'last_name' => 'Mwalimu',
+        'gender' => 'female',
+        'nida_number' => 'TAN-12345678',
+        'id_type' => 'voter_card',
+        'id_front_photo' => UploadedFile::fake()->image('id.jpg'),
+        'id_back_photo' => UploadedFile::fake()->image('id.jpg'),
+        'headshot_photo' => UploadedFile::fake()->image('selfie.jpg'),
+    ])->assertOk();
+
+    expect($draft->fresh()->id_type)->toBe('voter_card')
+        ->and($draft->fresh()->nida_number)->toBe('TAN-12345678');
 });
 
 it('step2 rejects duplicate NIDA', function () {
@@ -965,6 +1054,8 @@ it('release asset provisions a loan (with or without stock linkage)', function (
         'face_match_status' => 'passed',
     ]);
 
+    kycMarkPreHandoverComplete($customer);
+
     $response = $this->postJson("/api/v1/kyc/customers/{$customer->id}/release-asset");
 
     $response->assertOk()
@@ -1022,6 +1113,8 @@ it('release asset works even when no inventory unit is linked', function () {
         'face_match_status' => 'passed',
     ]);
 
+    kycMarkPreHandoverComplete($customer);
+
     $this->postJson("/api/v1/kyc/customers/{$customer->id}/release-asset")
         ->assertOk()
         ->assertJsonPath('data.release.status', 'released')
@@ -1031,6 +1124,68 @@ it('release asset works even when no inventory unit is linked', function () {
     expect($loan)->not->toBeNull()
         ->and($loan?->inventory_unit_id)->toBeNull()
         ->and($loan?->dealer_id)->toBe($this->dealer->id);
+});
+
+it('blocks release until pre-handover checklist is completed', function () {
+    $agreement = SystemDocument::factory()->create([
+        'key' => 'kyc_customer_agreement',
+        'disk' => 'public',
+        'path' => 'agreements/pre-handover-block.pdf',
+        'is_active' => true,
+        'uploaded_by' => $this->agent->id,
+    ]);
+
+    Storage::disk('public')->put('kyc/customer-signatures/api-customer.png', base64_decode(apiKycRawSignature(), true));
+    Storage::disk('public')->put('kyc/fo-signatures/api-fo.png', base64_decode(apiKycRawSignature(), true));
+    Storage::disk('public')->put('kyc/handover/api-release.pdf', 'handover checklist');
+
+    $customer = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'inventory_unit_id' => $this->inventoryUnit->id,
+        'agreement_document_id' => $agreement->id,
+        'agreement_accepted' => true,
+        'customer_signature_path' => 'kyc/customer-signatures/api-customer.png',
+        'fo_signature_path' => 'kyc/fo-signatures/api-fo.png',
+        'asset_handover_list_path' => 'kyc/handover/api-release.pdf',
+        'deposit_payment_status' => 'completed',
+        'cash_price' => 380000,
+        'deposit_amount' => 50000,
+        'preferred_repayment' => 'weekly',
+        'asset_release_status' => 'pending',
+        'kyc_status' => 'approved',
+    ]);
+
+    Verification::factory()->create([
+        'customer_id' => $customer->id,
+        'fo_id' => $this->agent->id,
+        'type' => 'kyc',
+        'status' => 'approved',
+        'face_match_status' => 'passed',
+    ]);
+
+    $this->postJson("/api/v1/kyc/customers/{$customer->id}/release-asset")
+        ->assertStatus(422)
+        ->assertJsonFragment(['message' => 'Complete the pre-handover checklist (unbox, boot, MDM lock) before release.']);
+});
+
+it('accepts pre-handover checklist and exposes it on release summary', function () {
+    $customer = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'inventory_unit_id' => $this->inventoryUnit->id,
+        'asset_release_status' => 'pending',
+        'kyc_status' => 'approved',
+    ]);
+
+    $this->postJson("/api/v1/kyc/customers/{$customer->id}/pre-handover-checklist", [
+        'device_unboxed' => true,
+        'device_boot_verified' => true,
+        'mdm_lock_confirmed' => true,
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.pre_handover_checklist.device_unboxed', true)
+        ->assertJsonPath('data.pre_handover_checklist.mdm_lock_confirmed', true);
+
+    expect($customer->fresh()->hasCompletedPreHandoverChecklist())->toBeTrue();
 });
 
 it('save-draft marks fo timestamp and draft tab lists only explicit drafts', function () {

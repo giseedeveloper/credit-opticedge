@@ -46,8 +46,8 @@ def _env_int(name: str, default: int) -> int:
 
 
 # Headshot / live selfie — stricter quality (defaults match previous behaviour).
-PASS_THRESHOLD = _env_float("FACE_MATCH_PASS_THRESHOLD", 0.72)
-REVIEW_THRESHOLD = _env_float("FACE_MATCH_REVIEW_THRESHOLD", 0.55)
+PASS_THRESHOLD = _env_float("FACE_MATCH_PASS_THRESHOLD", 0.40)
+REVIEW_THRESHOLD = _env_float("FACE_MATCH_REVIEW_THRESHOLD", 0.30)
 MIN_FACE_AREA_RATIO = _env_float("FACE_MATCH_MIN_FACE_AREA_RATIO", 0.045)
 MIN_SHARPNESS = _env_float("FACE_MATCH_MIN_SHARPNESS", 35.0)
 MIN_BRIGHTNESS = _env_float("FACE_MATCH_MIN_BRIGHTNESS", 35.0)

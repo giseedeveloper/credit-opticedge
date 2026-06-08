@@ -13,6 +13,7 @@ import '../models/customer_model.dart';
 import '../services/face_verification_service.dart';
 import '../models/dashboard_model.dart';
 import '../models/kyc_flow_model.dart';
+import '../utils/device_scan.dart';
 import '../utils/kyc_upload_limits.dart';
 
 const _unset = Object();
@@ -32,6 +33,7 @@ String _repaymentValueForApi(String raw) {
   switch (raw) {
     case 'bi-weekly':
       return 'biweekly';
+    case 'daily':
     case 'weekly':
     case 'monthly':
       return raw;
@@ -676,6 +678,74 @@ class KycNotifier extends StateNotifier<KycDraftState> {
     }
 
     return (retailPrice * 0.15).round().toString();
+  }
+
+  Future<String?> applyDeviceScanHints(DeviceScanHints hints) async {
+    var message = '';
+
+    if (state.imeiNumber.trim().isEmpty && hints.imei?.imei.isNotEmpty == true) {
+      state = state.copyWith(
+        imeiNumber: hints.imei!.imei,
+        imei2: state.imei2.trim().isEmpty && (hints.imei?.imei2?.isNotEmpty ?? false)
+            ? hints.imei!.imei2!
+            : state.imei2,
+      );
+      message = 'IMEI auto-filled (${hints.imei!.source}).';
+    }
+
+    try {
+      final response = await ApiClient.instance.post(
+        '/kyc/application/device/match-scan',
+        data: {
+          if (hints.modelText != null) 'detected_model_text': hints.modelText,
+          if (hints.modelCode != null) 'detected_model_code': hints.modelCode,
+          if (hints.ram != null) 'detected_ram': hints.ram,
+          if (hints.storage != null) 'detected_storage': hints.storage,
+          if (hints.rawText.isNotEmpty) 'raw_text': hints.rawText,
+        },
+      );
+
+      final match = response.data['data'] as Map<String, dynamic>? ?? {};
+      final autoSelected = match['auto_selected'] == true;
+      final modelId = match['phone_model_id']?.toString() ?? '';
+      final brandId = match['brand_id']?.toString() ?? '';
+      final brandName = match['brand_name']?.toString() ?? '';
+      final modelName = match['model_name']?.toString() ?? '';
+
+      if (autoSelected && modelId.isNotEmpty && brandId.isNotEmpty) {
+        final modelsRes = await ApiClient.instance.get(
+          '/kyc/application/device/models',
+          queryParameters: {
+            'brand_id': brandId,
+            'preferred_repayment': _repaymentValueForApi(state.preferredRepayment),
+          },
+        );
+        final models = (modelsRes.data['data'] as List<dynamic>? ?? [])
+            .map((item) => DeviceModelOption.fromJson(item as Map<String, dynamic>))
+            .toList();
+        DeviceModelOption? model;
+        for (final item in models) {
+          if (item.id == modelId) {
+            model = item;
+            break;
+          }
+        }
+
+        if (model != null) {
+          selectBrand(brandId);
+          selectModel(model);
+          return 'Catalog auto-selected $brandName $modelName.${message.isNotEmpty ? ' $message' : ''}';
+        }
+      }
+
+      if (modelName.isNotEmpty) {
+        return '${message.isNotEmpty ? '$message ' : ''}Suggested model: $brandName $modelName.';
+      }
+    } catch (_) {
+      // Keep IMEI-only success if catalog match fails.
+    }
+
+    return message.isEmpty ? null : message;
   }
 
   KycDraftState _applyRecommendedTerms(
@@ -1887,3 +1957,30 @@ final branchesProvider = FutureProvider<List<BranchModel>>((ref) async => []);
 final kycProvider = StateNotifierProvider<KycNotifier, KycDraftState>(
   (ref) => KycNotifier(),
 );
+
+final kycLoanPreviewProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
+  final state = ref.watch(kycProvider);
+  final cashPrice = double.tryParse(state.cashPrice) ?? 0;
+
+  if (cashPrice <= 0) {
+    return null;
+  }
+
+  final response = await ApiClient.instance.post(
+    '/kyc/application/loan-preview',
+    data: {
+      'cash_price': cashPrice,
+      'deposit_amount': double.tryParse(state.depositAmount) ?? 0,
+      'preferred_repayment': _repaymentValueForApi(state.preferredRepayment),
+      if (state.loanInterestRate.trim().isNotEmpty)
+        'interest_rate': double.tryParse(state.loanInterestRate),
+      if (state.loanInterestType.trim().isNotEmpty)
+        'interest_type': state.loanInterestType,
+      if (state.loanDurationWeeks.trim().isNotEmpty)
+        'duration_weeks': int.tryParse(state.loanDurationWeeks),
+    },
+  );
+
+  return response.data['data'] as Map<String, dynamic>?;
+});

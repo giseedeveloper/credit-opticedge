@@ -2,11 +2,12 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-
 import '../../config/constants.dart';
 
 class SignaturePadController extends ChangeNotifier {
   final List<List<Offset>> _strokes = <List<Offset>>[];
+  final Duration _notifyThrottle = const Duration(milliseconds: 32);
+  DateTime? _lastNotifyAt;
 
   List<List<Offset>> get strokes => List<List<Offset>>.unmodifiable(_strokes);
 
@@ -14,7 +15,7 @@ class SignaturePadController extends ChangeNotifier {
 
   void startStroke(Offset point) {
     _strokes.add([point]);
-    notifyListeners();
+    _notifyThrottled();
   }
 
   void appendStrokePoint(Offset point) {
@@ -25,6 +26,11 @@ class SignaturePadController extends ChangeNotifier {
     }
 
     _strokes.last.add(point);
+    _notifyThrottled();
+  }
+
+  void endStroke() {
+    _lastNotifyAt = null;
     notifyListeners();
   }
 
@@ -34,6 +40,18 @@ class SignaturePadController extends ChangeNotifier {
     }
 
     _strokes.clear();
+    _lastNotifyAt = null;
+    notifyListeners();
+  }
+
+  void _notifyThrottled() {
+    final now = DateTime.now();
+    if (_lastNotifyAt != null &&
+        now.difference(_lastNotifyAt!) < _notifyThrottle) {
+      return;
+    }
+
+    _lastNotifyAt = now;
     notifyListeners();
   }
 
@@ -84,89 +102,94 @@ class SignaturePad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, _) {
-        return Container(
-          height: height,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [
-                Colors.white,
-                AppConstants.surfaceMuted,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: controller.hasSignature
-                  ? AppConstants.success
-                  : AppConstants.border,
-              width: controller.hasSignature ? 1.4 : 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) {
+          return Container(
+            height: height,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Colors.white,
+                  AppConstants.surfaceMuted,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(23),
-            child: GestureDetector(
-              onPanStart: (details) {
-                controller.startStroke(details.localPosition);
-              },
-              onPanUpdate: (details) {
-                controller.appendStrokePoint(details.localPosition);
-              },
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: _SignaturePainter(
-                  strokes: controller.strokes,
-                  strokeColor: AppConstants.textPrimary,
-                  showGuide: true,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: controller.hasSignature
+                    ? AppConstants.success
+                    : AppConstants.border,
+                width: controller.hasSignature ? 1.4 : 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
-                child: controller.hasSignature
-                    ? null
-                    : const Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.draw_outlined,
-                              size: 28,
-                              color: AppConstants.textHint,
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Sign here with your finger',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppConstants.textSecondary,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'The signature will be attached to the customer agreement.',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(23),
+              child: GestureDetector(
+                onPanStart: (details) {
+                  controller.startStroke(details.localPosition);
+                },
+                onPanUpdate: (details) {
+                  controller.appendStrokePoint(details.localPosition);
+                },
+                onPanEnd: (_) {
+                  controller.endStroke();
+                },
+                child: CustomPaint(
+                  size: Size.infinite,
+                  painter: _SignaturePainter(
+                    strokes: controller.strokes,
+                    strokeColor: AppConstants.textPrimary,
+                    showGuide: true,
+                  ),
+                  child: controller.hasSignature
+                      ? null
+                      : const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.draw_outlined,
+                                size: 28,
                                 color: AppConstants.textHint,
                               ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+                              SizedBox(height: 8),
+                              Text(
+                                'Sign here with your finger',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppConstants.textSecondary,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'The signature will be attached to the customer agreement.',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppConstants.textHint,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

@@ -14,6 +14,7 @@ class LoanCalculatorService
     public function installmentCount(int $durationWeeks, string $repaymentFrequency): int
     {
         return match ($repaymentFrequency) {
+            'daily' => max(1, $durationWeeks * 7),
             'monthly' => max(1, (int) ceil($durationWeeks / 4.33)),
             'biweekly' => max(1, (int) ceil($durationWeeks / 2)),
             default => max(1, $durationWeeks),
@@ -23,6 +24,7 @@ class LoanCalculatorService
     public function periodRate(float $annualRatePercent, string $repaymentFrequency): float
     {
         return match ($repaymentFrequency) {
+            'daily' => ($annualRatePercent / 100) / 365,
             'monthly' => ($annualRatePercent / 100) / 12,
             'biweekly' => ($annualRatePercent / 100) / 26,
             default => ($annualRatePercent / 100) / 52,
@@ -123,6 +125,7 @@ class LoanCalculatorService
 
         for ($i = 1; $i <= $installments; $i++) {
             $dueDate = match ($loan->repayment_frequency) {
+                'daily' => Carbon::parse($loan->disbursed_at)->addDays($i),
                 'biweekly' => Carbon::parse($loan->disbursed_at)->addWeeks($i * 2),
                 'monthly' => Carbon::parse($loan->disbursed_at)->addMonths($i),
                 default => Carbon::parse($loan->disbursed_at)->addWeeks($i),

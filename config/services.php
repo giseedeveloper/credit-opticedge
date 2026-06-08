@@ -91,6 +91,9 @@ return [
             env('FACE_MATCH_REQUIRED', env('APP_ENV') === 'production'),
             FILTER_VALIDATE_BOOL
         ),
+        // Enforced by the face_match microservice (docker/face_match); Laravel proxies status only.
+        'pass_threshold' => (float) env('FACE_MATCH_PASS_THRESHOLD', 0.40),
+        'review_threshold' => (float) env('FACE_MATCH_REVIEW_THRESHOLD', 0.30),
     ],
 
 ];

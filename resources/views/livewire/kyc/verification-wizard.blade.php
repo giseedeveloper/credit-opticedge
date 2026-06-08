@@ -302,8 +302,9 @@
 
                                 <flux:field>
                                     <flux:label>Repayment Cycle <span class="text-red-500">*</span></flux:label>
-                                    <flux:select wire:model="preferredRepayment">
+                                    <flux:select wire:model.live="preferredRepayment">
                                         <flux:select.option value="">— Chagua —</flux:select.option>
+                                        <flux:select.option value="daily">Daily</flux:select.option>
                                         <flux:select.option value="weekly">Weekly</flux:select.option>
                                         <flux:select.option value="biweekly">Bi-weekly</flux:select.option>
                                         <flux:select.option value="monthly">Monthly</flux:select.option>
@@ -334,7 +335,7 @@
                                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     <flux:field>
                                         <flux:label>Device Price (TZS) <span class="text-red-500">*</span></flux:label>
-                                        <flux:input wire:model="cashPrice" type="number" min="1" placeholder="e.g. 450000" :readonly="$phoneModelId !== ''" />
+                                        <flux:input wire:model.live="cashPrice" type="number" min="1" placeholder="e.g. 450000" :readonly="$phoneModelId !== ''" />
                                         @if($phoneModelId !== '')
                                         <p class="mt-1 text-xs text-gray-500">Locked from catalog when a model is selected.</p>
                                         @endif
@@ -342,13 +343,38 @@
                                     </flux:field>
                                     <flux:field>
                                         <flux:label>Deposit / Down Payment (TZS) <span class="text-red-500">*</span></flux:label>
-                                        <flux:input wire:model="depositAmount" type="number" min="0" placeholder="e.g. 50000" :readonly="$phoneModelId !== ''" />
+                                        <flux:input wire:model.live="depositAmount" type="number" min="0" placeholder="e.g. 50000" :readonly="$phoneModelId !== ''" />
                                         @if($phoneModelId !== '')
                                         <p class="mt-1 text-xs text-gray-500">Auto-calculated from the selected model.</p>
                                         @endif
                                         <flux:error name="depositAmount" />
                                     </flux:field>
                                 </div>
+
+                                @php $loanPreview = $this->buildLoanPreview(); @endphp
+                                @if(! empty($loanPreview))
+                                <div class="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4">
+                                    <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-600">Loan Preview</p>
+                                    <div class="mt-3 grid grid-cols-2 gap-3 text-sm lg:grid-cols-4">
+                                        <div>
+                                            <p class="text-xs text-emerald-700/80">Financed amount</p>
+                                            <p class="font-black text-emerald-900">TZS {{ number_format($loanPreview['financed_principal']) }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-emerald-700/80">{{ ucfirst($loanPreview['repayment_frequency']) }} installment</p>
+                                            <p class="font-black text-emerald-900">TZS {{ number_format($loanPreview['installment_amount']) }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-emerald-700/80">Total payable</p>
+                                            <p class="font-black text-emerald-900">TZS {{ number_format($loanPreview['total_payable']) }}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-emerald-700/80">Payments</p>
+                                            <p class="font-black text-emerald-900">{{ number_format($loanPreview['installment_count']) }} × {{ ucfirst($loanPreview['repayment_frequency']) }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endif
                             </div>
                         </div>
                         @endif
@@ -394,13 +420,8 @@
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <flux:field>
-                                    <flux:label>NIDA Number <span class="text-red-500">*</span></flux:label>
-                                    <flux:input wire:model="nidaNumber" placeholder="20-digit NIDA" class="font-mono" maxlength="20" />
-                                    <flux:error name="nidaNumber" />
-                                </flux:field>
-                                <flux:field>
                                     <flux:label>ID Type Used <span class="text-red-500">*</span></flux:label>
-                                    <flux:select wire:model="idType">
+                                    <flux:select wire:model.live="idType">
                                         <flux:select.option value="">— Select —</flux:select.option>
                                         <flux:select.option value="nida">NIDA Card</flux:select.option>
                                         <flux:select.option value="passport">Passport</flux:select.option>
@@ -408,6 +429,18 @@
                                         <flux:select.option value="voter_card">Voter Card</flux:select.option>
                                     </flux:select>
                                     <flux:error name="idType" />
+                                </flux:field>
+                                <flux:field>
+                                    @php
+                                        $idRules = app(\App\Services\KycIdentityDocumentRules::class);
+                                        $idLabel = $idRules->documentNumberLabel($idType !== '' ? $idType : null);
+                                        $idHint = $idRules->documentNumberHint($idType !== '' ? $idType : null);
+                                        $idMax = $idRules->documentNumberMaxLength($idType !== '' ? $idType : null);
+                                    @endphp
+                                    <flux:label>{{ $idLabel }} <span class="text-red-500">*</span></flux:label>
+                                    <flux:input wire:model="nidaNumber" placeholder="{{ $idHint }}" class="font-mono" maxlength="{{ $idMax }}" />
+                                    <p class="mt-1 text-xs text-gray-500">{{ $idHint }}</p>
+                                    <flux:error name="nidaNumber" />
                                 </flux:field>
                             </div>
                             <div class="grid grid-cols-2 gap-3">

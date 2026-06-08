@@ -64,6 +64,22 @@ test('monthly schedules use installment count derived from weeks', function () {
         ->and(Carbon::parse($loan->disbursed_at)->diffInDays(Carbon::parse($firstDue)))->toBeGreaterThanOrEqual(28);
 });
 
+test('daily schedules use one installment per day in the loan term', function () {
+    $loan = createTestLoan(
+        principal: 500_000,
+        weeks: 2,
+        type: 'flat',
+        repaymentFrequency: 'daily',
+    );
+
+    $this->service->createSchedule($loan);
+
+    $firstDue = $loan->repaymentSchedules()->orderBy('installment_number')->value('due_date');
+
+    expect($loan->repaymentSchedules()->count())->toBe(14)
+        ->and(Carbon::parse($loan->disbursed_at)->diffInDays(Carbon::parse($firstDue)))->toEqual(1);
+});
+
 test('biweekly schedules use half-week installment count', function () {
     $loan = createTestLoan(
         principal: 500_000,

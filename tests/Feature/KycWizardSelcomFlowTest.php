@@ -166,6 +166,8 @@ it('releases the asset after approved payment and agreement checks are complete'
         'reviewed_at' => now()->subMinutes(5),
     ]);
 
+    kycMarkPreHandoverComplete($customer);
+
     Livewire::test(CustomerProfiles::class)
         ->call('releaseAsset', $customer->id);
 

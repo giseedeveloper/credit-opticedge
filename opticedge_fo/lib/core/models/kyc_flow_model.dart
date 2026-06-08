@@ -303,14 +303,46 @@ class KycAgreementContext {
       );
 }
 
+class KycPreHandoverChecklist {
+  final bool deviceUnboxed;
+  final bool deviceBootVerified;
+  final bool mdmLockConfirmed;
+  final String? completedAt;
+  final String? mdmLockStatus;
+
+  const KycPreHandoverChecklist({
+    this.deviceUnboxed = false,
+    this.deviceBootVerified = false,
+    this.mdmLockConfirmed = false,
+    this.completedAt,
+    this.mdmLockStatus,
+  });
+
+  bool get isComplete =>
+      deviceUnboxed && deviceBootVerified && mdmLockConfirmed;
+
+  factory KycPreHandoverChecklist.fromJson(Map<String, dynamic> json) {
+    return KycPreHandoverChecklist(
+      deviceUnboxed: json['device_unboxed'] == true,
+      deviceBootVerified: json['device_boot_verified'] == true,
+      mdmLockConfirmed: json['mdm_lock_confirmed'] == true,
+      completedAt: json['completed_at']?.toString(),
+      mdmLockStatus: json['mdm_lock_status']?.toString(),
+    );
+  }
+}
+
 class KycReleaseContext {
   final String status;
   final String? releasedAt;
   final String? releasedBy;
   final bool canReleaseAsset;
   final List<String> eligibilityBlockers;
+  final KycPreHandoverChecklist preHandoverChecklist;
   final String? inventoryUnitId;
   final String? inventoryUnitStatus;
+  final String? inventoryMdmId;
+  final String? inventoryLockStatus;
 
   const KycReleaseContext({
     this.status = 'pending',
@@ -318,8 +350,11 @@ class KycReleaseContext {
     this.releasedBy,
     this.canReleaseAsset = false,
     this.eligibilityBlockers = const [],
+    this.preHandoverChecklist = const KycPreHandoverChecklist(),
     this.inventoryUnitId,
     this.inventoryUnitStatus,
+    this.inventoryMdmId,
+    this.inventoryLockStatus,
   });
 
   factory KycReleaseContext.fromJson(Map<String, dynamic> json) {
@@ -334,14 +369,23 @@ class KycReleaseContext {
       }
     }
 
+    final checklistRaw = json['pre_handover_checklist'];
+
     return KycReleaseContext(
       status: json['status']?.toString() ?? 'pending',
       releasedAt: json['released_at']?.toString(),
       releasedBy: json['released_by']?.toString(),
       canReleaseAsset: json['can_release_asset'] == true,
       eligibilityBlockers: blockers,
+      preHandoverChecklist: checklistRaw is Map
+          ? KycPreHandoverChecklist.fromJson(
+              Map<String, dynamic>.from(checklistRaw),
+            )
+          : const KycPreHandoverChecklist(),
       inventoryUnitId: json['inventory_unit_id']?.toString(),
       inventoryUnitStatus: json['inventory_unit_status']?.toString(),
+      inventoryMdmId: json['inventory_mdm_id']?.toString(),
+      inventoryLockStatus: json['inventory_lock_status']?.toString(),
     );
   }
 }

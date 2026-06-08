@@ -99,6 +99,7 @@ Route::prefix('v1')->middleware(['api.version:1'])->group(function () {
             ->group(function () {
                 Route::post('/{id}/release-asset', [KycApiController::class, 'releaseAsset']);
                 Route::post('/{id}/handover-checklist', [KycApiController::class, 'uploadHandoverChecklist']);
+                Route::post('/{id}/pre-handover-checklist', [KycApiController::class, 'submitPreHandoverChecklist']);
             });
 
         Route::get('/kyc/branches', [KycApiController::class, 'branches'])
@@ -112,6 +113,9 @@ Route::prefix('v1')->middleware(['api.version:1'])->group(function () {
                 Route::get('/device/brands', [KycApiController::class, 'deviceBrands']);
                 Route::get('/device/models', [KycApiController::class, 'deviceModels']);
                 Route::get('/device/inventory', [KycApiController::class, 'deviceInventory']);
+                Route::post('/device/match-scan', [KycApiController::class, 'deviceMatchScan']);
+                Route::post('/loan-preview', [KycApiController::class, 'loanPreview']);
+                Route::get('/identity-rules', [KycApiController::class, 'identityDocumentRules']);
                 Route::get('/stage-flow', [KycApiController::class, 'stageFlow']);
                 // Step 1: creates the draft customer, returns customer_id
                 Route::post('/stage1', [KycApiController::class, 'step1Device']);

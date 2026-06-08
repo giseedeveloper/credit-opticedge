@@ -28,7 +28,7 @@ class CustomerLoanProvisioningService
     public function defaultTerms(?string $preferredRepayment = null): array
     {
         $defaults = config('credit.defaults');
-        $repaymentFrequency = in_array($preferredRepayment, ['weekly', 'biweekly', 'monthly'], true)
+        $repaymentFrequency = in_array($preferredRepayment, ['daily', 'weekly', 'biweekly', 'monthly'], true)
             ? $preferredRepayment
             : ($defaults['repayment_frequency'] ?? 'monthly');
 

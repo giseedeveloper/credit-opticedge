@@ -9,6 +9,7 @@ import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
 import '../../../widgets/common/face_verification_hero_card.dart';
 import '../../../widgets/common/glass_card.dart';
+import '../../../core/utils/id_document_rules.dart';
 import '../../../widgets/common/photo_picker_tile.dart';
 
 class Step2IdentityScreen extends ConsumerStatefulWidget {
@@ -269,21 +270,21 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                         icon: _idTypeIcon(type),
                         compact: true,
                         onTap: () {
+                          if (state.idType != type) {
+                            _nida.clear();
+                          }
                           ref.read(kycProvider.notifier).update(
-                                (current) => current.copyWith(idType: type),
+                                (current) => current.copyWith(
+                                  idType: type,
+                                  nidaNumber: '',
+                                ),
                               );
                         },
                       );
                     }).toList(),
                   ),
                   const SizedBox(height: 14),
-                  _field(
-                    _nida,
-                    'NIDA / ID Number',
-                    icon: Icons.credit_card_outlined,
-                    required: true,
-                    hint: 'Enter the ID number exactly as shown',
-                  ),
+                  _idNumberField(state.idType),
                 ],
               ),
             ).animate().fadeIn(delay: 120.ms).slideY(begin: 0.06, end: 0),
@@ -842,6 +843,26 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
             ),
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _idNumberField(String idType) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _label(IdDocumentRules.labelFor(idType)),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _nida,
+          maxLength: IdDocumentRules.maxLengthFor(idType),
+          decoration: InputDecoration(
+            hintText: IdDocumentRules.hintFor(idType),
+            prefixIcon: Icon(_idTypeIcon(idType), size: 18),
+            counterText: '',
+          ),
+          validator: (value) => IdDocumentRules.validate(idType, value),
+        ),
       ],
     );
   }

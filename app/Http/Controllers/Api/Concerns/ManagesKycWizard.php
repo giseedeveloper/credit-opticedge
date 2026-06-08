@@ -19,6 +19,7 @@ use App\Services\FaceMatchCoordinator;
 use App\Services\IMEITrackingService;
 use App\Services\KycAccessoryOfferService;
 use App\Services\KycDeviceCatalogService;
+use App\Services\KycIdentityDocumentRules;
 use App\Services\KycPhoneService;
 use App\Services\KycStageFlowService;
 use App\Services\SelcomCheckoutService;
@@ -334,14 +335,19 @@ trait ManagesKycWizard
     ): JsonResponse {
         $customer = $this->findAgentCustomerOrFail($customerId, ['dealer']);
 
+        $identityRules = app(KycIdentityDocumentRules::class);
+
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'min:2', 'max:60'],
             'middle_name' => ['nullable', 'string', 'max:60'],
             'last_name' => ['required', 'string', 'min:2', 'max:60'],
             'gender' => ['required', 'in:male,female,other'],
             'date_of_birth' => ['nullable', 'date', 'before:today'],
-            'nida_number' => ['required', 'string', 'size:20', 'unique:customers,nida_number,'.$customer->id],
             'id_type' => ['required', 'in:nida,passport,driving_license,voter_card'],
+            'nida_number' => $identityRules->documentNumberRules(
+                $request->string('id_type')->toString() ?: null,
+                $customer->id
+            ),
             'id_front_photo' => ['nullable', 'image', 'max:5120'],
             'id_back_photo' => ['nullable', 'image', 'max:5120'],
             'headshot_photo' => ['nullable', 'image', 'max:5120'],

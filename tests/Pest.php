@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Customer;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /*
@@ -14,7 +16,7 @@ use Tests\TestCase;
 */
 
 pest()->extend(TestCase::class)
-    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+    ->use(RefreshDatabase::class)
     ->in('Feature');
 
 /*
@@ -43,7 +45,20 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
-{
-    // ..
+function kycMarkPreHandoverComplete(
+    Customer $customer,
+    ?string $mdmStatus = 'skipped_no_mdm_id',
+): Customer {
+    $metadata = $customer->metadata ?? [];
+    $metadata['pre_handover_checklist'] = [
+        'device_unboxed' => true,
+        'device_boot_verified' => true,
+        'mdm_lock_confirmed' => true,
+        'completed_at' => now()->toIso8601String(),
+        'completed_by' => 'test',
+        'mdm_lock_status' => $mdmStatus,
+    ];
+    $customer->update(['metadata' => $metadata]);
+
+    return $customer->fresh();
 }

@@ -16,7 +16,10 @@ use App\Services\DeviceIdentifierScanService;
 use App\Services\ExternalDeviceCatalogService;
 use App\Services\IMEITrackingService;
 use App\Services\KycAccessoryOfferService;
+use App\Services\KycDeviceCatalogMatcher;
 use App\Services\KycDeviceCatalogService;
+use App\Services\KycIdentityDocumentRules;
+use App\Services\KycLoanPreviewService;
 use App\Services\KycPhoneService;
 use App\Services\SelcomCheckoutService;
 use Illuminate\Support\Facades\Storage;
@@ -255,7 +258,7 @@ class VerificationWizard extends Component
             'imei2' => ['nullable', 'string', 'digits:15'],
             'cashPrice' => ['required', 'numeric', 'min:1'],
             'depositAmount' => ['required', 'numeric', 'min:0'],
-            'preferredRepayment' => ['required', 'in:weekly,biweekly,monthly'],
+            'preferredRepayment' => ['required', 'in:daily,weekly,biweekly,monthly'],
             'imeiPhoto' => ['nullable', 'image', 'max:5120'],
             'deviceBoxPhoto' => ['nullable', 'image', 'max:5120'],
             'devicePhoto' => ['nullable', 'image', 'max:5120'],
@@ -266,11 +269,13 @@ class VerificationWizard extends Component
     /** @return array<string,mixed> */
     private function step2Rules(): array
     {
+        $identityRules = app(KycIdentityDocumentRules::class);
+
         return [
             'firstName' => ['required', 'string', 'min:2', 'max:60'],
             'lastName' => ['required', 'string', 'min:2', 'max:60'],
             'gender' => ['required', 'in:male,female,other'],
-            'nidaNumber' => ['required', 'string', 'size:20', 'unique:customers,nida_number'],
+            'nidaNumber' => $identityRules->documentNumberRules($this->idType !== '' ? $this->idType : null),
             'idType' => ['required', 'in:nida,passport,driving_license,voter_card'],
             'idFrontPhoto' => ['required', 'image', 'max:5120'],
             'idBackPhoto' => ['required', 'image', 'max:5120'],
@@ -572,25 +577,6 @@ class VerificationWizard extends Component
         $detectedStorage = is_string($payload['detected_storage'] ?? null) ? trim((string) $payload['detected_storage']) : null;
         $linkedUnit = $catalog->accessibleUnit(auth()->user(), $this->inventoryUnitId);
 
-        if (! $detectedImei && ! $detectedSerial) {
-            $this->scanFeedbackTone = 'amber';
-            $this->scanFeedbackMessage = 'Uploaded image was received, but no clear IMEI or serial number was detected. You can still enter the IMEI manually.';
-
-            return;
-        }
-
-        // Helpful UX: if user hasn't started searching inventory yet, auto-fill the search box
-        // with the best identifier so they can select the right stock unit faster.
-        if ($this->inventorySearch === '') {
-            $this->inventorySearch = (string) ($detectedImei ?: $detectedSerial ?: '');
-        }
-
-        // If a device box scan detected an email and the user hasn't entered one, prefill it.
-        if ($this->email === '' && $detectedEmail) {
-            $this->email = strtolower($detectedEmail);
-        }
-
-        // Keep a small hint in scan metadata (no DB write here; it will persist on submit).
         if ($detectedModelText) {
             $this->deviceScan['detected_model_text'] = $detectedModelText;
         }
@@ -605,6 +591,64 @@ class VerificationWizard extends Component
         }
         if ($detectedStorage) {
             $this->deviceScan['detected_storage'] = $detectedStorage;
+        }
+
+        $catalogMatch = app(KycDeviceCatalogMatcher::class)->matchFromScan([
+            'detected_model_text' => $detectedModelText,
+            'detected_model_code' => $detectedModelCode,
+            'detected_ram' => $detectedRam,
+            'detected_storage' => $detectedStorage,
+            'raw_text' => is_string($payload['raw_text'] ?? null) ? $payload['raw_text'] : $scan['raw_text'] ?? null,
+        ]);
+
+        if ($catalogMatch['confidence'] > 0) {
+            $this->deviceScan['catalog_match'] = $catalogMatch;
+        }
+
+        if ($catalogMatch['auto_selected'] && $this->phoneModelId === '' && $catalogMatch['phone_model_id']) {
+            $phoneModel = PhoneModel::query()
+                ->with('brand')
+                ->whereKey($catalogMatch['phone_model_id'])
+                ->where('is_active', true)
+                ->first();
+
+            if ($phoneModel) {
+                $this->brandId = (string) $phoneModel->brand_id;
+                $this->phoneModelId = (string) $phoneModel->id;
+                $this->deviceSpecs = $catalog->buildDeviceSpecs($phoneModel);
+                $this->cashPrice = (string) ((float) $phoneModel->retail_price);
+                $this->depositAmount = (string) ($catalog->recommendedDepositForRetailPrice($phoneModel->retail_price) ?? '');
+                $this->seedLoanTermsFromDefaults();
+            }
+        }
+
+        if (! $detectedImei && ! $detectedSerial) {
+            if ($catalogMatch['auto_selected'] && filled($catalogMatch['model_name'])) {
+                $this->scanFeedbackTone = 'emerald';
+                $this->scanFeedbackMessage = "Model auto-selected from scan: {$catalogMatch['brand_name']} {$catalogMatch['model_name']}. Enter IMEI manually if needed.";
+
+                return;
+            }
+
+            if ($catalogMatch['confidence'] >= 0.35 && filled($catalogMatch['model_name'])) {
+                $this->scanFeedbackTone = 'amber';
+                $this->scanFeedbackMessage = "No IMEI detected. Suggested model: {$catalogMatch['brand_name']} {$catalogMatch['model_name']}. Enter IMEI manually.";
+
+                return;
+            }
+
+            $this->scanFeedbackTone = 'amber';
+            $this->scanFeedbackMessage = 'Uploaded image was received, but no clear IMEI or serial number was detected. You can still enter the IMEI manually.';
+
+            return;
+        }
+
+        if ($this->inventorySearch === '') {
+            $this->inventorySearch = (string) ($detectedImei ?: $detectedSerial ?: '');
+        }
+
+        if ($this->email === '' && $detectedEmail) {
+            $this->email = strtolower($detectedEmail);
         }
 
         // If the user hasn't selected a model yet, build a helpful draft specs string
@@ -653,6 +697,31 @@ class VerificationWizard extends Component
 
         $this->scanFeedbackTone = 'emerald';
         $this->scanFeedbackMessage = 'Identifiers were captured from the uploaded image and filled automatically.';
+
+        if ($catalogMatch['auto_selected'] && filled($catalogMatch['model_name'])) {
+            $this->scanFeedbackMessage .= " Catalog auto-selected {$catalogMatch['brand_name']} {$catalogMatch['model_name']}.";
+        } elseif ($catalogMatch['confidence'] >= 0.35 && filled($catalogMatch['model_name'])) {
+            $this->scanFeedbackMessage .= " Suggested model: {$catalogMatch['brand_name']} {$catalogMatch['model_name']}.";
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function buildLoanPreview(): array
+    {
+        if ((float) $this->cashPrice <= 0) {
+            return [];
+        }
+
+        return app(KycLoanPreviewService::class)->preview([
+            'cash_price' => $this->cashPrice,
+            'deposit_amount' => $this->depositAmount,
+            'preferred_repayment' => $this->preferredRepayment,
+            'interest_rate' => $this->loanInterestRate,
+            'interest_type' => $this->loanInterestType,
+            'duration_weeks' => $this->loanDurationWeeks,
+        ]);
     }
 
     public function nextStep(): void
@@ -1055,7 +1124,7 @@ class VerificationWizard extends Component
             'imei2' => ['nullable', 'string', 'digits:15'],
             'cashPrice' => ['required', 'numeric', 'min:1'],
             'depositAmount' => ['required', 'numeric', 'min:0'],
-            'preferredRepayment' => ['required', 'in:weekly,biweekly,monthly'],
+            'preferredRepayment' => ['required', 'in:daily,weekly,biweekly,monthly'],
             // Step 2
             'firstName' => ['required', 'string', 'min:2', 'max:60'],
             'middleName' => ['nullable', 'string', 'max:60'],

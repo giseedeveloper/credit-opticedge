@@ -6,6 +6,7 @@ use App\Http\Requests\Api\Kyc\HandoverChecklistRequest;
 use App\Http\Requests\Api\Kyc\PreHandoverChecklistRequest;
 use App\Models\Customer;
 use App\Services\CustomerLoanProvisioningService;
+use App\Services\FoAgentDashboardService;
 use App\Services\KycStageFlowService;
 use App\Services\PreHandoverChecklistService;
 use App\Traits\ApiResponse;
@@ -17,35 +18,19 @@ trait ManagesKycAgentPortal
 {
     use ApiResponse;
 
-    public function dashboard(): JsonResponse
+    public function dashboard(FoAgentDashboardService $dashboardService): JsonResponse
     {
-        $foId = auth()->id();
-
-        $base = Customer::where('registered_by', $foId);
-
-        $total = (clone $base)->count();
-        $pending = (clone $base)->whereHas('latestVerification', fn ($q) => $q->where('status', 'pending'))->count();
-        $verified = (clone $base)->whereHas('latestVerification', fn ($q) => $q->where('status', 'approved'))->count();
-        $declined = (clone $base)->whereHas('latestVerification', fn ($q) => $q->where('status', 'rejected'))->count();
-        $drafts = (clone $base)
-            ->whereDoesntHave('verifications')
-            ->whereNotNull('kyc_fo_saved_as_draft_at')
-            ->count();
-
-        return $this->successResponse([
-            'total_registered' => $total,
-            'pending' => $pending,
-            'verified' => $verified,
-            'declined' => $declined,
-            'drafts' => $drafts,
-        ], 'Dashboard stats retrieved.');
+        return $this->successResponse(
+            $dashboardService->statsForAgent(auth()->id()),
+            'Dashboard stats retrieved.',
+        );
     }
 
     // ──────────────────────────────────────────────────────────────
     // MY CUSTOMER LIST (paginated)
     // GET /api/v1/kyc/customers?status=pending&search=John&per_page=20
     // ──────────────────────────────────────────────────────────────
-    public function myCustomers(Request $request): JsonResponse
+    public function myCustomers(Request $request, KycStageFlowService $stageFlow): JsonResponse
     {
         $request->validate([
             'status' => ['nullable', 'in:pending,approved,verified,rejected,draft'],
@@ -82,26 +67,39 @@ trait ManagesKycAgentPortal
 
         $customers = $query->latest()->paginate($request->integer('per_page', 20));
 
-        $items = $customers->getCollection()->map(fn (Customer $c) => [
-            'id' => $c->id,
-            'full_name' => $c->full_name,
-            'phone' => $c->phone,
-            'gender' => $c->gender,
-            'kyc_status' => $c->verifications_count === 0
-                ? 'draft'
-                : ($c->kyc_status ?: ($c->latestKycVerification?->status ?? 'draft')),
-            'auto_check' => $c->latestKycVerification?->auto_check_status
-                ?? $c->latestVerification?->auto_check_status,
-            'face_match' => [
-                'status' => $c->latestKycVerification?->face_match_status
-                    ?? $c->latestVerification?->face_match_status,
-                'score' => $c->latestKycVerification?->face_match_score
-                    ?? $c->latestVerification?->face_match_score,
-            ],
-            'dealer' => $c->dealer?->name,
-            'headshot_url' => $this->photoUrl($c->headshot_photo_path),
-            'registered_at' => $c->created_at->toDateTimeString(),
-        ]);
+        $items = $customers->getCollection()->map(function (Customer $c) use ($stageFlow) {
+            $faceMatchStatus = $c->latestKycVerification?->face_match_status
+                ?? $c->latestVerification?->face_match_status;
+            $isDraft = $c->verifications_count === 0;
+            $savedAt = $c->kyc_fo_saved_as_draft_at;
+
+            return [
+                'id' => $c->id,
+                'full_name' => $c->full_name,
+                'phone' => $c->phone,
+                'gender' => $c->gender,
+                'kyc_status' => $isDraft
+                    ? 'draft'
+                    : ($c->kyc_status ?: ($c->latestKycVerification?->status ?? 'draft')),
+                'auto_check' => $c->latestKycVerification?->auto_check_status
+                    ?? $c->latestVerification?->auto_check_status,
+                'face_match' => [
+                    'status' => $faceMatchStatus,
+                    'score' => $c->latestKycVerification?->face_match_score
+                        ?? $c->latestVerification?->face_match_score,
+                    'needs_review' => in_array($faceMatchStatus, ['review', 'failed'], true),
+                ],
+                'dealer' => $c->dealer?->name,
+                'resume_step' => $this->determineResumeStep($c),
+                'resume_stage' => $stageFlow->determineResumeStage($c),
+                'ready_for_release' => $c->isReadyForAssetRelease(),
+                'is_stale_draft' => $isDraft
+                    && $savedAt !== null
+                    && $savedAt->lt(now()->subDay()),
+                'headshot_url' => $this->photoUrl($c->headshot_photo_path),
+                'registered_at' => $c->created_at->toDateTimeString(),
+            ];
+        });
 
         return $this->successResponse([
             'data' => $items,

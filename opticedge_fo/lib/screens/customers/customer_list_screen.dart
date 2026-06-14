@@ -305,14 +305,14 @@ class _CustomerCard extends StatelessWidget {
                                 color: AppConstants.textSecondary),
                             overflow: TextOverflow.ellipsis),
                       ),
-                      if (item.branch != null) ...[
+                      if (item.dealer != null) ...[
                         const SizedBox(width: 8),
-                        const Icon(Icons.location_on_outlined,
+                        const Icon(Icons.storefront_outlined,
                             size: 12, color: AppConstants.textHint),
                         const SizedBox(width: 2),
                         Flexible(
                           child: Text(
-                            item.branch!,
+                            item.dealer!,
                             style: const TextStyle(
                                 fontSize: 11, color: AppConstants.textHint),
                             overflow: TextOverflow.ellipsis,

@@ -27,12 +27,23 @@ final dashboardProvider =
   (ref) => DashboardNotifier(),
 );
 
-// ─── Branches ────────────────────────────────────────────────────
-final branchesProvider = FutureProvider<List<BranchModel>>((ref) async {
-  final res = await ApiClient.instance.get('/kyc/branches');
-  final list = res.data['data'] as List<dynamic>;
+Future<void> refreshDashboardHome(WidgetRef ref) async {
+  await ref.read(dashboardProvider.notifier).load();
+  ref.invalidate(recentCustomersProvider);
+}
+
+// ─── Recent customers (home feed, independent of list tab filter) ─
+final recentCustomersProvider =
+    FutureProvider.autoDispose<List<CustomerListItem>>((ref) async {
+  final res = await ApiClient.instance.get(
+    '/kyc/customers',
+    queryParameters: const {'page': 1, 'per_page': 5},
+  );
+  final body = res.data['data'] as Map<String, dynamic>;
+  final list = body['data'] as List<dynamic>;
+
   return list
-      .map((e) => BranchModel.fromJson(e as Map<String, dynamic>))
+      .map((e) => CustomerListItem.fromJson(e as Map<String, dynamic>))
       .toList();
 });
 

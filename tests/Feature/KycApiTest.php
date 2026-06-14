@@ -1224,7 +1224,52 @@ it('save-draft marks fo timestamp and draft tab lists only explicit drafts', fun
 
     $this->getJson('/api/v1/kyc/dashboard')
         ->assertOk()
-        ->assertJsonPath('data.drafts', 2);
+        ->assertJsonPath('data.drafts', 2)
+        ->assertJsonStructure([
+            'data' => [
+                'total_registered',
+                'pending',
+                'verified',
+                'declined',
+                'drafts',
+                'stale_drafts',
+                'face_review',
+                'ready_for_release',
+                'actionable_count',
+                'actions',
+            ],
+        ]);
+});
+
+it('returns enriched customer list fields for fo home', function () {
+    $customer = Customer::factory()->create([
+        'registered_by' => $this->agent->id,
+        'first_name' => 'Home',
+        'last_name' => 'Feed',
+        'phone' => '0712000999',
+        'kyc_fo_saved_as_draft_at' => now(),
+    ]);
+
+    $this->getJson('/api/v1/kyc/customers?per_page=5')
+        ->assertOk()
+        ->assertJsonPath('data.data.0.id', $customer->id)
+        ->assertJsonStructure([
+            'data' => [
+                'data' => [
+                    '*' => [
+                        'id',
+                        'full_name',
+                        'kyc_status',
+                        'dealer',
+                        'face_match',
+                        'resume_step',
+                        'resume_stage',
+                        'ready_for_release',
+                        'is_stale_draft',
+                    ],
+                ],
+            ],
+        ]);
 });
 
 it('save-draft rejects placeholder customers and submitted applications', function () {

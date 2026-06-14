@@ -8,7 +8,14 @@ class CustomerListItem {
   final String? gender;
   final String kycStatus;
   final String? autoCheck;
-  final String? branch;
+  final String? dealer;
+  final String? faceMatchStatus;
+  final double? faceMatchScore;
+  final bool faceMatchNeedsReview;
+  final int? resumeStep;
+  final int? resumeStage;
+  final bool readyForRelease;
+  final bool isStaleDraft;
   final String? headshotUrl;
   final String registeredAt;
 
@@ -19,24 +26,41 @@ class CustomerListItem {
     this.gender,
     this.kycStatus = 'draft',
     this.autoCheck,
-    this.branch,
+    this.dealer,
+    this.faceMatchStatus,
+    this.faceMatchScore,
+    this.faceMatchNeedsReview = false,
+    this.resumeStep,
+    this.resumeStage,
+    this.readyForRelease = false,
+    this.isStaleDraft = false,
     this.headshotUrl,
     required this.registeredAt,
   });
 
-  factory CustomerListItem.fromJson(Map<String, dynamic> json) =>
-      CustomerListItem(
-        id: json['id']?.toString() ?? '',
-        fullName: json['full_name']?.toString() ?? '',
-        phone: json['phone']?.toString() ?? '',
-        gender: json['gender']?.toString(),
-        kycStatus: json['kyc_status']?.toString() ?? 'draft',
-        autoCheck: json['auto_check']?.toString(),
-        branch: json['branch']?.toString(),
-        headshotUrl:
-            AppConstants.resolveMediaUrl(json['headshot_url']?.toString()),
-        registeredAt: json['registered_at']?.toString() ?? '',
-      );
+  factory CustomerListItem.fromJson(Map<String, dynamic> json) {
+    final faceMatch = json['face_match'] as Map<String, dynamic>?;
+
+    return CustomerListItem(
+      id: json['id']?.toString() ?? '',
+      fullName: json['full_name']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
+      gender: json['gender']?.toString(),
+      kycStatus: json['kyc_status']?.toString() ?? 'draft',
+      autoCheck: json['auto_check']?.toString(),
+      dealer: json['dealer']?.toString() ?? json['branch']?.toString(),
+      faceMatchStatus: faceMatch?['status']?.toString(),
+      faceMatchScore: (faceMatch?['score'] as num?)?.toDouble(),
+      faceMatchNeedsReview: faceMatch?['needs_review'] == true,
+      resumeStep: (json['resume_step'] as num?)?.toInt(),
+      resumeStage: (json['resume_stage'] as num?)?.toInt(),
+      readyForRelease: json['ready_for_release'] == true,
+      isStaleDraft: json['is_stale_draft'] == true,
+      headshotUrl:
+          AppConstants.resolveMediaUrl(json['headshot_url']?.toString()),
+      registeredAt: json['registered_at']?.toString() ?? '',
+    );
+  }
 }
 
 class CustomerDetail {

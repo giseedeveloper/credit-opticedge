@@ -71,7 +71,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         child: RefreshIndicator(
           color: AppConstants.primary,
           onRefresh: () async {
-            ref.read(dashboardProvider.notifier).load();
+            await ref.read(dashboardProvider.notifier).load();
+            ref.invalidate(recentCustomersProvider);
+            await ref.read(customerListProvider.notifier).load(reset: true);
           },
           child: CustomScrollView(
             slivers: [
@@ -83,7 +85,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     dashAsync.when(
                       loading: () => _buildStatsShimmer(),
                       error: (e, _) => _buildErrorBanner(e.toString()),
-                      data: (stats) => _buildStatsGrid(stats),
+                      data: (stats) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (stats.actions.isNotEmpty) ...[
+                            _buildActionInbox(stats),
+                            const SizedBox(height: 20),
+                          ],
+                          _buildStatsGrid(stats),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 28),
                     _DashboardSectionHeader(
@@ -259,13 +270,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                         const SizedBox(width: 12),
                         _heroActionButton(
                           icon: Icons.notifications_none_rounded,
-                          badgeCount:
-                              insight.pending > 0 ? insight.pending : null,
-                          semanticsLabel: insight.pending > 0
-                              ? 'View ${insight.pending} pending applications'
-                              : 'No pending applications',
-                          onTap: insight.pending > 0
-                              ? () => context.go('/customers?tab=pending')
+                          badgeCount: insight.actionableCount > 0
+                              ? insight.actionableCount
+                              : null,
+                          semanticsLabel: insight.actionableCount > 0
+                              ? 'View ${insight.actionableCount} actionable items'
+                              : 'No actionable items',
+                          onTap: insight.actions.isNotEmpty
+                              ? () => _showActionInboxSheet(insight)
                               : null,
                         ),
                         const SizedBox(width: 10),
@@ -514,22 +526,190 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
+  void _showActionInboxSheet(DashboardStats stats) {
+    final theme = Theme.of(context);
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.dividerColor,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Action inbox',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${stats.actionableCount} items need your attention',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    color: theme.textTheme.bodyMedium?.color,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...stats.actions.map((action) {
+                  final color = _actionSeverityColor(action.severity);
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${action.count}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.w800,
+                            color: color,
+                          ),
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      action.title,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    subtitle: Text(action.subtitle),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      context.go('/customers?tab=${action.tab}');
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Color _actionSeverityColor(String severity) {
+    return switch (severity) {
+      'warning' => DesignTokens.statAmber,
+      'success' => DesignTokens.statGreen,
+      'danger' => AppConstants.error,
+      _ => DesignTokens.statBlue,
+    };
+  }
+
+  Widget _buildActionInbox(DashboardStats stats) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final preview = stats.actions.take(3).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _DashboardSectionHeader(
+          title: 'Action inbox',
+          subtitle: '${stats.actionableCount} items need attention',
+          trailing: stats.actions.length > 3
+              ? TextButton(
+                  onPressed: () => _showActionInboxSheet(stats),
+                  child: const Text('See all'),
+                )
+              : null,
+        ),
+        const SizedBox(height: 12),
+        ...preview.map((action) {
+          final color = _actionSeverityColor(action.severity);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: GestureDetector(
+              onTap: () => context.go('/customers?tab=${action.tab}'),
+              child: GlassCard.surface(
+                context,
+                borderRadius: BorderRadius.circular(18),
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: isDark ? 0.2 : 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${action.count}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.w800,
+                            color: color,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            action.title,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            action.subtitle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              color: theme.textTheme.bodyMedium?.color,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded, color: color),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
   Widget _buildStatsGrid(DashboardStats stats) {
     final s = S.of(ref);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final items = [
-      _StatData(
-        label: s.total,
-        value: stats.totalRegistered.toString(),
-        note: 'Customers onboarded',
-        iconAsset: AppIconAssets.customers,
-        color: DesignTokens.statBlue,
-        background:
-            isDark ? DesignTokens.statBlueBgDark : DesignTokens.statBlueBg,
-        accent: isDark
-            ? DesignTokens.statBlueAccentDark
-            : DesignTokens.statBlueAccent,
-      ),
       _StatData(
         label: s.drafts,
         value: stats.drafts.toString(),
@@ -541,6 +721,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         accent: isDark
             ? DesignTokens.statAmberAccentDark
             : DesignTokens.statAmberAccent,
+        onTap: () => context.go('/customers?tab=draft'),
       ),
       _StatData(
         label: s.pending,
@@ -554,11 +735,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         accent: isDark
             ? DesignTokens.statVioletAccentDark
             : DesignTokens.statVioletAccent,
+        onTap: () => context.go('/customers?tab=pending'),
       ),
       _StatData(
         label: s.verified,
         value: stats.verified.toString(),
-        note: 'Ready to release',
+        note: 'Approved customers',
         iconAsset: AppIconAssets.verified,
         color: DesignTokens.statGreen,
         background: isDark
@@ -567,6 +749,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         accent: isDark
             ? DesignTokens.statGreenAccentDark
             : DesignTokens.statGreenAccent,
+        onTap: () => context.go('/customers?tab=approved'),
+      ),
+      _StatData(
+        label: s.declined,
+        value: stats.declined.toString(),
+        note: 'Rejected applications',
+        iconAsset: AppIconAssets.pending,
+        color: AppConstants.error,
+        background: isDark
+            ? AppConstants.error.withValues(alpha: 0.15)
+            : const Color(0xFFFEF2F2),
+        accent: isDark
+            ? AppConstants.error.withValues(alpha: 0.35)
+            : const Color(0xFFFECACA),
+        onTap: () => context.go('/customers?tab=rejected'),
       ),
     ];
 
@@ -775,24 +972,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   Widget _buildRecentCustomers() {
-    final listState = ref.watch(customerListProvider);
-    if (listState.isLoading && listState.items.isEmpty) {
-      return _buildCustomerShimmer();
-    }
-    if (listState.items.isEmpty) {
-      return _buildEmptyState();
-    }
-    final recent = listState.items.take(5).toList();
-    return Column(
-      children: recent
-          .map((c) => _CustomerTile(
-                name: c.fullName,
-                phone: c.phone,
-                status: c.kycStatus,
-                headshotUrl: c.headshotUrl,
-                onTap: () => context.go('/customers/${c.id}'),
-              ))
-          .toList(),
+    final recentAsync = ref.watch(recentCustomersProvider);
+
+    return recentAsync.when(
+      loading: () => _buildCustomerShimmer(),
+      error: (_, __) => _buildEmptyState(),
+      data: (recent) {
+        if (recent.isEmpty) {
+          return _buildEmptyState();
+        }
+
+        return Column(
+          children: recent
+              .map((c) => _CustomerTile(
+                    name: c.fullName,
+                    phone: c.phone,
+                    status: c.kycStatus,
+                    headshotUrl: c.headshotUrl,
+                    dealer: c.dealer,
+                    autoCheck: c.autoCheck,
+                    faceMatchNeedsReview: c.faceMatchNeedsReview,
+                    readyForRelease: c.readyForRelease,
+                    resumeStep: c.resumeStep,
+                    isStaleDraft: c.isStaleDraft,
+                    onTap: () => context.go('/customers/${c.id}'),
+                  ))
+              .toList(),
+        );
+      },
     );
   }
 
@@ -903,6 +1110,7 @@ class _StatData {
   final Color color;
   final Color background;
   final Color accent;
+  final VoidCallback? onTap;
 
   const _StatData({
     required this.label,
@@ -912,6 +1120,7 @@ class _StatData {
     required this.color,
     required this.background,
     required this.accent,
+    this.onTap,
   });
 }
 
@@ -980,7 +1189,9 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> {
         opacity: _opacity.value,
         child: Transform.translate(
           offset: Offset(0, _slide.value),
-          child: Container(
+          child: GestureDetector(
+            onTap: widget.data.onTap,
+            child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(26),
               gradient: LinearGradient(
@@ -1082,10 +1293,30 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> {
               ),
             ),
           ),
+          ),
         ),
       ),
     );
   }
+}
+
+Widget _miniBadge(String label, Color color, bool isDark) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: isDark ? color.withValues(alpha: 0.18) : color.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: color.withValues(alpha: 0.25)),
+    ),
+    child: Text(
+      label,
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        color: color,
+      ),
+    ),
+  );
 }
 
 class _CustomerTile extends StatelessWidget {
@@ -1093,6 +1324,12 @@ class _CustomerTile extends StatelessWidget {
   final String phone;
   final String status;
   final String? headshotUrl;
+  final String? dealer;
+  final String? autoCheck;
+  final bool faceMatchNeedsReview;
+  final bool readyForRelease;
+  final int? resumeStep;
+  final bool isStaleDraft;
   final VoidCallback onTap;
 
   const _CustomerTile({
@@ -1100,6 +1337,12 @@ class _CustomerTile extends StatelessWidget {
     required this.phone,
     required this.status,
     this.headshotUrl,
+    this.dealer,
+    this.autoCheck,
+    this.faceMatchNeedsReview = false,
+    this.readyForRelease = false,
+    this.resumeStep,
+    this.isStaleDraft = false,
     required this.onTap,
   });
 
@@ -1167,6 +1410,57 @@ class _CustomerTile extends StatelessWidget {
                                 fontWeight: FontWeight.w500,
                                 color: theme.textTheme.bodyMedium?.color,
                               ),
+                            ),
+                            if (dealer != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                dealer!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  color: theme.textTheme.bodySmall?.color,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                if (status == 'draft' && resumeStep != null)
+                                  _miniBadge(
+                                    'Step $resumeStep',
+                                    DesignTokens.statBlue,
+                                    isDark,
+                                  ),
+                                if (isStaleDraft)
+                                  _miniBadge(
+                                    'Stale',
+                                    DesignTokens.statAmber,
+                                    isDark,
+                                  ),
+                                if (faceMatchNeedsReview)
+                                  _miniBadge(
+                                    'Face review',
+                                    DesignTokens.statViolet,
+                                    isDark,
+                                  ),
+                                if (autoCheck != null)
+                                  _miniBadge(
+                                    autoCheck!,
+                                    autoCheck == 'passed'
+                                        ? DesignTokens.statGreen
+                                        : DesignTokens.statAmber,
+                                    isDark,
+                                  ),
+                                if (readyForRelease)
+                                  _miniBadge(
+                                    'Release ready',
+                                    DesignTokens.statGreen,
+                                    isDark,
+                                  ),
+                              ],
                             ),
                           ],
                         ),
@@ -1346,6 +1640,13 @@ class _DashboardHeroInsights extends StatelessWidget {
                 'Drafts',
                 '${insight.drafts}',
                 DesignTokens.loginCoralGlow,
+              ),
+              _divider(),
+              _insightCell(
+                Icons.cancel_outlined,
+                'Declined',
+                '${insight.declined}',
+                const Color(0xFFFCA5A5),
               ),
             ],
           ),

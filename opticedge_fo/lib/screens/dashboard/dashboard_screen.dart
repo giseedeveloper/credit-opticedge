@@ -90,7 +90,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   padding: EdgeInsets.zero,
                   children: [
                     Transform.translate(
-                      offset: const Offset(0, -14),
+                      offset: const Offset(0, -10),
                       child: Container(
                         decoration: BoxDecoration(
                           color: scrollSheetColor,
@@ -107,7 +107,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           ],
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+                          padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -119,7 +119,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                     ? _buildActionInbox(stats)
                                     : const SizedBox.shrink(),
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 14),
                               _DashboardSectionHeader(
                                 title: s.quickActions,
                                 subtitle:
@@ -127,7 +127,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                 compact: true,
                               ),
                               Transform.translate(
-                                offset: const Offset(0, -22),
+                                offset: const Offset(0, -18),
                                 child: _buildQuickActions(user, s),
                               ),
                               Transform.translate(
@@ -158,7 +158,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(height: 10),
+                                    const SizedBox(height: 4),
                                     _buildRecentCustomers(),
                                   ],
                                 ),
@@ -786,22 +786,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 )
               : null,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         ...preview.map((action) {
           final color = _actionSeverityColor(action.severity);
           return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(bottom: 12),
             child: GestureDetector(
               onTap: () => context.go('/customers?tab=${action.tab}'),
               child: GlassCard.surface(
                 context,
                 borderRadius: BorderRadius.circular(18),
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      width: 40,
-                      height: 40,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: isDark ? 0.2 : 0.12),
                         borderRadius: BorderRadius.circular(12),
@@ -816,7 +817,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -826,22 +827,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                             style: GoogleFonts.plusJakartaSans(
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
+                              height: 1.25,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 4),
                           Text(
                             action.subtitle,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
+                              height: 1.35,
                               color: theme.textTheme.bodyMedium?.color,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Icon(Icons.chevron_right_rounded, color: color),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Icon(Icons.chevron_right_rounded, color: color),
+                    ),
                   ],
                 ),
               ),
@@ -924,15 +930,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cellWidth = (constraints.maxWidth - 10) / 2;
-        const cellHeight = 68.0;
+        final cellWidth = (constraints.maxWidth - 6) / 2;
+        const cellHeight = 58.0;
 
         return GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
+          crossAxisSpacing: 5,
+          mainAxisSpacing: 5,
           childAspectRatio: cellWidth / cellHeight,
           children: actions.map((a) => _buildActionCard(a)).toList(),
         );
@@ -973,7 +979,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             borderRadius: BorderRadius.circular(isPrimary ? 15 : 16),
             borderColor: action.color.withValues(alpha: 0.28),
             blurSigma: 14,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
             boxShadow: const [],
             child: Row(
               children: [
@@ -1083,8 +1089,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       children: List.generate(
           3,
           (_) => Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                height: 64,
+                margin: const EdgeInsets.only(bottom: 6),
+                height: 58,
                 decoration: BoxDecoration(
                   color: shimmerColor,
                   borderRadius: BorderRadius.circular(12),
@@ -1220,7 +1226,7 @@ class _CustomerTile extends StatelessWidget {
     final statusLabel = AppConstants.statusLabels[status] ?? status;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 6),
       child: GestureDetector(
         onTap: onTap,
         child: Container(
@@ -1242,7 +1248,7 @@ class _CustomerTile extends StatelessWidget {
                   context,
                   borderRadius: BorderRadius.circular(22),
                   blurSigma: 20,
-                  padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
+                  padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),
                   child: Row(
                     children: [
                       _CustomerAvatar(
@@ -1251,7 +1257,7 @@ class _CustomerTile extends StatelessWidget {
                         isDark: isDark,
                         ringColor: statusColor,
                       ),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1287,10 +1293,10 @@ class _CustomerTile extends StatelessWidget {
                                 ),
                               ),
                             ],
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 6),
                             Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
+                              spacing: 5,
+                              runSpacing: 5,
                               children: [
                                 if (status == 'draft' && resumeStep != null)
                                   _miniBadge(
@@ -1422,8 +1428,8 @@ class _DashboardSectionHeader extends StatelessWidget {
       children: [
         Container(
           width: 4,
-          height: compact ? 16 : 42,
-          margin: EdgeInsets.only(top: compact ? 0 : 2, right: compact ? 8 : 12),
+          height: compact ? 20 : 42,
+          margin: EdgeInsets.only(top: compact ? 2 : 2, right: compact ? 10 : 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             gradient: const LinearGradient(
@@ -1447,11 +1453,11 @@ class _DashboardSectionHeader extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                   color: theme.textTheme.bodyLarge?.color,
                   letterSpacing: -0.5,
-                  height: compact ? 1.0 : null,
+                  height: compact ? 1.15 : null,
                 ),
               ),
               if (!compact) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   subtitle,
                   style: GoogleFonts.plusJakartaSans(

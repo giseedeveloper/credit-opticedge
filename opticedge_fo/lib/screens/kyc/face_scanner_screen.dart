@@ -15,6 +15,7 @@ import '../../config/constants.dart';
 import '../../config/design_tokens.dart';
 import '../../core/api/api_client.dart';
 import '../../core/services/face_verification_service.dart';
+import '../../core/utils/face_match_reason_text.dart';
 
 /// Face Scanner Screen — Full screen camera preview with live face detection
 /// Used for KYC Step 2 to capture and verify customer face against ID photo
@@ -617,7 +618,8 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
         reason.contains('too_small') ||
         reason.contains('multiple_faces') ||
         reason.contains('invalid_image') ||
-        reason.contains('no_face_detected')) {
+        reason.contains('no_face_detected') ||
+        reason.contains('headshot:')) {
       return true;
     }
 
@@ -1550,39 +1552,6 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     );
   }
 
-  /// User-facing Swahili for known API / face-match reasons.
-  String _localizedFaceMatchReason(String reason) {
-    final l = reason.toLowerCase();
-    if (l.contains('face match service is not configured')) {
-      return 'Huduma ya ulinganisho wa uso haijawekwa kwenye seva (kumbukumbu FACE_MATCH_URL). Msimamizi wa mfumo aihangaishe kisha ajaribu tena.';
-    }
-    if (l.contains('face match service is unreachable')) {
-      return 'Huduma ya ulinganisho haipatikani kwa sasa. Angalia mtandao au jaribu tena baada ya muda mfupi.';
-    }
-    if (l.contains('face match failed') && l.contains('manual')) {
-      return 'Ulinganisho haukufanikiwa. Jaribu picha nyingine au omba uhakiki wa mkono.';
-    }
-    if (l.contains('multiple_faces_detected')) {
-      return 'Nyuso zaidi ya moja zimeonekana. Hakikisha mtu mmoja tu anaonekana kwenye frame.';
-    }
-    if (l.contains('no_face_detected')) {
-      return 'Uso haujaonekana vizuri. Weka uso katikati ya frame na ujaribu tena.';
-    }
-    if (l.contains('face_too_small')) {
-      return 'Uso uko mbali sana. Msogeze mteja karibu kidogo kwenye kamera.';
-    }
-    if (l.contains('image_blurry')) {
-      return 'Picha imeblur. Simamisha kamera kwa utulivu na mwanga wa kutosha.';
-    }
-    if (l.contains('image_too_dark')) {
-      return 'Picha ni giza sana. Ongeza mwanga kabla ya kupiga picha tena.';
-    }
-    if (l.contains('image_too_bright')) {
-      return 'Mwanga ni mkali sana. Punguza mwanga mkali na ujaribu tena.';
-    }
-    return reason;
-  }
-
   Widget _buildResult() {
     final isSuccess = _result!.isFaceStepComplete;
     final isReview = _result!.isReviewBand;
@@ -1763,7 +1732,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            _localizedFaceMatchReason(_result!.reason!),
+                            localizedFaceMatchReason(_result!.reason!),
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.8),
                               fontSize: 13,

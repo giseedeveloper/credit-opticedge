@@ -8,7 +8,6 @@ use App\Models\Verification;
 use App\Services\FaceMatchService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -132,8 +131,8 @@ it('verifies face and returns failed result with alert flag', function () {
     $this->mock(FaceMatchService::class, function ($mock) {
         $mock->shouldReceive('match')->once()->andReturn([
             'status' => 'failed',
-            'score' => 0.21,
-            'reason' => 'Faces do not match.',
+            'score' => 0.52,
+            'reason' => 'id_front:image_blurry',
         ]);
     });
 
@@ -143,6 +142,8 @@ it('verifies face and returns failed result with alert flag', function () {
         ->assertOk()
         ->assertJsonPath('data.passed', false)
         ->assertJsonPath('data.face_match.status', 'failed')
+        ->assertJsonPath('data.face_match.score', 0.52)
+        ->assertJsonPath('data.face_match.reason', 'id_front:image_blurry')
         ->assertJsonPath('data.face_match.alert', true);
 });
 

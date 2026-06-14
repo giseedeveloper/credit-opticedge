@@ -10,6 +10,7 @@ import '../../../widgets/common/app_button.dart';
 import '../../../widgets/kyc/kyc_wizard_ui.dart';
 import '../../../widgets/common/face_verification_hero_card.dart';
 import '../../../widgets/common/glass_card.dart';
+import '../../../core/utils/face_match_reason_text.dart';
 import '../../../core/utils/id_document_rules.dart';
 import '../../../widgets/common/photo_picker_tile.dart';
 
@@ -542,7 +543,9 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                         faceMatch['reason'].toString().trim().isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
-                        faceMatch['reason'].toString(),
+                        localizedFaceMatchReason(
+                          faceMatch['reason']?.toString(),
+                        ),
                         style: TextStyle(
                           fontSize: 11,
                           height: 1.4,

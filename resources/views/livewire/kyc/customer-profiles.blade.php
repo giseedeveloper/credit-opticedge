@@ -685,6 +685,57 @@
                         </div>
                     </div>
 
+                    @if(!$dc->hasCompletedPreHandoverChecklist() && auth()->user()->canAccess('loans.create'))
+                    <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-900/40 dark:bg-amber-950/30">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-700 dark:text-amber-300">Pre-handover Checklist</p>
+                        <p class="mt-2 text-sm text-amber-900 dark:text-amber-100">Confirm these steps in front of the customer before asset release.</p>
+                        <div class="mt-3 space-y-2">
+                            <label class="flex items-start gap-3 rounded-xl bg-white px-3 py-2 text-sm dark:bg-zinc-900">
+                                <input type="checkbox" wire:model.live="preHandoverUnboxed" class="mt-0.5 rounded border-gray-300 text-oe focus:ring-oe" />
+                                <span>
+                                    <span class="font-semibold text-gray-800 dark:text-gray-100">Device unboxed</span>
+                                    <span class="mt-0.5 block text-xs text-gray-500">Open the box with the customer and verify the handset.</span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-3 rounded-xl bg-white px-3 py-2 text-sm dark:bg-zinc-900">
+                                <input type="checkbox" wire:model.live="preHandoverBoot" class="mt-0.5 rounded border-gray-300 text-oe focus:ring-oe" />
+                                <span>
+                                    <span class="font-semibold text-gray-800 dark:text-gray-100">Device boots normally</span>
+                                    <span class="mt-0.5 block text-xs text-gray-500">Power on and confirm the home screen loads.</span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-3 rounded-xl bg-white px-3 py-2 text-sm dark:bg-zinc-900">
+                                <input type="checkbox" wire:model.live="preHandoverMdm" class="mt-0.5 rounded border-gray-300 text-oe focus:ring-oe" />
+                                <span>
+                                    <span class="font-semibold text-gray-800 dark:text-gray-100">MDM lock applied</span>
+                                    <span class="mt-0.5 block text-xs text-gray-500">
+                                        {{ $dc->inventoryUnit?->mdm_id ? 'MDM ID: '.$dc->inventoryUnit->mdm_id : 'No MDM ID on stock — lock will be skipped until MDM is linked.' }}
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+                        <button type="button"
+                                wire:click="completePreHandoverChecklist('{{ $dc->id }}')"
+                                wire:loading.attr="disabled"
+                                class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-oe px-4 py-2.5 text-sm font-bold text-white transition hover:bg-orange-600 disabled:opacity-60">
+                            <flux:icon name="check-badge" class="size-4" />
+                            Save pre-handover checklist
+                        </button>
+                    </div>
+                    @elseif($dc->hasCompletedPreHandoverChecklist())
+                    <div class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                        <div class="flex items-center gap-3">
+                            <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                <flux:icon name="check-circle" class="size-5" />
+                            </span>
+                            <div>
+                                <p class="text-sm font-bold text-emerald-800 dark:text-emerald-200">Pre-handover checklist complete</p>
+                                <p class="text-xs text-emerald-700 dark:text-emerald-300">Unbox, boot, and MDM lock confirmed.</p>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
                     <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
                         <div class="rounded-2xl border border-gray-100 bg-gray-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
                             <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Payment Details</p>

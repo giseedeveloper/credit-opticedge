@@ -5,6 +5,7 @@ namespace App\Livewire\Kyc;
 use App\Models\Customer;
 use App\Models\Verification;
 use App\Services\CustomerLoanProvisioningService;
+use App\Services\PreHandoverChecklistService;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -37,6 +38,12 @@ class CustomerProfiles extends Component
     public string $rejectReason = '';
 
     public string $rejectNotes = '';
+
+    public bool $preHandoverUnboxed = false;
+
+    public bool $preHandoverBoot = false;
+
+    public bool $preHandoverMdm = false;
 
     /** @var array<string,int> */
     public array $statCounts = [];
@@ -80,6 +87,54 @@ class CustomerProfiles extends Component
     {
         $this->showDetail = false;
         $this->detailCustomerId = null;
+        $this->resetPreHandoverForm();
+    }
+
+    private function resetPreHandoverForm(): void
+    {
+        $this->preHandoverUnboxed = false;
+        $this->preHandoverBoot = false;
+        $this->preHandoverMdm = false;
+    }
+
+    public function completePreHandoverChecklist(string $id): void
+    {
+        abort_unless(auth()->user()->canAccess('loans.create'), 403);
+
+        if (! $this->preHandoverUnboxed || ! $this->preHandoverBoot || ! $this->preHandoverMdm) {
+            $this->dispatch('toast', message: 'Confirm unbox, boot, and MDM lock before saving the checklist.', type: 'error');
+
+            return;
+        }
+
+        $customer = Customer::query()
+            ->with('inventoryUnit')
+            ->findOrFail($id);
+
+        if ($customer->hasCompletedPreHandoverChecklist()) {
+            $this->dispatch('toast', message: 'Pre-handover checklist is already complete.', type: 'success');
+            $this->resetPreHandoverForm();
+
+            return;
+        }
+
+        app(PreHandoverChecklistService::class)->complete(
+            $customer,
+            [
+                'device_unboxed' => true,
+                'device_boot_verified' => true,
+                'mdm_lock_confirmed' => true,
+            ],
+            auth()->user(),
+        );
+
+        activity('kyc')
+            ->performedOn($customer)
+            ->causedBy(auth()->user())
+            ->log('pre_handover_checklist_completed');
+
+        $this->resetPreHandoverForm();
+        $this->dispatch('toast', message: 'Pre-handover checklist saved.', type: 'success');
     }
 
     // ── Approve ─────────────────────────────────────────────────────────

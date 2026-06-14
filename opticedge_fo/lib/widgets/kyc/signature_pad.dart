@@ -6,8 +6,6 @@ import '../../config/constants.dart';
 
 class SignaturePadController extends ChangeNotifier {
   final List<List<Offset>> _strokes = <List<Offset>>[];
-  final Duration _notifyThrottle = const Duration(milliseconds: 32);
-  DateTime? _lastNotifyAt;
 
   List<List<Offset>> get strokes => List<List<Offset>>.unmodifiable(_strokes);
 
@@ -15,7 +13,6 @@ class SignaturePadController extends ChangeNotifier {
 
   void startStroke(Offset point) {
     _strokes.add([point]);
-    _notifyThrottled();
   }
 
   void appendStrokePoint(Offset point) {
@@ -26,11 +23,9 @@ class SignaturePadController extends ChangeNotifier {
     }
 
     _strokes.last.add(point);
-    _notifyThrottled();
   }
 
   void endStroke() {
-    _lastNotifyAt = null;
     notifyListeners();
   }
 
@@ -40,18 +35,6 @@ class SignaturePadController extends ChangeNotifier {
     }
 
     _strokes.clear();
-    _lastNotifyAt = null;
-    notifyListeners();
-  }
-
-  void _notifyThrottled() {
-    final now = DateTime.now();
-    if (_lastNotifyAt != null &&
-        now.difference(_lastNotifyAt!) < _notifyThrottle) {
-      return;
-    }
-
-    _lastNotifyAt = now;
     notifyListeners();
   }
 
@@ -90,7 +73,7 @@ class SignaturePadController extends ChangeNotifier {
   }
 }
 
-class SignaturePad extends StatelessWidget {
+class SignaturePad extends StatefulWidget {
   final SignaturePadController controller;
   final double height;
 
@@ -101,13 +84,40 @@ class SignaturePad extends StatelessWidget {
   });
 
   @override
+  State<SignaturePad> createState() => _SignaturePadState();
+}
+
+class _SignaturePadState extends State<SignaturePad> {
+  int _paintGeneration = 0;
+
+  void _repaintCanvas() {
+    setState(() => _paintGeneration++);
+  }
+
+  void _handlePointerDown(PointerDownEvent event) {
+    widget.controller.startStroke(event.localPosition);
+    _repaintCanvas();
+  }
+
+  void _handlePointerMove(PointerMoveEvent event) {
+    widget.controller.appendStrokePoint(event.localPosition);
+    _repaintCanvas();
+  }
+
+  void _handlePointerUp(PointerUpEvent event) {
+    widget.controller.endStroke();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: AnimatedBuilder(
-        animation: controller,
-        builder: (context, _) {
-          return Container(
-            height: height,
+    return ListenableBuilder(
+      listenable: widget.controller,
+      builder: (context, _) {
+        final hasSignature = widget.controller.hasSignature;
+
+        return RepaintBoundary(
+          child: Container(
+            height: widget.height,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [
@@ -119,10 +129,10 @@ class SignaturePad extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: controller.hasSignature
+                color: hasSignature
                     ? AppConstants.success
                     : AppConstants.border,
-                width: controller.hasSignature ? 1.4 : 1,
+                width: hasSignature ? 1.4 : 1,
               ),
               boxShadow: [
                 BoxShadow(
@@ -134,24 +144,20 @@ class SignaturePad extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(23),
-              child: GestureDetector(
-                onPanStart: (details) {
-                  controller.startStroke(details.localPosition);
-                },
-                onPanUpdate: (details) {
-                  controller.appendStrokePoint(details.localPosition);
-                },
-                onPanEnd: (_) {
-                  controller.endStroke();
-                },
+              child: Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: _handlePointerDown,
+                onPointerMove: _handlePointerMove,
+                onPointerUp: _handlePointerUp,
+                onPointerCancel: (_) => widget.controller.endStroke(),
                 child: CustomPaint(
                   size: Size.infinite,
                   painter: _SignaturePainter(
-                    strokes: controller.strokes,
+                    strokes: widget.controller.strokes,
                     strokeColor: AppConstants.textPrimary,
                     showGuide: true,
                   ),
-                  child: controller.hasSignature
+                  child: hasSignature
                       ? null
                       : const Center(
                           child: Column(
@@ -187,9 +193,9 @@ class SignaturePad extends StatelessWidget {
                 ),
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }

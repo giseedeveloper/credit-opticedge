@@ -42,6 +42,19 @@ class KycApprovalListState {
   }
 }
 
+List<dynamic> _parseQueueCustomers(dynamic raw) {
+  if (raw is List) {
+    return raw;
+  }
+  if (raw is Map) {
+    final nested = raw['data'];
+    if (nested is List) {
+      return nested;
+    }
+  }
+  return const [];
+}
+
 class KycApprovalListNotifier extends StateNotifier<KycApprovalListState> {
   KycApprovalListNotifier() : super(const KycApprovalListState());
 
@@ -66,7 +79,7 @@ class KycApprovalListNotifier extends StateNotifier<KycApprovalListState> {
         },
       );
       final data = res.data['data'] as Map<String, dynamic>;
-      final customers = (data['customers'] as List<dynamic>? ?? [])
+      final customers = _parseQueueCustomers(data['customers'])
           .map((e) => KycApprovalQueueItem.fromJson(
                 Map<String, dynamic>.from(e as Map),
               ))
@@ -201,7 +214,7 @@ class KycApprovalDetailNotifier extends StateNotifier<KycApprovalDetailState> {
 
   Future<bool> _post(
     String path,
-    Map<String, dynamic?> body,
+    Map<String, dynamic> body,
     String customerId,
   ) async {
     state = state.copyWith(isSubmitting: true, error: null);

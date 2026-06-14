@@ -178,6 +178,24 @@ it('releases the asset after approved payment and agreement checks are complete'
     expect($this->inventoryUnit->fresh()->status)->toBe('sold');
 });
 
+it('completes pre-handover checklist from customer profiles detail', function () {
+    $customer = Customer::factory()->create([
+        'dealer_id' => $this->dealer->id,
+        'inventory_unit_id' => $this->inventoryUnit->id,
+        'kyc_status' => 'approved',
+    ]);
+
+    Livewire::actingAs($this->fo)
+        ->test(CustomerProfiles::class)
+        ->set('preHandoverUnboxed', true)
+        ->set('preHandoverBoot', true)
+        ->set('preHandoverMdm', true)
+        ->call('completePreHandoverChecklist', $customer->id)
+        ->assertHasNoErrors();
+
+    expect($customer->fresh()->hasCompletedPreHandoverChecklist())->toBeTrue();
+});
+
 function kycWizardFlowSignatureDataUrl(): string
 {
     return 'data:image/png;base64,'.kycWizardFlowRawSignature();

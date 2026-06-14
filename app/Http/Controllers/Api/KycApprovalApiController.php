@@ -49,10 +49,16 @@ class KycApprovalApiController extends Controller
             ->latest()
             ->paginate($perPage);
 
+        $serializedCustomers = $customers
+            ->getCollection()
+            ->map(fn (Customer $customer) => $this->serializeQueueCustomer($customer))
+            ->values()
+            ->all();
+
         return $this->successResponse([
             'stage' => $stage,
             'stage_counts' => $this->stageCounts(),
-            'customers' => $customers->through(fn (Customer $customer) => $this->serializeQueueCustomer($customer)),
+            'customers' => $serializedCustomers,
             'pagination' => [
                 'current_page' => $customers->currentPage(),
                 'last_page' => $customers->lastPage(),

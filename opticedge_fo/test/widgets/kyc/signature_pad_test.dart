@@ -10,6 +10,7 @@ void main() {
     controller.startStroke(const Offset(10, 10));
     controller.appendStrokePoint(const Offset(40, 18));
     controller.appendStrokePoint(const Offset(90, 34));
+    controller.endStroke();
 
     final dataUrl = await controller.exportAsDataUrl();
 

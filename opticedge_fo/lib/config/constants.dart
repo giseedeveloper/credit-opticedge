@@ -76,6 +76,13 @@ class AppConstants {
   static const String userKey = 'fo_user_data';
   static const String draftPrefix = 'kyc_draft_';
 
+  // Face match thresholds (aligned with FACE_MATCH_* on server)
+  static const double faceMatchPassThreshold = 0.40;
+  static const double faceMatchReviewThreshold = 0.30;
+  static int get faceMatchPassPercent => (faceMatchPassThreshold * 100).round();
+  static int get faceMatchReviewPercent =>
+      (faceMatchReviewThreshold * 100).round();
+
   // Colors
   static const Color primary = Color(0xFFF36D34);
   static const Color primaryLight = Color(0xFFFF8B5B);

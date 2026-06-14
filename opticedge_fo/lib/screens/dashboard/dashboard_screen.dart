@@ -25,27 +25,20 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _animController;
+    with SingleTickerProviderStateMixin {
   late AnimationController _ambientController;
 
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
     _ambientController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 6),
     )..repeat(reverse: true);
-    Future.delayed(const Duration(milliseconds: 100), _animController.forward);
   }
 
   @override
   void dispose() {
-    _animController.dispose();
     _ambientController.dispose();
     super.dispose();
   }
@@ -65,70 +58,121 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final theme = Theme.of(context);
     final s = S.of(ref);
 
+    final isDark = theme.brightness == Brightness.dark;
+    final scrollSheetColor = isDark
+        ? const Color(0xFF0F172A).withValues(alpha: 0.97)
+        : Colors.white.withValues(alpha: 0.97);
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: PremiumGlassBackground(
-        child: RefreshIndicator(
-          color: AppConstants.primary,
-          onRefresh: () async {
-            await ref.read(dashboardProvider.notifier).load();
-            ref.invalidate(recentCustomersProvider);
-            await ref.read(customerListProvider.notifier).load(reset: true);
-          },
-          child: CustomScrollView(
-            slivers: [
-              _buildAppBar(user, dashAsync.valueOrNull, onlineAsync),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    dashAsync.when(
-                      loading: () => _buildStatsShimmer(),
-                      error: (e, _) => _buildErrorBanner(e.toString()),
-                      data: (stats) => Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (stats.actions.isNotEmpty) ...[
-                            _buildActionInbox(stats),
-                            const SizedBox(height: 20),
+        child: Column(
+          children: [
+            _buildFixedHeroHeader(
+              user,
+              dashAsync.valueOrNull,
+              onlineAsync,
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                color: AppConstants.primary,
+                onRefresh: () async {
+                  await ref.read(dashboardProvider.notifier).load();
+                  ref.invalidate(recentCustomersProvider);
+                  await ref
+                      .read(customerListProvider.notifier)
+                      .load(reset: true);
+                },
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: EdgeInsets.zero,
+                  children: [
+                    Transform.translate(
+                      offset: const Offset(0, -14),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: scrollSheetColor,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(28),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black
+                                  .withValues(alpha: isDark ? 0.28 : 0.07),
+                              blurRadius: 24,
+                              offset: const Offset(0, -6),
+                            ),
                           ],
-                          _buildStatsGrid(stats),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    _DashboardSectionHeader(
-                      title: s.quickActions,
-                      subtitle: 'Shortcuts for your daily field work',
-                    ),
-                    const SizedBox(height: 14),
-                    _buildQuickActions(user, s),
-                    const SizedBox(height: 28),
-                    _DashboardSectionHeader(
-                      title: s.recentCustomers,
-                      subtitle: 'Latest registrations and status changes',
-                      trailing: TextButton(
-                        onPressed: () => context.go('/customers'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: theme.colorScheme.primary,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),
-                        child: Text(
-                          s.seeAll,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              dashAsync.when(
+                                loading: () => const SizedBox.shrink(),
+                                error: (e, _) =>
+                                    _buildErrorBanner(e.toString()),
+                                data: (stats) => stats.actions.isNotEmpty
+                                    ? _buildActionInbox(stats)
+                                    : const SizedBox.shrink(),
+                              ),
+                              const SizedBox(height: 12),
+                              _DashboardSectionHeader(
+                                title: s.quickActions,
+                                subtitle:
+                                    'Shortcuts for your daily field work',
+                                compact: true,
+                              ),
+                              Transform.translate(
+                                offset: const Offset(0, -22),
+                                child: _buildQuickActions(user, s),
+                              ),
+                              Transform.translate(
+                                offset: const Offset(0, -14),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _DashboardSectionHeader(
+                                      title: s.recentCustomers,
+                                      subtitle:
+                                          'Latest registrations and status changes',
+                                      trailing: TextButton(
+                                        onPressed: () =>
+                                            context.go('/customers'),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor:
+                                              theme.colorScheme.primary,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          s.seeAll,
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _buildRecentCustomers(),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    _buildRecentCustomers(),
-                  ]),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -139,7 +183,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return '${s.weekdays[now.weekday - 1]}, ${now.day} ${s.months[now.month - 1]}';
   }
 
-  SliverAppBar _buildAppBar(
+  Widget _buildFixedHeroHeader(
     user,
     DashboardStats? stats,
     AsyncValue<bool> onlineAsync,
@@ -150,201 +194,172 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final reduceMotion = MediaQuery.of(context).disableAnimations;
 
-    return SliverAppBar(
-      expandedHeight: 388,
-      pinned: true,
-      stretch: true,
-      elevation: 0,
-      backgroundColor:
-          isDark ? DesignTokens.loginDeep : DesignTokens.loginNavy,
-      flexibleSpace: FlexibleSpaceBar(
-        stretchModes: const [StretchMode.zoomBackground],
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: isDark
-                    ? DesignTokens.loginHeroMeshDark
-                    : DesignTokens.loginHeroMesh,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: isDark
+            ? DesignTokens.loginHeroMeshDark
+            : DesignTokens.loginHeroMesh,
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: _DashboardGridPainter(
+                  color: Colors.white.withValues(alpha: 0.035),
+                ),
               ),
             ),
-            CustomPaint(
-              painter: _DashboardGridPainter(
-                color: Colors.white.withValues(alpha: 0.035),
+          ),
+          if (!reduceMotion)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _ambientController,
+                  builder: (_, __) {
+                    final drift =
+                        math.sin(_ambientController.value * math.pi * 2) * 10;
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Positioned(
+                          top: -20 + drift,
+                          right: -24,
+                          child: _heroGlowOrb(
+                            150,
+                            AppConstants.primary.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        Positioned(
+                          left: -36,
+                          bottom: 48 - drift,
+                          child: _heroGlowOrb(
+                            120,
+                            DesignTokens.loginSkyGlow.withValues(alpha: 0.14),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
-            if (!reduceMotion)
-              AnimatedBuilder(
-                animation: _ambientController,
-                builder: (_, __) {
-                  final drift = math.sin(_ambientController.value * math.pi * 2) * 10;
-                  return Stack(
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: DesignTokens.dashboardHeroOverlay,
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Positioned(
-                        top: -20 + drift,
-                        right: -24,
-                        child: _heroGlowOrb(
-                          150,
-                          AppConstants.primary.withValues(alpha: 0.2),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Text(
+                                _todayFormattedL10n(s),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _greeting(s),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withValues(alpha: 0.75),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              user?.name.split(' ').first ?? 'Officer',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                                height: 1.05,
+                                color: Colors.white,
+                                letterSpacing: -0.8,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Positioned(
-                        left: -36,
-                        bottom: 48 - drift,
-                        child: _heroGlowOrb(
-                          120,
-                          DesignTokens.loginSkyGlow.withValues(alpha: 0.14),
+                      const SizedBox(width: 8),
+                      _heroActionButton(
+                        icon: Icons.notifications_none_rounded,
+                        badgeCount: insight.actionableCount > 0
+                            ? insight.actionableCount
+                            : null,
+                        semanticsLabel: insight.actionableCount > 0
+                            ? 'View ${insight.actionableCount} actionable items'
+                            : 'Open action inbox',
+                        onTap: _openActionInbox,
+                        size: 40,
+                      ),
+                      const SizedBox(width: 8),
+                      _heroProfileAvatar(user, size: 40),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (user?.branch != null)
+                        _heroChip(
+                          icon: Icons.location_on_outlined,
+                          label: user!.branch!.name,
                         ),
+                      if (user?.dealer != null)
+                        _heroChip(
+                          icon: Icons.storefront_outlined,
+                          label: user!.dealer!.name,
+                        ),
+                      _heroChip(
+                        icon: Icons.circle,
+                        label: isOnline ? 'Online' : 'Offline',
+                        iconColor: isOnline
+                            ? const Color(0xFF4ADE80)
+                            : AppConstants.textHint,
                       ),
                     ],
-                  );
-                },
-              ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: DesignTokens.dashboardHeroOverlay,
-              ),
-            ),
-            SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.2),
-                                  ),
-                                ),
-                                child: Text(
-                                  _todayFormattedL10n(s),
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                _greeting(s),
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white.withValues(alpha: 0.75),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                user?.name.split(' ').first ?? 'Officer',
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.05,
-                                  color: Colors.white,
-                                  letterSpacing: -0.8,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        _heroActionButton(
-                          icon: Icons.notifications_none_rounded,
-                          badgeCount: insight.actionableCount > 0
-                              ? insight.actionableCount
-                              : null,
-                          semanticsLabel: insight.actionableCount > 0
-                              ? 'View ${insight.actionableCount} actionable items'
-                              : 'No actionable items',
-                          onTap: insight.actions.isNotEmpty
-                              ? () => _showActionInboxSheet(insight)
-                              : null,
-                        ),
-                        const SizedBox(width: 10),
-                        GestureDetector(
-                          onTap: () => context.go('/profile'),
-                          child: Container(
-                            padding: const EdgeInsets.all(2.5),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppConstants.primary,
-                                  DesignTokens.loginSkyGlow.withValues(alpha: 0.7),
-                                ],
-                              ),
-                            ),
-                            child: Container(
-                              width: 46,
-                              height: 46,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.14),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.25),
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  user?.initials ?? 'FO',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    color: Colors.white,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        if (user?.branch != null)
-                          _heroChip(
-                            icon: Icons.location_on_outlined,
-                            label: user!.branch!.name,
-                          ),
-                        if (user?.dealer != null)
-                          _heroChip(
-                            icon: Icons.storefront_outlined,
-                            label: user!.dealer!.name,
-                          ),
-                        _heroChip(
-                          icon: Icons.circle,
-                          label: isOnline ? 'Online' : 'Offline',
-                          iconColor: isOnline
-                              ? const Color(0xFF4ADE80)
-                              : AppConstants.textHint,
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    ClipRRect(
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ClipRRect(
                       borderRadius: BorderRadius.circular(20),
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
@@ -353,8 +368,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           child: InkWell(
                             onTap: () => context.go('/customers'),
                             child: Container(
-                              height: 54,
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              height: 48,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.14),
                                 borderRadius: BorderRadius.circular(20),
@@ -368,7 +384,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                     width: 36,
                                     height: 36,
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.16),
+                                      color:
+                                          Colors.white.withValues(alpha: 0.16),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Icon(
@@ -382,7 +399,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                     child: Text(
                                       s.searchCustomers,
                                       style: GoogleFonts.plusJakartaSans(
-                                        color: Colors.white.withValues(alpha: 0.88),
+                                        color:
+                                            Colors.white.withValues(alpha: 0.88),
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -400,14 +418,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    _DashboardHeroInsights(insight: insight),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: _DashboardHeroInsights(insight: insight),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -428,41 +449,48 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Widget _heroActionButton({
     required IconData icon,
     int? badgeCount,
-    VoidCallback? onTap,
+    required VoidCallback onTap,
     String? semanticsLabel,
+    double size = 48,
   }) {
+    final radius = size * 0.33;
+    final iconSize = size * 0.45;
+
     final child = Container(
-      width: 48,
-      height: 48,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
       ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Center(
-            child: Icon(icon, color: Colors.white, size: 22),
+            child: Icon(icon, color: Colors.white, size: iconSize),
           ),
           if (badgeCount != null && badgeCount > 0)
             Positioned(
-              top: 4,
-              right: 2,
+              top: 3,
+              right: 1,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
                   color: AppConstants.primary,
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
                 ),
-                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                constraints: BoxConstraints(
+                  minWidth: size * 0.38,
+                  minHeight: size * 0.38,
+                ),
                 child: Text(
                   badgeCount > 99 ? '99+' : '$badgeCount',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 9,
+                    fontSize: size * 0.2,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -472,22 +500,60 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       ),
     );
 
-    if (onTap == null) {
-      return Semantics(
-        label: semanticsLabel ?? 'Notifications',
-        child: child,
-      );
-    }
-
     return Semantics(
       button: true,
       label: semanticsLabel ?? 'Notifications',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: child,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: child,
+      ),
+    );
+  }
+
+  Widget _heroProfileAvatar(dynamic user, {double size = 40}) {
+    final innerSize = size - 4;
+
+    return Semantics(
+      button: true,
+      label: 'Open profile',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => context.go('/profile'),
+        child: Container(
+          width: size,
+          height: size,
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [
+                AppConstants.primary,
+                DesignTokens.loginSkyGlow.withValues(alpha: 0.7),
+              ],
+            ),
+          ),
+          child: Container(
+            width: innerSize,
+            height: innerSize,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.25),
+              ),
+            ),
+            child: Center(
+              child: Text(
+                user?.initials ?? 'FO',
+                style: GoogleFonts.plusJakartaSans(
+                  color: Colors.white,
+                  fontSize: size * 0.32,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -526,86 +592,166 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
+  void _openActionInbox() {
+    final stats = ref.read(dashboardProvider).valueOrNull;
+    if (stats != null) {
+      _showActionInboxSheet(stats);
+      return;
+    }
+
+    ref.read(dashboardProvider.notifier).load().then((_) {
+      if (!mounted) {
+        return;
+      }
+
+      final fresh = ref.read(dashboardProvider).valueOrNull;
+      if (fresh != null) {
+        _showActionInboxSheet(fresh);
+        return;
+      }
+
+      final error = ref.read(dashboardProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error != null
+                ? 'Could not load inbox: $error'
+                : 'Could not load inbox. Pull to refresh and try again.',
+          ),
+        ),
+      );
+    });
+  }
+
   void _showActionInboxSheet(DashboardStats stats) {
     final theme = Theme.of(context);
 
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetContext) {
+        final maxHeight = MediaQuery.of(sheetContext).size.height * 0.72;
+
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: theme.dividerColor,
-                      borderRadius: BorderRadius.circular(999),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: theme.dividerColor,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Action inbox',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+                  const SizedBox(height: 16),
+                  Text(
+                    'Action inbox',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${stats.actionableCount} items need your attention',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    color: theme.textTheme.bodyMedium?.color,
+                  const SizedBox(height: 4),
+                  Text(
+                    stats.actionableCount > 0
+                        ? '${stats.actionableCount} items need your attention'
+                        : 'No urgent actions right now',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      color: theme.textTheme.bodyMedium?.color,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                ...stats.actions.map((action) {
-                  final color = _actionSeverityColor(action.severity);
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Grouped summaries — tap a row to open the matching customer list.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      color: theme.textTheme.bodySmall?.color,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (stats.actions.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
                       child: Center(
-                        child: Text(
-                          '${action.count}',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontWeight: FontWeight.w800,
-                            color: color,
-                          ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.notifications_none_rounded,
+                              size: 40,
+                              color: theme.dividerColor,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'You are all caught up.',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontWeight: FontWeight.w600,
+                                color: theme.textTheme.bodyMedium?.color,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    title: Text(
-                      action.title,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.w700,
+                    )
+                  else
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: stats.actions.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (_, index) {
+                          final action = stats.actions[index];
+                          final color = _actionSeverityColor(action.severity);
+
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${action.count}',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontWeight: FontWeight.w800,
+                                    color: color,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              action.title,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(action.subtitle),
+                            trailing: const Icon(Icons.chevron_right_rounded),
+                            onTap: () {
+                              Navigator.of(sheetContext).pop();
+                              context.go('/customers?tab=${action.tab}');
+                            },
+                          );
+                        },
                       ),
                     ),
-                    subtitle: Text(action.subtitle),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () {
-                      Navigator.of(sheetContext).pop();
-                      context.go('/customers?tab=${action.tab}');
-                    },
-                  );
-                }),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -635,7 +781,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           subtitle: '${stats.actionableCount} items need attention',
           trailing: stats.actions.length > 3
               ? TextButton(
-                  onPressed: () => _showActionInboxSheet(stats),
+                  onPressed: _openActionInbox,
                   child: const Text('See all'),
                 )
               : null,
@@ -703,86 +849,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           );
         }),
       ],
-    );
-  }
-
-  Widget _buildStatsGrid(DashboardStats stats) {
-    final s = S.of(ref);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final items = [
-      _StatData(
-        label: s.drafts,
-        value: stats.drafts.toString(),
-        note: 'Need completion',
-        iconAsset: AppIconAssets.drafts,
-        color: DesignTokens.statAmber,
-        background:
-            isDark ? DesignTokens.statAmberBgDark : DesignTokens.statAmberBg,
-        accent: isDark
-            ? DesignTokens.statAmberAccentDark
-            : DesignTokens.statAmberAccent,
-        onTap: () => context.go('/customers?tab=draft'),
-      ),
-      _StatData(
-        label: s.pending,
-        value: stats.pending.toString(),
-        note: 'Waiting review',
-        iconAsset: AppIconAssets.pending,
-        color: DesignTokens.statViolet,
-        background: isDark
-            ? DesignTokens.statVioletBgDark
-            : DesignTokens.statVioletBg,
-        accent: isDark
-            ? DesignTokens.statVioletAccentDark
-            : DesignTokens.statVioletAccent,
-        onTap: () => context.go('/customers?tab=pending'),
-      ),
-      _StatData(
-        label: s.verified,
-        value: stats.verified.toString(),
-        note: 'Approved customers',
-        iconAsset: AppIconAssets.verified,
-        color: DesignTokens.statGreen,
-        background: isDark
-            ? DesignTokens.statGreenBgDark
-            : DesignTokens.statGreenBg,
-        accent: isDark
-            ? DesignTokens.statGreenAccentDark
-            : DesignTokens.statGreenAccent,
-        onTap: () => context.go('/customers?tab=approved'),
-      ),
-      _StatData(
-        label: s.declined,
-        value: stats.declined.toString(),
-        note: 'Rejected applications',
-        iconAsset: AppIconAssets.pending,
-        color: AppConstants.error,
-        background: isDark
-            ? AppConstants.error.withValues(alpha: 0.15)
-            : const Color(0xFFFEF2F2),
-        accent: isDark
-            ? AppConstants.error.withValues(alpha: 0.35)
-            : const Color(0xFFFECACA),
-        onTap: () => context.go('/customers?tab=rejected'),
-      ),
-    ];
-
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 14,
-      mainAxisSpacing: 14,
-      childAspectRatio: 1.02,
-      children: items
-          .asMap()
-          .entries
-          .map((e) => _AnimatedStatCard(
-                data: e.value,
-                delay: e.key * 80,
-                parentController: _animController,
-              ))
-          .toList(),
     );
   }
 
@@ -856,14 +922,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         ),
     ];
 
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 14,
-      mainAxisSpacing: 14,
-      childAspectRatio: 1.22,
-      children: actions.map((a) => _buildActionCard(a)).toList(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cellWidth = (constraints.maxWidth - 10) / 2;
+        const cellHeight = 68.0;
+
+        return GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: cellWidth / cellHeight,
+          children: actions.map((a) => _buildActionCard(a)).toList(),
+        );
+      },
     );
   }
 
@@ -875,93 +948,90 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       onTap: action.onTap,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: action.color.withValues(alpha: 0.14),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
+              color: action.color.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
           gradient: isPrimary
               ? LinearGradient(
                   colors: [
-                    action.color.withValues(alpha: 0.45),
-                    DesignTokens.loginSkyGlow.withValues(alpha: 0.25),
+                    action.color.withValues(alpha: 0.4),
+                    DesignTokens.loginSkyGlow.withValues(alpha: 0.2),
                   ],
                 )
               : null,
           color: isPrimary ? null : action.surface.withValues(alpha: 0.5),
         ),
         child: Padding(
-          padding: EdgeInsets.all(isPrimary ? 1.2 : 0),
+          padding: EdgeInsets.all(isPrimary ? 1 : 0),
           child: GlassCard(
             tint: action.surface,
-            borderRadius: BorderRadius.circular(isPrimary ? 22.8 : 24),
-            borderColor: action.color.withValues(alpha: 0.3),
-            blurSigma: 22,
-            padding: const EdgeInsets.all(16),
+            borderRadius: BorderRadius.circular(isPrimary ? 15 : 16),
+            borderColor: action.color.withValues(alpha: 0.28),
+            blurSigma: 14,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             boxShadow: const [],
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        gradient: DesignTokens.statCardSheen(action.color),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: action.color.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: Center(
-                        child: AppColorIcon(
-                          assetName: action.iconAsset,
-                          size: 24,
-                          semanticsLabel: action.label,
-                        ),
-                      ),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    gradient: DesignTokens.statCardSheen(action.color),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: action.color.withValues(alpha: 0.2),
                     ),
-                    const Spacer(),
-                    Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: action.color.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.arrow_outward_rounded,
-                        size: 16,
-                        color: action.color,
-                      ),
+                  ),
+                  child: Center(
+                    child: AppColorIcon(
+                      assetName: action.iconAsset,
+                      size: 18,
+                      semanticsLabel: action.label,
                     ),
-                  ],
-                ),
-                const Spacer(),
-                Text(
-                  action.label,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: action.color,
-                    letterSpacing: -0.2,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  action.caption,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: captionColor,
-                    height: 1.35,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        action.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: action.color,
+                          height: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        action.caption,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: captionColor,
+                          height: 1.15,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                Icon(
+                  Icons.arrow_outward_rounded,
+                  size: 13,
+                  color: action.color.withValues(alpha: 0.8),
                 ),
               ],
             ),
@@ -1000,32 +1070,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               .toList(),
         );
       },
-    );
-  }
-
-  Widget _buildStatsShimmer() {
-    final theme = Theme.of(context);
-    final shimmerColor = theme.cardTheme.color ?? theme.colorScheme.surface;
-    final borderColor = theme.brightness == Brightness.dark
-        ? DesignTokens.darkBorder
-        : AppConstants.border;
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.6,
-      children: List.generate(
-        4,
-        (_) => Container(
-          decoration: BoxDecoration(
-            color: shimmerColor,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: borderColor),
-          ),
-        ),
-      ),
     );
   }
 
@@ -1102,28 +1146,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 }
 
-class _StatData {
-  final String label;
-  final String value;
-  final String note;
-  final String iconAsset;
-  final Color color;
-  final Color background;
-  final Color accent;
-  final VoidCallback? onTap;
-
-  const _StatData({
-    required this.label,
-    required this.value,
-    required this.note,
-    required this.iconAsset,
-    required this.color,
-    required this.background,
-    required this.accent,
-    this.onTap,
-  });
-}
-
 class _ActionData {
   final String label;
   final String caption;
@@ -1140,164 +1162,6 @@ class _ActionData {
     required this.surface,
     required this.onTap,
   });
-}
-
-class _AnimatedStatCard extends StatefulWidget {
-  final _StatData data;
-  final int delay;
-  final AnimationController parentController;
-
-  const _AnimatedStatCard({
-    required this.data,
-    required this.delay,
-    required this.parentController,
-  });
-
-  @override
-  State<_AnimatedStatCard> createState() => _AnimatedStatCardState();
-}
-
-class _AnimatedStatCardState extends State<_AnimatedStatCard> {
-  late Animation<double> _opacity;
-  late Animation<double> _slide;
-
-  @override
-  void initState() {
-    super.initState();
-    final start = widget.delay / 900.0;
-    final end = (widget.delay / 900.0 + 0.45).clamp(0.0, 1.0);
-    _opacity = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
-        parent: widget.parentController,
-        curve: Interval(start, end, curve: Curves.easeOut)));
-    _slide = Tween<double>(begin: 20, end: 0).animate(CurvedAnimation(
-        parent: widget.parentController,
-        curve: Interval(start, end, curve: Curves.easeOut)));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final noteColor = theme.textTheme.bodyMedium?.color;
-    final valueChipBg = isDark
-        ? widget.data.color.withValues(alpha: 0.14)
-        : Colors.white.withValues(alpha: 0.7);
-
-    return AnimatedBuilder(
-      animation: widget.parentController,
-      builder: (_, __) => Opacity(
-        opacity: _opacity.value,
-        child: Transform.translate(
-          offset: Offset(0, _slide.value),
-          child: GestureDetector(
-            onTap: widget.data.onTap,
-            child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(26),
-              gradient: LinearGradient(
-                colors: [
-                  widget.data.color.withValues(alpha: 0.5),
-                  widget.data.color.withValues(alpha: 0.12),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.data.color.withValues(alpha: isDark ? 0.15 : 0.1),
-                  blurRadius: 22,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(1.1),
-              child: GlassCard(
-                tint: widget.data.background,
-                borderRadius: BorderRadius.circular(24.9),
-                borderColor: Colors.transparent,
-                blurSigma: 20,
-                padding: const EdgeInsets.all(16),
-                boxShadow: const [],
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            gradient: DesignTokens.statCardSheen(widget.data.color),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: widget.data.color.withValues(alpha: 0.22),
-                            ),
-                          ),
-                          child: Center(
-                            child: AppColorIcon(
-                              assetName: widget.data.iconAsset,
-                              size: 24,
-                              semanticsLabel: widget.data.label,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: valueChipBg,
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: widget.data.color.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          child: Text(
-                            widget.data.value,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: widget.data.color,
-                              letterSpacing: -0.6,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.data.label,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: widget.data.color,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          widget.data.note,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: noteColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 Widget _miniBadge(String label, Color color, bool isDark) {
@@ -1542,11 +1406,13 @@ class _DashboardSectionHeader extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.trailing,
+    this.compact = false,
   });
 
   final String title;
   final String subtitle;
   final Widget? trailing;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -1556,8 +1422,8 @@ class _DashboardSectionHeader extends StatelessWidget {
       children: [
         Container(
           width: 4,
-          height: 42,
-          margin: const EdgeInsets.only(top: 2, right: 12),
+          height: compact ? 16 : 42,
+          margin: EdgeInsets.only(top: compact ? 0 : 2, right: compact ? 8 : 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             gradient: const LinearGradient(
@@ -1577,21 +1443,24 @@ class _DashboardSectionHeader extends StatelessWidget {
               Text(
                 title,
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 20,
+                  fontSize: compact ? 16 : 20,
                   fontWeight: FontWeight.w800,
                   color: theme.textTheme.bodyLarge?.color,
                   letterSpacing: -0.5,
+                  height: compact ? 1.0 : null,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: theme.textTheme.bodyMedium?.color,
+              if (!compact) ...[
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: theme.textTheme.bodyMedium?.color,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -1609,14 +1478,15 @@ class _DashboardHeroInsights extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
           ),
           child: Row(
@@ -1657,7 +1527,7 @@ class _DashboardHeroInsights extends StatelessWidget {
 
   Widget _divider() => Container(
         width: 1,
-        height: 44,
+        height: 36,
         color: Colors.white.withValues(alpha: 0.14),
       );
 
@@ -1669,25 +1539,33 @@ class _DashboardHeroInsights extends StatelessWidget {
   ) {
     return Expanded(
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: tone, size: 18),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: GoogleFonts.plusJakartaSans(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
+          Icon(icon, color: tone, size: 16),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(
-              color: Colors.white.withValues(alpha: 0.72),
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: GoogleFonts.plusJakartaSans(
+                color: Colors.white.withValues(alpha: 0.72),
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

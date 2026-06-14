@@ -16,6 +16,7 @@ import '../../widgets/common/app_button.dart';
 import '../../widgets/common/status_badge.dart';
 import '../../widgets/common/glass_card.dart';
 import '../../widgets/common/premium_glass_background.dart';
+import '../../widgets/customers/pre_handover_checklist_panel.dart';
 
 class CustomerDetailScreen extends ConsumerWidget {
   final String customerId;
@@ -1126,79 +1127,21 @@ class _DetailViewState extends ConsumerState<_DetailView>
         ],
         if (!isReleased) ...[
           const SizedBox(height: 12),
-          if (release?.preHandoverChecklist.isComplete ?? false)
-            _statusTile(
-              title: 'Pre-handover checklist complete',
-              subtitle:
-                  'Unbox, boot, na MDM lock zimethibitishwa.${release?.preHandoverChecklist.mdmLockStatus != null ? ' MDM: ${release!.preHandoverChecklist.mdmLockStatus}.' : ''}',
-              color: AppConstants.success,
-              icon: Icons.fact_check_outlined,
-            )
-          else ...[
-            Text(
-              'Kabla ya release, thibitisha hatua hizi mbele ya mteja:',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.4,
-                color: Theme.of(context).textTheme.bodyMedium?.color,
-              ),
-            ),
-            const SizedBox(height: 8),
-            CheckboxListTile(
-              value: _deviceUnboxed,
-              onChanged: _submittingPreHandover
-                  ? null
-                  : (value) => setState(() => _deviceUnboxed = value == true),
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: const Text(
-                'Device imefunguliwa (unbox) mbele ya mteja',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-            ),
-            CheckboxListTile(
-              value: _deviceBootVerified,
-              onChanged: _submittingPreHandover
-                  ? null
-                  : (value) =>
-                      setState(() => _deviceBootVerified = value == true),
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: const Text(
-                'Device imeboot na inaonyesha screen ya kawaida',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-            ),
-            CheckboxListTile(
-              value: _mdmLockConfirmed,
-              onChanged: _submittingPreHandover
-                  ? null
-                  : (value) =>
-                      setState(() => _mdmLockConfirmed = value == true),
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: const Text(
-                'MDM lock imewekwa kwenye kifaa',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(
-                (release?.inventoryMdmId?.isNotEmpty ?? false)
-                    ? 'MDM ID: ${release!.inventoryMdmId}'
-                    : 'Hakuna MDM ID kwenye stock — lock itaruka mpaka MDM iunganishwe.',
-                style: const TextStyle(fontSize: 11),
-              ),
-            ),
-            const SizedBox(height: 8),
-            AppButton(
-              label: 'Thibitisha pre-handover checklist',
-              icon: Icons.verified_outlined,
-              isLoading: _submittingPreHandover,
-              outlined: true,
-              width: double.infinity,
-              onPressed:
-                  _submittingPreHandover ? null : _submitPreHandoverChecklist,
-            ),
-          ],
+          PreHandoverChecklistPanel(
+            isComplete: release?.preHandoverChecklist.isComplete ?? false,
+            deviceUnboxed: _deviceUnboxed,
+            deviceBootVerified: _deviceBootVerified,
+            mdmLockConfirmed: _mdmLockConfirmed,
+            isSubmitting: _submittingPreHandover,
+            mdmLockStatus: release?.preHandoverChecklist.mdmLockStatus,
+            inventoryMdmId: release?.inventoryMdmId,
+            onUnboxedChanged: (value) => setState(() => _deviceUnboxed = value),
+            onBootChanged: (value) =>
+                setState(() => _deviceBootVerified = value),
+            onMdmChanged: (value) =>
+                setState(() => _mdmLockConfirmed = value),
+            onSubmit: _submitPreHandoverChecklist,
+          ),
         ],
         if (canRelease && !isReleased) ...[
           const SizedBox(height: 8),

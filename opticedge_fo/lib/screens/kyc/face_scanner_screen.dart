@@ -739,6 +739,12 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                 'Hatua tatu',
                 'Kunyaza macho, kugeuza kichwa kidogo, kisha picha inachukuliwa kiotomatiki.',
               ),
+              const SizedBox(height: 14),
+              _preScanTip(
+                Icons.verified_user_outlined,
+                'Kiwango cha kupita',
+                'Ulinganisho wa ${AppConstants.faceMatchPassPercent}% au zaidi hupita; ${AppConstants.faceMatchReviewPercent}–${AppConstants.faceMatchPassPercent - 1}% inahitaji ukaguzi wa HQ.',
+              ),
               const Spacer(),
               SizedBox(
                 width: double.infinity,

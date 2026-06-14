@@ -129,7 +129,15 @@ trait ManagesKycCatalog
 
     public function stageFlow(KycStageFlowService $stageFlow): JsonResponse
     {
-        return $this->successResponse($stageFlow->contract(), 'KYC stage flow retrieved.');
+        return $this->successResponse([
+            ...$stageFlow->contract(),
+            'face_match' => [
+                'pass_threshold' => (float) config('services.face_match.pass_threshold', 0.40),
+                'review_threshold' => (float) config('services.face_match.review_threshold', 0.30),
+                'pass_percent' => (int) round((float) config('services.face_match.pass_threshold', 0.40) * 100),
+                'review_percent' => (int) round((float) config('services.face_match.review_threshold', 0.30) * 100),
+            ],
+        ], 'KYC stage flow retrieved.');
     }
 
     public function deviceMatchScan(Request $request, KycDeviceCatalogMatcher $matcher): JsonResponse

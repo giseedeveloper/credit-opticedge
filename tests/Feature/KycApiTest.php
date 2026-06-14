@@ -94,7 +94,9 @@ it('returns the simplified three-stage kyc flow contract', function () {
         ->assertJsonPath('data.stages.0.label', 'Device & Offer')
         ->assertJsonPath('data.stages.1.label', 'Customer & Verification')
         ->assertJsonPath('data.stages.2.label', 'Payment, Agreement & Handover')
-        ->assertJsonPath('data.stages.1.legacy_steps', [2, 3, 4, 5, 6]);
+        ->assertJsonPath('data.stages.1.legacy_steps', [2, 3, 4, 5, 6])
+        ->assertJsonPath('data.face_match.pass_percent', 40)
+        ->assertJsonPath('data.face_match.review_percent', 30);
 });
 
 // ─── Step 1: Device ───────────────────────────────────────────────────────────
@@ -1298,6 +1300,36 @@ it('save-draft rejects placeholder customers and submitted applications', functi
 
     $this->postJson("/api/v1/kyc/application/{$submitted->id}/save-draft")
         ->assertStatus(422);
+});
+
+it('returns pending kyc approvals queue as a plain customers array', function () {
+    $customer = Customer::factory()->create([
+        'dealer_id' => $this->dealer->id,
+        'first_name' => 'Asha',
+        'last_name' => 'Mwangi',
+        'phone' => '0712345678',
+        'kyc_status' => 'pending',
+        'kyc_stage' => 1,
+    ]);
+
+    Verification::factory()->create([
+        'customer_id' => $customer->id,
+        'stage' => 1,
+        'status' => 'pending',
+        'stage1_status' => 'pending',
+    ]);
+
+    $response = $this->getJson('/api/v1/kyc/approvals/pending?stage=1')
+        ->assertOk()
+        ->assertJsonPath('data.stage', 1);
+
+    $customers = $response->json('data.customers');
+
+    expect($customers)->toBeArray()
+        ->and(array_is_list($customers))->toBeTrue()
+        ->and($customers)->toHaveCount(1)
+        ->and($customers[0]['full_name'])->toBe($customer->full_name)
+        ->and($customers[0]['verification']['stage'])->toBe(1);
 });
 
 function apiKycSignatureDataUrl(): string

@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../config/constants.dart';
 
-/// Brand logo used on splash, login, and anywhere the app icon is shown in-app.
+/// Brand logo for splash, login, and in-app headers (original compact sizing).
 class AppLogo extends StatelessWidget {
   const AppLogo({
     super.key,
-    this.size = 120,
-    this.borderRadius = 28,
+    this.size = 96,
+    this.borderRadius = 24,
     this.showShadow = true,
     this.elevation = 0,
   });
@@ -31,12 +31,15 @@ class AppLogo extends StatelessWidget {
         errorBuilder: (_, __, ___) => Container(
           width: size,
           height: size,
-          color: AppConstants.infoSurface,
+          decoration: BoxDecoration(
+            color: AppConstants.infoSurface,
+            borderRadius: BorderRadius.circular(borderRadius),
+          ),
           alignment: Alignment.center,
-          child: const Icon(
+          child: Icon(
             Icons.verified_user_rounded,
             color: AppConstants.info,
-            size: 40,
+            size: (size * 0.35).clamp(24, 48),
           ),
         ),
       ),

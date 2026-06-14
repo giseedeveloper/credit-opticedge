@@ -23,12 +23,12 @@ class StepIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pillHeight = compact ? 42.0 : 52.0;
-    final horizontalPadding = compact ? 11.0 : 14.0;
-    final verticalPadding = compact ? 6.0 : 8.0;
-    final badgeSize = compact ? 24.0 : 28.0;
-    final stepFontSize = compact ? 9.0 : 10.0;
-    final labelFontSize = compact ? 11.0 : 12.0;
+    final pillHeight = compact ? 36.0 : 52.0;
+    final horizontalPadding = compact ? 9.0 : 14.0;
+    final verticalPadding = compact ? 5.0 : 8.0;
+    final badgeSize = compact ? 20.0 : 28.0;
+    final stepFontSize = compact ? 8.0 : 10.0;
+    final labelFontSize = compact ? 10.0 : 12.0;
     final inactiveSurface = onDarkBackground
         ? Colors.white.withValues(alpha: 0.12)
         : AppConstants.surfaceMuted;
@@ -49,7 +49,7 @@ class StepIndicator extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: totalSteps,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (_, __) => SizedBox(width: compact ? 7 : 10),
         itemBuilder: (context, index) {
           final stepNumber = index + 1;
           final isDone = currentStep > stepNumber;
@@ -74,7 +74,7 @@ class StepIndicator extends StatelessWidget {
                     )
                   : null,
               color: isDone ? AppConstants.successSurface : inactiveSurface,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(compact ? 14 : 18),
               border: Border.all(
                 color: isActive
                     ? (onDarkBackground

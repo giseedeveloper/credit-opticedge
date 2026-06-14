@@ -5,6 +5,7 @@ import '../../../config/constants.dart';
 import '../../../config/design_tokens.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/kyc/kyc_wizard_ui.dart';
 import '../../../widgets/common/glass_card.dart';
 
 class Step6ConsentScreen extends ConsumerStatefulWidget {
@@ -36,7 +37,7 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(kycProvider);
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: KycWizardUi.pagePadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -78,11 +79,11 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
                     s.copyWith(callConsentAccepted: v ?? false)),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
 
           // Summary indicator
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: KycWizardUi.cardPadding,
             decoration: BoxDecoration(
               color: _allAccepted(state)
                   ? const Color(0xFFECFDF5)
@@ -103,16 +104,16 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
                   color: _allAccepted(state)
                       ? AppConstants.success
                       : AppConstants.textSecondary,
-                  size: 20,
+                  size: 18,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     _allAccepted(state)
                         ? 'Tayari.'
                         : 'Chagua vitatu vyote.',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: KycWizardUi.bodySize,
                       fontWeight: FontWeight.w500,
                       color: _allAccepted(state)
                           ? AppConstants.success
@@ -124,8 +125,9 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
             ),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 20),
           AppButton(
+            compact: true,
             label: 'Save & Continue',
             width: double.infinity,
             isLoading: state.isSubmitting,
@@ -155,32 +157,32 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
       onTap: () => onChanged(!value),
       child: GlassCard(
         tint: value ? AppConstants.primarySurface : idleSurface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: KycWizardUi.cardRadius,
         borderColor: value
             ? AppConstants.primary
             : (isDark ? DesignTokens.darkBorder : AppConstants.border),
-        padding: const EdgeInsets.all(14),
+        padding: KycWizardUi.cardPadding,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 30,
+              height: 30,
               decoration: BoxDecoration(
                 color: value
                     ? AppConstants.primary
                     : (isDark
                         ? DesignTokens.darkBorder.withValues(alpha: 0.35)
                         : AppConstants.borderLight),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon,
                   color: value
                       ? Colors.white
                       : theme.textTheme.bodyMedium?.color,
-                  size: 18),
+                  size: 16),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,7 +190,7 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: KycWizardUi.bodySize,
                       fontWeight: FontWeight.w600,
                       color: value
                           ? AppConstants.primary
@@ -196,13 +198,13 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
                     ),
                   ),
                   if (description.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       description,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: KycWizardUi.labelSize,
                         color: theme.textTheme.bodyMedium?.color,
-                        height: 1.4,
+                        height: 1.35,
                       ),
                     ),
                   ],
@@ -225,21 +227,6 @@ class _Step6State extends ConsumerState<Step6ConsentScreen> {
     );
   }
 
-  Widget _sectionHeader(String title, String subtitle) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).textTheme.bodyLarge?.color)),
-          if (subtitle.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(subtitle,
-                style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).textTheme.bodyMedium?.color)),
-          ],
-        ],
-      );
+  Widget _sectionHeader(String title, String subtitle) =>
+      KycSectionHeader(title: title, subtitle: subtitle);
 }

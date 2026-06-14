@@ -80,7 +80,7 @@ class SignaturePad extends StatefulWidget {
   const SignaturePad({
     super.key,
     required this.controller,
-    this.height = 190,
+    this.height = 150,
   });
 
   @override

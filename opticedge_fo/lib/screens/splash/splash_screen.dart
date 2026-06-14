@@ -288,9 +288,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Widget _buildLogo() {
     return const AppLogo(
-      size: 168,
-      borderRadius: 32,
-      elevation: 14,
+      size: 112,
+      borderRadius: 26,
+      elevation: 12,
       showShadow: true,
     );
   }

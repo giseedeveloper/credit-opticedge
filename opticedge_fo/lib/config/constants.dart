@@ -6,7 +6,12 @@ class AppConstants {
 
   static const String appName = 'Opticedge FO';
   static const String tagline = 'Fast. Secure. Verified.';
+  /// In-app brand image (original logo file).
   static const String appLogoAsset = 'assets/images/opticedge_app_logo.png';
+
+  /// Circular launcher / home-screen icon only (generated asset).
+  static const String appLauncherIconAsset =
+      'assets/images/opticedge_app_launcher_icon.png';
 
   /// Brand blue from Opticedge Africa logo (#0072BC).
   static const Color brandBlue = Color(0xFF0072BC);
@@ -77,8 +82,8 @@ class AppConstants {
   static const String draftPrefix = 'kyc_draft_';
 
   // Face match thresholds (aligned with FACE_MATCH_* on server)
-  static const double faceMatchPassThreshold = 0.40;
-  static const double faceMatchReviewThreshold = 0.30;
+  static const double faceMatchPassThreshold = 0.75;
+  static const double faceMatchReviewThreshold = 0.65;
   static int get faceMatchPassPercent => (faceMatchPassThreshold * 100).round();
   static int get faceMatchReviewPercent =>
       (faceMatchReviewThreshold * 100).round();

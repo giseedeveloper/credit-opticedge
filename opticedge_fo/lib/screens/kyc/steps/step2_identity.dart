@@ -7,6 +7,7 @@ import '../../../config/design_tokens.dart';
 import '../../../core/providers/customer_provider.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/kyc/kyc_wizard_ui.dart';
 import '../../../widgets/common/face_verification_hero_card.dart';
 import '../../../widgets/common/glass_card.dart';
 import '../../../core/utils/id_document_rules.dart';
@@ -141,7 +142,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
     final completionPercent = (completion * 100).round();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: KycWizardUi.pagePadding,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       child: Form(
         key: _formKey,
@@ -149,7 +150,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _sectionHeader('Utambulisho', ''),
-            const SizedBox(height: 18),
+            const SizedBox(height: 12),
             _progressHero(
               completionPercent: completionPercent,
               capturedPhotos: capturedPhotos,
@@ -159,7 +160,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
               const SizedBox(height: 14),
               _faceMatchCard(state.customerId!),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             _card(
               title: '1. Taarifa binafsi',
               subtitle: '',
@@ -188,7 +189,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                     required: true,
                     hint: 'Enter the customer surname',
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
                   _label('Gender'),
                   const SizedBox(height: 8),
                   Row(
@@ -224,7 +225,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                 ],
               ),
             ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             _card(
               title: '2. Kitambulisho',
               subtitle: '',
@@ -288,7 +289,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                 ],
               ),
             ).animate().fadeIn(delay: 120.ms).slideY(begin: 0.06, end: 0),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             _card(
               title: '3. Mapicha',
               subtitle: '',
@@ -408,8 +409,9 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                 ],
               ),
             ).animate().fadeIn(delay: 180.ms).slideY(begin: 0.06, end: 0),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
             AppButton(
+              compact: true,
               label: 'Save & Continue',
               width: double.infinity,
               isLoading: state.isSubmitting,
@@ -558,32 +560,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
     );
   }
 
-  Widget _sectionHeader(String title, String subtitle) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: AppConstants.textPrimary,
-          ),
-        ),
-        if (subtitle.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.5,
-              color: AppConstants.textSecondary,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
+  Widget _sectionHeader(String title, String subtitle) => KycSectionHeader(title: title, subtitle: subtitle);
 
   Widget _progressHero({
     required int completionPercent,
@@ -591,19 +568,19 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
     required String selectedIdType,
   }) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: KycWizardUi.cardPadding,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF103454), Color(0xFF1E5987)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: KycWizardUi.cardRadius,
         boxShadow: [
           BoxShadow(
-            color: AppConstants.heroEnd.withValues(alpha: 0.22),
-            blurRadius: 22,
-            offset: const Offset(0, 12),
+            color: AppConstants.heroEnd.withValues(alpha: 0.16),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -614,18 +591,19 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.verified_user_outlined,
                   color: Colors.white,
+                  size: 18,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -633,16 +611,16 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
                     const Text(
                       'Maendeleo',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: KycWizardUi.sectionTitleSize,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       '$completionPercent% · picha $capturedPhotos/4',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: KycWizardUi.labelSize,
                         color: Colors.white.withValues(alpha: 0.82),
                       ),
                     ),
@@ -655,12 +633,12 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(99),
             child: LinearProgressIndicator(
               value: completionPercent / 100,
-              minHeight: 10,
+              minHeight: 7,
               backgroundColor: Colors.white.withValues(alpha: 0.12),
               valueColor: const AlwaysStoppedAnimation<Color>(
                 AppConstants.primaryLight,
@@ -708,29 +686,31 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
   }) {
     return GlassCard.surface(
       context,
+      padding: KycWizardUi.cardPadding,
+      borderRadius: KycWizardUi.cardRadius,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: KycWizardUi.cardTitleSize,
               fontWeight: FontWeight.w800,
               color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
           if (subtitle.isNotEmpty) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               subtitle,
               style: TextStyle(
-                fontSize: 12,
-                height: 1.45,
+                fontSize: KycWizardUi.labelSize,
+                height: 1.35,
                 color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
             ),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: KycWizardUi.innerGap),
           child,
         ],
       ),
@@ -743,7 +723,7 @@ class _Step2State extends ConsumerState<Step2IdentityScreen> {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark

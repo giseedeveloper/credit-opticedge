@@ -113,8 +113,8 @@ services:
     container_name: opticedge_face_match
     restart: unless-stopped
     environment:
-      FACE_MATCH_PASS_THRESHOLD: ${FACE_MATCH_PASS_THRESHOLD:-0.40}
-      FACE_MATCH_REVIEW_THRESHOLD: ${FACE_MATCH_REVIEW_THRESHOLD:-0.30}
+      FACE_MATCH_PASS_THRESHOLD: ${FACE_MATCH_PASS_THRESHOLD:-0.75}
+      FACE_MATCH_REVIEW_THRESHOLD: ${FACE_MATCH_REVIEW_THRESHOLD:-0.65}
       FACE_MATCH_MIN_FACE_AREA_RATIO: ${FACE_MATCH_MIN_FACE_AREA_RATIO:-0.045}
       FACE_MATCH_MIN_SHARPNESS: ${FACE_MATCH_MIN_SHARPNESS:-35}
       FACE_MATCH_MIN_BRIGHTNESS: ${FACE_MATCH_MIN_BRIGHTNESS:-35}
@@ -134,12 +134,12 @@ services:
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=5)",
+          "import urllib.request, json; r=urllib.request.urlopen('http://127.0.0.1:8001/health/ready', timeout=8); d=json.loads(r.read()); exit(0 if d.get('model_loaded') else 1)",
         ]
       interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 180s
+      timeout: 12s
+      retries: 8
+      start_period: 240s
     networks:
       - opticedge_net
 

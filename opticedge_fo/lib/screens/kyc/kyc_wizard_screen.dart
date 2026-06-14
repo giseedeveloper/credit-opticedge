@@ -16,6 +16,7 @@ import 'steps/step4_income.dart';
 import 'steps/step5_nok.dart';
 import 'steps/step6_consent.dart';
 import 'steps/step7_submit.dart';
+import '../../widgets/kyc/kyc_wizard_ui.dart';
 import '../../widgets/kyc/step_indicator.dart';
 
 class KycWizardScreen extends ConsumerStatefulWidget {
@@ -262,7 +263,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
         : AppConstants.border.withValues(alpha: 0.55);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+      padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark
@@ -292,11 +293,11 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 46,
-                height: 46,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   color: iconBg,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: iconBorder,
                   ),
@@ -304,7 +305,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                 child: Center(
                   child: AppColorIcon(
                     assetName: _stepIcons[stepIndex - 1],
-                    size: 27,
+                    size: 22,
                     semanticsLabel: _stepLabels[stepIndex - 1],
                   ),
                 ),
@@ -317,33 +318,33 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                     Text(
                       'Step $stepIndex of 7',
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 9,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: 2.2,
+                        letterSpacing: 1.8,
                         color: metaColor,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       _stepLabels[stepIndex - 1],
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 19,
+                        fontSize: 16,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: -0.45,
+                        letterSpacing: -0.35,
                         color: titleColor,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Text(
                       descriptor.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        height: 1.28,
+                        height: 1.25,
                         color: subtitleColor,
                       ),
                     ),
@@ -356,8 +357,8 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                   foregroundColor:
                       isDark ? titleColor : AppConstants.primary,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  minimumSize: const Size(0, 38),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  minimumSize: const Size(0, 32),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 onPressed: () async {
@@ -381,13 +382,13 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                   stepIndex > 1 ? 'Back' : 'Exit',
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
-                    fontSize: 13,
+                    fontSize: 12,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           StepIndicator(
             totalSteps: 7,
             currentStep: stepIndex,
@@ -531,7 +532,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                           ? DesignTokens.darkSurface
                           : AppConstants.kycWizardSurface,
                       borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(28),
+                        top: Radius.circular(22),
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -547,10 +548,10 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                         if (showOutcomeBanner &&
                             descriptor.outcome.trim().isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+                            padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
                             child: Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.all(14),
+                              padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: isDark
@@ -565,7 +566,7 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
                                   color: AppConstants.primary.withValues(
                                     alpha: isDark ? 0.22 : 0.14,
@@ -576,8 +577,8 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Container(
-                                    width: 34,
-                                    height: 34,
+                                    width: 28,
+                                    height: 28,
                                     decoration: BoxDecoration(
                                       gradient: const LinearGradient(
                                         colors: [
@@ -585,22 +586,22 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                                           AppConstants.primaryDark,
                                         ],
                                       ),
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: const Icon(
                                       Icons.auto_awesome_rounded,
-                                      size: 18,
+                                      size: 15,
                                       color: Colors.white,
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
+                                  const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       descriptor.outcome,
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w700,
-                                        height: 1.45,
+                                        height: 1.4,
                                         color: theme.colorScheme.onSurface,
                                       ),
                                     ),
@@ -609,7 +610,12 @@ class _KycWizardScreenState extends ConsumerState<KycWizardScreen> {
                               ),
                             ),
                           ),
-                        Expanded(child: _buildStepBody(stepIndex)),
+                        Expanded(
+                          child: Theme(
+                            data: KycWizardUi.compactFormTheme(theme),
+                            child: _buildStepBody(stepIndex),
+                          ),
+                        ),
                       ],
                     ),
                   ),

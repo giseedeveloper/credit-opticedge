@@ -14,6 +14,7 @@ import '../../../widgets/common/app_button.dart';
 import '../../../widgets/common/app_color_icon.dart';
 import '../../../widgets/common/glass_card.dart';
 import '../../../widgets/common/photo_picker_tile.dart';
+import '../../../widgets/kyc/kyc_wizard_ui.dart';
 
 class Step1DeviceScreen extends ConsumerStatefulWidget {
   const Step1DeviceScreen({super.key});
@@ -215,7 +216,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
 
     return SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.all(20),
+      padding: KycWizardUi.pagePadding,
       child: Form(
         key: _formKey,
         child: Column(
@@ -226,28 +227,30 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
               attachedPhotos: attachedPhotos,
               requiredPhotos: 2,
             ).animate().fadeIn(duration: 260.ms).slideY(begin: 0.08, end: 0),
-            const SizedBox(height: 18),
+            const SizedBox(height: 12),
             GlassCard.surface(
               context,
+              padding: KycWizardUi.cardPadding,
+              borderRadius: KycWizardUi.cardRadius,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Picha (Scan)',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: KycWizardUi.cardTitleSize,
                       fontWeight: FontWeight.w800,
                       color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
                   GridView.count(
                     crossAxisCount: 2,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    childAspectRatio: 0.9,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 1.08,
                     children: [
                       PhotoPickerTile(
                         label: 'IMEI Sticker',
@@ -294,7 +297,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                 ],
               ),
             ).animate().fadeIn(delay: 40.ms).slideY(begin: 0.06, end: 0),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             brandsAsync.when(
               loading: () =>
                   const LinearProgressIndicator(color: AppConstants.primary),
@@ -312,6 +315,8 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
               data: (brands) {
                 return GlassCard.surface(
                   context,
+                  padding: KycWizardUi.cardPadding,
+                  borderRadius: KycWizardUi.cardRadius,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -515,16 +520,18 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                 );
               },
             ).animate().fadeIn(delay: 70.ms).slideY(begin: 0.06, end: 0),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             GlassCard.surface(
               context,
+              padding: KycWizardUi.cardPadding,
+              borderRadius: KycWizardUi.cardRadius,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Manual (Mkono)',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: KycWizardUi.cardTitleSize,
                       fontWeight: FontWeight.w800,
                       color: Theme.of(context).textTheme.bodyLarge?.color,
                     ),
@@ -596,9 +603,11 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                     preview['repayment_frequency']?.toString() ?? 'weekly';
 
                 return Padding(
-                  padding: const EdgeInsets.only(top: 16),
+                  padding: const EdgeInsets.only(top: 10),
                   child: GlassCard.surface(
                     context,
+                    padding: KycWizardUi.cardPadding,
+                    borderRadius: KycWizardUi.cardRadius,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -652,8 +661,9 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
               loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
             AppButton(
+              compact: true,
               label: 'Save & Continue',
               width: double.infinity,
               isLoading: state.isSubmitting,
@@ -673,14 +683,14 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
     required int requiredPhotos,
   }) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF103454), Color(0xFF1F5A88)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: AppConstants.heroEnd.withValues(alpha: 0.2),
@@ -696,16 +706,16 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Center(
                   child: AppColorIcon(
                     assetName: AppIconAssets.device,
-                    size: 22,
+                    size: 18,
                     tintColor: Colors.white,
                     semanticsLabel: 'Device scan',
                   ),
@@ -719,16 +729,16 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
                     const Text(
                       'Maendeleo',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       'Picha $requiredPhotos/$requiredPhotos · identifiers · bei/deposit',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         height: 1.45,
                         color: Colors.white.withValues(alpha: 0.82),
                       ),
@@ -738,7 +748,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
@@ -788,7 +798,7 @@ class _Step1State extends ConsumerState<Step1DeviceScreen> {
           Text(
             value,
             style: const TextStyle(
-              fontSize: 15,
+              fontSize: KycWizardUi.sectionTitleSize,
               fontWeight: FontWeight.w800,
               color: Colors.white,
             ),

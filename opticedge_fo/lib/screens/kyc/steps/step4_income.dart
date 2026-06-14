@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/constants.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/kyc/kyc_wizard_ui.dart';
 
 class Step4IncomeScreen extends ConsumerStatefulWidget {
   const Step4IncomeScreen({super.key});
@@ -64,7 +65,7 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(kycProvider);
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: KycWizardUi.pagePadding,
       child: Form(
         key: _formKey,
         child: Column(
@@ -113,10 +114,10 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
                 required: true, keyboard: TextInputType.number),
             const SizedBox(height: 14),
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: KycWizardUi.cardPadding,
               decoration: BoxDecoration(
                 color: AppConstants.surfaceMuted,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: KycWizardUi.cardRadius,
                 border: Border.all(color: AppConstants.border),
               ),
               child: Row(
@@ -128,7 +129,7 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
                         Text(
                           'Politically Exposed Person (PEP)',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: KycWizardUi.bodySize,
                             fontWeight: FontWeight.w700,
                             color: AppConstants.textPrimary,
                           ),
@@ -159,6 +160,7 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
                 optional: true, hint: 'e.g. 2 years'),
             const SizedBox(height: 32),
             AppButton(
+              compact: true,
               label: 'Save & Continue',
               width: double.infinity,
               isLoading: state.isSubmitting,
@@ -172,22 +174,8 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
     );
   }
 
-  Widget _sectionHeader(String title, String subtitle) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppConstants.textPrimary)),
-          if (subtitle.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(subtitle,
-                style: const TextStyle(
-                    fontSize: 12, color: AppConstants.textSecondary)),
-          ],
-        ],
-      );
+  Widget _sectionHeader(String title, String subtitle) =>
+      KycSectionHeader(title: title, subtitle: subtitle);
 
   Widget _label(String text, {bool optional = false}) => Wrap(
         spacing: 6,
@@ -196,7 +184,7 @@ class _Step4State extends ConsumerState<Step4IncomeScreen> {
         children: [
           Text(text,
               style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: KycWizardUi.bodySize,
                   fontWeight: FontWeight.w500,
                   color: AppConstants.textPrimary)),
           if (optional)

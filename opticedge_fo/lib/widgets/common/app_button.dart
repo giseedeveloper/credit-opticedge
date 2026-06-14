@@ -9,6 +9,7 @@ class AppButton extends StatelessWidget {
   final IconData? icon;
   final Color? color;
   final double? width;
+  final bool compact;
 
   /// Screen reader label (defaults to [label]).
   final String? semanticsLabel;
@@ -22,12 +23,17 @@ class AppButton extends StatelessWidget {
     this.icon,
     this.color,
     this.width,
+    this.compact = false,
     this.semanticsLabel,
   });
 
   @override
   Widget build(BuildContext context) {
     final bg = color ?? AppConstants.primary;
+    final verticalPadding = compact ? 12.0 : 17.0;
+    final horizontalPadding = compact ? 16.0 : 24.0;
+    final borderRadius = compact ? 14.0 : 20.0;
+    final iconSize = compact ? 16.0 : 18.0;
     final child = isLoading
         ? const SizedBox(
             width: 20,
@@ -42,8 +48,8 @@ class AppButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 18),
-                const SizedBox(width: 8),
+                Icon(icon, size: iconSize),
+                SizedBox(width: compact ? 6 : 8),
               ],
               Flexible(
                 child: Text(
@@ -51,6 +57,10 @@ class AppButton extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: compact ? 13 : 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -69,9 +79,12 @@ class AppButton extends StatelessWidget {
               foregroundColor: bg,
               side: BorderSide(color: bg, width: 1.5),
               backgroundColor: Colors.white.withValues(alpha: 0.88),
-              padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 24),
+              padding: EdgeInsets.symmetric(
+                vertical: verticalPadding,
+                horizontal: horizontalPadding,
+              ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(borderRadius),
               ),
             ),
             child: child,
@@ -97,7 +110,7 @@ class AppButton extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(borderRadius),
             boxShadow: [
               BoxShadow(
                 color: bg.withValues(alpha: 0.28),
@@ -115,9 +128,12 @@ class AppButton extends StatelessWidget {
               disabledForegroundColor: Colors.white.withValues(alpha: 0.72),
               shadowColor: Colors.transparent,
               surfaceTintColor: Colors.transparent,
-              padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 24),
+              padding: EdgeInsets.symmetric(
+                vertical: verticalPadding,
+                horizontal: horizontalPadding,
+              ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(borderRadius),
               ),
               elevation: 0,
             ),

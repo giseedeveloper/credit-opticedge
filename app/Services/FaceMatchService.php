@@ -40,8 +40,8 @@ class FaceMatchService
         }
 
         try {
-            $res = Http::timeout(25)
-                ->retry(2, 250)
+            $res = Http::timeout(45)
+                ->retry(3, 500)
                 ->attach('id_front', file_get_contents($idFront->getRealPath()), $idFront->getClientOriginalName())
                 ->attach('headshot', file_get_contents($headshot->getRealPath()), $headshot->getClientOriginalName())
                 ->post(rtrim($endpoint, '/').'/match');

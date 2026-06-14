@@ -87,6 +87,11 @@ it('public media rejects invalid traversal paths even when signed', function () 
 });
 
 it('returns the simplified three-stage kyc flow contract', function () {
+    config([
+        'services.face_match.pass_threshold' => 0.75,
+        'services.face_match.review_threshold' => 0.65,
+    ]);
+
     $this->getJson('/api/v1/kyc/application/stage-flow')
         ->assertOk()
         ->assertJsonPath('data.version', 'kyc_3_stage_v1')
@@ -95,8 +100,8 @@ it('returns the simplified three-stage kyc flow contract', function () {
         ->assertJsonPath('data.stages.1.label', 'Customer & Verification')
         ->assertJsonPath('data.stages.2.label', 'Payment, Agreement & Handover')
         ->assertJsonPath('data.stages.1.legacy_steps', [2, 3, 4, 5, 6])
-        ->assertJsonPath('data.face_match.pass_percent', 40)
-        ->assertJsonPath('data.face_match.review_percent', 30);
+        ->assertJsonPath('data.face_match.pass_percent', 75)
+        ->assertJsonPath('data.face_match.review_percent', 65);
 });
 
 // ─── Step 1: Device ───────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import '../../../config/constants.dart';
 import '../../../config/design_tokens.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/kyc/kyc_wizard_ui.dart';
 import '../../../widgets/common/glass_card.dart';
 import '../../../widgets/kyc/phone_number_field.dart';
 
@@ -85,7 +86,7 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
     final countriesAsync = ref.watch(phoneCountriesProvider);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: KycWizardUi.pagePadding,
       child: Form(
         key: _formKey,
         child: Column(
@@ -172,6 +173,7 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
             ],
             const SizedBox(height: 32),
             AppButton(
+              compact: true,
               label: 'Save & Continue',
               width: double.infinity,
               isLoading: state.isSubmitting,
@@ -198,8 +200,8 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
   }) {
     return GlassCard.surface(
       context,
-      borderRadius: BorderRadius.circular(18),
-      padding: const EdgeInsets.all(16),
+      borderRadius: KycWizardUi.cardRadius,
+      padding: KycWizardUi.cardPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -209,20 +211,20 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
               Expanded(
                 child: Row(children: [
                   Container(
-                    width: 30,
-                    height: 30,
+                    width: 26,
+                    height: 26,
                     decoration: BoxDecoration(
                       color: AppConstants.primarySurface,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(Icons.person_outline_rounded,
-                        color: AppConstants.primary, size: 16),
+                        color: AppConstants.primary, size: 14),
                   ),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(title,
                         style: TextStyle(
-                            fontSize: 14,
+                            fontSize: KycWizardUi.cardTitleSize,
                             fontWeight: FontWeight.w600,
                             color: Theme.of(context).textTheme.bodyLarge?.color),
                         overflow: TextOverflow.ellipsis),
@@ -233,11 +235,11 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
                 GestureDetector(
                   onTap: onRemove,
                   child: const Icon(Icons.remove_circle_outline_rounded,
-                      color: AppConstants.error, size: 20),
+                      color: AppConstants.error, size: 18),
                 ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: KycWizardUi.innerGap),
           _field(nameCtrl, 'Full Name', required: required),
           const SizedBox(height: 12),
           PhoneNumberField(
@@ -305,23 +307,8 @@ class _Step5State extends ConsumerState<Step5NokScreen> {
     );
   }
 
-  Widget _sectionHeader(String title, String subtitle) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).textTheme.bodyLarge?.color)),
-          if (subtitle.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(subtitle,
-                style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).textTheme.bodyMedium?.color)),
-          ],
-        ],
-      );
+  Widget _sectionHeader(String title, String subtitle) =>
+      KycSectionHeader(title: title, subtitle: subtitle);
 
   Widget _label(String text, {bool optional = false}) => Row(children: [
         Text(text,

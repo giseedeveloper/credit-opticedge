@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import sys
+from contextlib import asynccontextmanager
 from typing import Any, List, Optional, Tuple
 
 import cv2
@@ -10,8 +12,6 @@ import numpy as np
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 from insightface.app import FaceAnalysis
-
-app = FastAPI(title="OpticEdge Face Match", version="1.0.0")
 
 
 def _match_log_line(message: str) -> None:
@@ -23,6 +23,7 @@ def _match_log_line(message: str) -> None:
 
 
 _face_app: Optional[FaceAnalysis] = None
+_model_warmup_complete = False
 
 
 def _env_float(name: str, default: float) -> float:
@@ -45,9 +46,9 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
-# Headshot / live selfie — stricter quality (defaults match previous behaviour).
-PASS_THRESHOLD = _env_float("FACE_MATCH_PASS_THRESHOLD", 0.40)
-REVIEW_THRESHOLD = _env_float("FACE_MATCH_REVIEW_THRESHOLD", 0.30)
+# Headshot / live selfie — stricter quality for 75% pass target.
+PASS_THRESHOLD = _env_float("FACE_MATCH_PASS_THRESHOLD", 0.75)
+REVIEW_THRESHOLD = _env_float("FACE_MATCH_REVIEW_THRESHOLD", 0.65)
 MIN_FACE_AREA_RATIO = _env_float("FACE_MATCH_MIN_FACE_AREA_RATIO", 0.045)
 MIN_SHARPNESS = _env_float("FACE_MATCH_MIN_SHARPNESS", 35.0)
 MIN_BRIGHTNESS = _env_float("FACE_MATCH_MIN_BRIGHTNESS", 35.0)
@@ -62,12 +63,6 @@ ID_MAX_BRIGHTNESS = _env_float("FACE_MATCH_ID_MAX_BRIGHTNESS", 238.0)
 ID_UPSCALE_MIN_EDGE = _env_int("FACE_MATCH_ID_UPSCALE_MIN_EDGE", 960)
 
 
-@app.get("/health")
-async def health():
-    """Lightweight liveness check for Docker / load balancers (no model load)."""
-    return {"status": "ok"}
-
-
 def _get_face_app() -> FaceAnalysis:
     global _face_app
     if _face_app is None:
@@ -75,6 +70,38 @@ def _get_face_app() -> FaceAnalysis:
         _face_app = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
         _face_app.prepare(ctx_id=0, det_size=(640, 640))
     return _face_app
+
+
+def _warmup_model() -> None:
+    global _model_warmup_complete
+    _get_face_app()
+    _model_warmup_complete = True
+    _match_log_line("face_match model warmup complete")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, _warmup_model)
+    yield
+
+
+app = FastAPI(title="OpticEdge Face Match", version="1.0.0", lifespan=lifespan)
+
+
+@app.get("/health")
+async def health():
+    """Lightweight liveness check for Docker / load balancers (no model load)."""
+    return {"status": "ok"}
+
+
+@app.get("/health/ready")
+async def health_ready():
+    """Readiness: model loaded and ready to score matches."""
+    return {
+        "status": "ok" if _model_warmup_complete else "warming",
+        "model_loaded": _model_warmup_complete,
+    }
 
 
 def _read_image(upload: UploadFile) -> Optional[np.ndarray]:
@@ -216,6 +243,7 @@ def _id_front_candidate_images(id_img: np.ndarray) -> List[Tuple[str, np.ndarray
 
     # Portrait ROIs on enhanced image (fractions of W x H).
     rois: List[Tuple[str, float, float, float, float]] = [
+        ("roi_nida_left", 0.02, 0.10, 0.36, 0.90),
         ("roi_left", 0.02, 0.08, 0.44, 0.82),
         ("roi_right", 0.54, 0.08, 0.99, 0.82),
         ("roi_center", 0.20, 0.10, 0.82, 0.78),

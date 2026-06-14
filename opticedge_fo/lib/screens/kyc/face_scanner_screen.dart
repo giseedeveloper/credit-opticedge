@@ -93,6 +93,14 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   /// Modern flow: tips before camera permission + preview.
   bool _preScanAcknowledged = false;
 
+  /// Hold still in [detected] before auto-capture.
+  static const Duration _detectedHoldDuration = Duration(milliseconds: 1800);
+
+  /// Let camera settle after stopping ML Kit stream before still capture.
+  static const Duration _captureSettleDuration = Duration(milliseconds: 350);
+
+  static const int _maxVerifyAttempts = 3;
+
   /// Auto-capture after user stays in [detected] briefly.
   Timer? _detectedHoldTimer;
 
@@ -408,7 +416,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
         _detectedHoldTimer?.cancel();
         _detectedHoldTimer = null;
       } else {
-        _detectedHoldTimer ??= Timer(const Duration(milliseconds: 750), () {
+        _detectedHoldTimer ??= Timer(_detectedHoldDuration, () {
           if (!mounted || session != _cameraSession) {
             return;
           }
@@ -497,7 +505,9 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     _detectedHoldTimer = null;
 
     final controller = _cameraController;
-    if (controller == null || !controller.value.isInitialized) return;
+    if (controller == null || !controller.value.isInitialized) {
+      return;
+    }
 
     setState(() {
       _isProcessing = true;
@@ -518,22 +528,48 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
       }
 
       await _safeStopImageStream();
+      await Future<void>.delayed(_captureSettleDuration);
 
-      final image = await controller.takePicture();
-      final file = File(image.path);
+      FaceVerificationResult? lastResult;
 
-      final result = await FaceVerificationService.instance.verifyFace(
-        widget.customerId,
-        file,
-      );
+      for (var attempt = 1; attempt <= _maxVerifyAttempts; attempt++) {
+        if (attempt > 1) {
+          await Future<void>.delayed(const Duration(milliseconds: 700));
+        }
 
-      if (mounted) {
-        setState(() {
-          _result = result;
-          _verificationPassed = result.isFaceStepComplete;
-          _isProcessing = false;
-        });
+        final image = await controller.takePicture();
+        final file = File(image.path);
+
+        lastResult = await FaceVerificationService.instance.verifyFace(
+          widget.customerId,
+          file,
+        );
+
+        final shouldRetry = attempt < _maxVerifyAttempts &&
+            _shouldAutoRetryVerification(lastResult);
+
+        if (!shouldRetry) {
+          break;
+        }
+
+        if (mounted) {
+          setState(() {
+            _errorInstruction =
+                'Picha haijatosi. Tunajaribu tena ($attempt/$_maxVerifyAttempts)...';
+          });
+        }
       }
+
+      if (!mounted || lastResult == null) {
+        return;
+      }
+
+      setState(() {
+        _result = lastResult;
+        _verificationPassed = lastResult!.isFaceStepComplete;
+        _isProcessing = false;
+        _errorInstruction = null;
+      });
     } on DioException catch (e) {
       if (mounted) {
         setState(() {
@@ -559,6 +595,33 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
         await _startImageStream();
       }
     }
+  }
+
+  bool _shouldAutoRetryVerification(FaceVerificationResult result) {
+    if (result.isFaceStepComplete) {
+      return false;
+    }
+
+    final reason = (result.reason ?? '').toLowerCase();
+
+    if (reason.contains('unreachable') ||
+        reason.contains('internal_error') ||
+        reason.contains('internal error') ||
+        reason.contains('not configured')) {
+      return true;
+    }
+
+    if (reason.contains('blurry') ||
+        reason.contains('too_dark') ||
+        reason.contains('too_bright') ||
+        reason.contains('too_small') ||
+        reason.contains('multiple_faces') ||
+        reason.contains('invalid_image') ||
+        reason.contains('no_face_detected')) {
+      return true;
+    }
+
+    return result.isReviewBand && reason.isNotEmpty;
   }
 
   Future<void> _pickFromGallery() async {
@@ -759,7 +822,9 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                   ),
                   onPressed: () async {
                     setState(() => _preScanAcknowledged = true);
+                    final idSync = _ensureIdFrontOnServer();
                     await _initCamera();
+                    await idSync;
                   },
                   child: const Text(
                     'Anza skani',

@@ -172,18 +172,18 @@ class PhotoPickerTile extends StatelessWidget {
                     file != null ? AppConstants.success : AppConstants.border,
                 width: file != null ? 1.5 : 1,
               ),
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: file != null
                 ? ClipRRect(
-                    borderRadius: BorderRadius.circular(21),
+                    borderRadius: BorderRadius.circular(15),
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
@@ -246,40 +246,40 @@ class PhotoPickerTile extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                width: isCompactTile ? 32 : 44,
-                                height: isCompactTile ? 32 : 44,
+                                width: isCompactTile ? 28 : 36,
+                                height: isCompactTile ? 28 : 36,
                                 decoration: BoxDecoration(
                                   color: AppConstants.surface,
                                   borderRadius: BorderRadius.circular(
-                                    isCompactTile ? 12 : 16,
+                                    isCompactTile ? 10 : 12,
                                   ),
                                 ),
                                 child: Icon(
                                   Icons.document_scanner_outlined,
                                   color: AppConstants.primary,
-                                  size: isCompactTile ? 18 : 24,
+                                  size: isCompactTile ? 16 : 20,
                                 ),
                               ),
-                              SizedBox(height: isCompactTile ? 4 : 8),
+                              SizedBox(height: isCompactTile ? 3 : 6),
                               Text(
                                 label,
                                 maxLines: isCompactTile ? 2 : 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: isCompactTile ? 9.5 : 11,
+                                  fontSize: isCompactTile ? 9 : 10,
                                   fontWeight: FontWeight.w700,
                                   color: AppConstants.textPrimary,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
                               if (!isCompactTile) ...[
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 3),
                                 const Text(
                                   'Tap to scan or attach',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 9,
                                     fontWeight: FontWeight.w600,
                                     color: AppConstants.textSecondary,
                                   ),

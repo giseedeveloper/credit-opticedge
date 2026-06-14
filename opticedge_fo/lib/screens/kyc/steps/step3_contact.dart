@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/constants.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/kyc/kyc_wizard_ui.dart';
 import '../../../widgets/common/glass_card.dart';
 import '../../../widgets/kyc/phone_number_field.dart';
 
@@ -77,7 +78,7 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
     ].where((item) => item).length;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: KycWizardUi.pagePadding,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       child: Form(
         key: _formKey,
@@ -85,12 +86,12 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _sectionHeader('Mawasiliano', ''),
-            const SizedBox(height: 18),
+            const SizedBox(height: 12),
             _contactHero(completionCount: completionCount)
                 .animate()
                 .fadeIn(duration: 260.ms)
                 .slideY(begin: 0.08, end: 0),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             _card(
               title: '1. Simu',
               subtitle: '',
@@ -149,8 +150,9 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
                 ),
               ),
             ).animate().fadeIn(delay: 60.ms).slideY(begin: 0.06, end: 0),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
             AppButton(
+              compact: true,
               label: 'Save & Continue',
               width: double.infinity,
               isLoading: state.isSubmitting,
@@ -164,48 +166,23 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
     );
   }
 
-  Widget _sectionHeader(String title, String subtitle) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: AppConstants.textPrimary,
-          ),
-        ),
-        if (subtitle.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.5,
-              color: AppConstants.textSecondary,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
+  Widget _sectionHeader(String title, String subtitle) => KycSectionHeader(title: title, subtitle: subtitle);
 
   Widget _contactHero({required int completionCount}) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: KycWizardUi.cardPadding,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF153D61), Color(0xFF2A6C9B)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: KycWizardUi.cardRadius,
         boxShadow: [
           BoxShadow(
-            color: AppConstants.heroEnd.withValues(alpha: 0.18),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: AppConstants.heroEnd.withValues(alpha: 0.14),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -215,13 +192,13 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
           const Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.phone_in_talk_outlined, color: Colors.white, size: 20),
-              SizedBox(width: 10),
+              Icon(Icons.phone_in_talk_outlined, color: Colors.white, size: 18),
+              SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Maendeleo',
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: KycWizardUi.sectionTitleSize,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
                   ),
@@ -229,11 +206,11 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             '$completionCount/1',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: KycWizardUi.labelSize,
               color: Colors.white.withValues(alpha: 0.82),
             ),
           ),
@@ -249,29 +226,31 @@ class _Step3State extends ConsumerState<Step3ContactScreen> {
   }) {
     return GlassCard.surface(
       context,
+      padding: KycWizardUi.cardPadding,
+      borderRadius: KycWizardUi.cardRadius,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: KycWizardUi.cardTitleSize,
               fontWeight: FontWeight.w800,
               color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
           if (subtitle.isNotEmpty) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               subtitle,
               style: TextStyle(
-                fontSize: 12,
-                height: 1.45,
+                fontSize: KycWizardUi.labelSize,
+                height: 1.35,
                 color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
             ),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: KycWizardUi.innerGap),
           child,
         ],
       ),

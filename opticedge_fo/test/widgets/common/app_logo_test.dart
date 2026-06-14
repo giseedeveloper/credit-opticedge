@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opticedge_fo/widgets/common/app_logo.dart';
 
 void main() {
-  testWidgets('AppLogo renders brand asset', (WidgetTester tester) async {
+  testWidgets('AppLogo renders compact brand asset', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -14,5 +14,9 @@ void main() {
 
     expect(find.byType(AppLogo), findsOneWidget);
     expect(find.byType(Image), findsOneWidget);
+
+    final image = tester.widget<Image>(find.byType(Image));
+    expect(image.width, 80);
+    expect(image.height, 80);
   });
 }

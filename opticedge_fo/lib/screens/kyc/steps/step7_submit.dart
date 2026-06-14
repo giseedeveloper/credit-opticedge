@@ -13,6 +13,7 @@ import '../../../core/models/kyc_flow_model.dart';
 import '../../../core/providers/customer_provider.dart';
 import '../../../core/providers/kyc_provider.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/kyc/kyc_wizard_ui.dart';
 import '../../../widgets/common/glass_card.dart';
 import '../../../widgets/common/photo_picker_tile.dart';
 import '../../../widgets/kyc/phone_number_field.dart';
@@ -356,7 +357,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
       backgroundColor: Colors.white,
       builder: (context) => SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          padding: const EdgeInsets.fromLTRB(14, 8, 20, 28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,7 +365,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
               const Text(
                 'Customer Agreement',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: KycWizardUi.sectionTitleSize,
                   fontWeight: FontWeight.w800,
                   color: AppConstants.textPrimary,
                 ),
@@ -378,14 +379,14 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                   color: AppConstants.textSecondary,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               _agreementPreviewSheetCard(document),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: KycWizardUi.cardPadding,
                 decoration: BoxDecoration(
                   color: AppConstants.infoSurface,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: KycWizardUi.cardRadius,
                   border: Border.all(
                     color: AppConstants.info.withValues(alpha: 0.14),
                   ),
@@ -429,12 +430,12 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: KycWizardUi.cardPadding,
                 decoration: BoxDecoration(
                   color: AppConstants.borderLight,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: KycWizardUi.cardRadius,
                 ),
                 child: SelectableText(
                   document.url,
@@ -445,8 +446,9 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               AppButton(
+                compact: true,
                 label: 'Copy Agreement Link',
                 width: double.infinity,
                 icon: Icons.copy_rounded,
@@ -492,14 +494,14 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
             (agreementContext?.foSignatureUrl?.isNotEmpty ?? false));
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: KycWizardUi.pagePadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _sectionHeader('Malipo & tuma', ''),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           _summaryCard(state),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           _closingFlowCard(
             paymentReady: paymentReady,
             agreementReady:
@@ -510,7 +512,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                     (state.agreementContext?.handoverListUrl?.isNotEmpty ??
                         false)),
           ).animate().fadeIn(duration: 260.ms).slideY(begin: 0.08, end: 0),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           _card(
             title: '1. Malipo',
             subtitle: '',
@@ -549,10 +551,10 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                   const SizedBox(height: 12),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(14),
+                    padding: KycWizardUi.cardPadding,
                     decoration: BoxDecoration(
                       color: AppConstants.errorSurface,
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: KycWizardUi.cardRadius,
                       border: Border.all(
                         color: AppConstants.error.withValues(alpha: 0.18),
                       ),
@@ -586,6 +588,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                   children: [
                     Expanded(
                       child: AppButton(
+                        compact: true,
                         label: paymentReady ? 'Payment Confirmed' : 'Send Push',
                         icon: paymentReady
                             ? Icons.check_circle_outline
@@ -600,6 +603,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                     const SizedBox(width: 10),
                     Expanded(
                       child: AppButton(
+                        compact: true,
                         label: 'Refresh Status',
                         outlined: true,
                         icon: Icons.refresh_rounded,
@@ -613,7 +617,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           _card(
             title: '2. ETR & mkopo',
             subtitle: '',
@@ -688,7 +692,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           _card(
             title: '3. Mkataba',
             subtitle: '',
@@ -745,7 +749,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           _card(
             title: '4. Saini',
             subtitle: '',
@@ -787,7 +791,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           _card(
             title: '5. Taarifa za mwisho',
             subtitle: '',
@@ -887,6 +891,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           ),
           const SizedBox(height: 24),
           AppButton(
+            compact: true,
             label: 'Submit Application',
             width: double.infinity,
             icon: Icons.send_rounded,
@@ -895,6 +900,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           ),
           const SizedBox(height: 12),
           AppButton(
+            compact: true,
             label: S.of(ref).saveAsDraft,
             width: double.infinity,
             outlined: true,
@@ -910,16 +916,16 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
 
   Widget _summaryCard(KycDraftState state) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: KycWizardUi.cardPadding,
       decoration: BoxDecoration(
         color: AppConstants.surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: KycWizardUi.cardRadius,
         border: Border.all(color: AppConstants.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -929,12 +935,12 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           const Text(
             'Muhtasari',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: KycWizardUi.cardTitleSize,
               fontWeight: FontWeight.w800,
               color: AppConstants.textPrimary,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KycWizardUi.innerGap),
           _summaryRow(
               'Customer', '${state.firstName} ${state.lastName}'.trim()),
           _summaryRow('Phone', state.phone),
@@ -954,7 +960,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     required bool handoverReady,
   }) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: KycWizardUi.cardPadding,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF103454), Color(0xFF1F5A88)],
@@ -976,7 +982,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           const Text(
             'Maendeleo',
             style: TextStyle(
-              fontSize: 15,
+              fontSize: KycWizardUi.sectionTitleSize,
               fontWeight: FontWeight.w800,
               color: Colors.white,
             ),
@@ -1065,30 +1071,31 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
   }) {
     return GlassCard.surface(
       context,
-      borderRadius: BorderRadius.circular(22),
+      padding: KycWizardUi.cardPadding,
+      borderRadius: KycWizardUi.cardRadius,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: KycWizardUi.cardTitleSize,
               fontWeight: FontWeight.w800,
               color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
           if (subtitle.isNotEmpty) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               subtitle,
               style: TextStyle(
-                fontSize: 12,
-                height: 1.45,
+                fontSize: KycWizardUi.labelSize,
+                height: 1.35,
                 color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
             ),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: KycWizardUi.innerGap),
           child,
         ],
       ),
@@ -1103,7 +1110,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: KycWizardUi.cardPadding,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark
@@ -1118,7 +1125,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: KycWizardUi.cardRadius,
         border: Border.all(
             color: isDark ? DesignTokens.darkBorder : AppConstants.border),
       ),
@@ -1128,12 +1135,12 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 48,
-                height: 60,
+                width: 40,
+                height: 48,
                 decoration: BoxDecoration(
                   color:
                       isDark ? DesignTokens.darkSurface : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                       color: isDark
                           ? DesignTokens.darkBorder
@@ -1142,9 +1149,10 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                 child: const Icon(
                   Icons.picture_as_pdf_outlined,
                   color: AppConstants.primary,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1152,19 +1160,19 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                     Text(
                       document.title,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: KycWizardUi.bodySize,
                         fontWeight: FontWeight.w800,
                         color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       paymentReady
                           ? 'Malipo tayari. Onyesha mkataba.'
                           : 'Malipo kwanza.',
                       style: TextStyle(
-                        fontSize: 12,
-                        height: 1.45,
+                        fontSize: KycWizardUi.labelSize,
+                        height: 1.35,
                         color: Theme.of(context).textTheme.bodyMedium?.color,
                       ),
                     ),
@@ -1177,6 +1185,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           _agreementPreviewSheetCard(document),
           const SizedBox(height: 12),
           AppButton(
+            compact: true,
             label: 'View Agreement Preview',
             outlined: true,
             icon: Icons.visibility_outlined,
@@ -1191,10 +1200,10 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: KycWizardUi.cardPadding,
       decoration: BoxDecoration(
         color: isDark ? DesignTokens.darkSurfaceElevated : Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: KycWizardUi.cardRadius,
         border: Border.all(
             color: isDark ? DesignTokens.darkBorder : AppConstants.border),
         boxShadow: [
@@ -1256,7 +1265,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: KycWizardUi.cardPadding,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [Color(0xFFF8FAFC), Color(0xFFF1F5F9)],
@@ -1272,12 +1281,12 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                 Text(
                   document.title,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: KycWizardUi.bodySize,
                     fontWeight: FontWeight.w800,
                     color: AppConstants.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Container(
                   width: 72,
                   height: 5,
@@ -1349,7 +1358,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     final confirmedAmount = paymentContext?.amount ?? depositAmount;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: KycWizardUi.cardPadding,
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(16),
@@ -1482,7 +1491,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: 220.ms,
-        padding: const EdgeInsets.all(14),
+        padding: KycWizardUi.cardPadding,
         decoration: BoxDecoration(
           color: selected
               ? color.withValues(alpha: 0.08)
@@ -1541,25 +1550,25 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
         Text(
           title,
           style: const TextStyle(
-            fontSize: 13,
+            fontSize: KycWizardUi.bodySize,
             fontWeight: FontWeight.w700,
             color: AppConstants.textPrimary,
           ),
         ),
         if (subtitle.isNotEmpty) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Text(
             subtitle,
             style: const TextStyle(
-              fontSize: 12,
-              height: 1.45,
+              fontSize: KycWizardUi.labelSize,
+              height: 1.35,
               color: AppConstants.textSecondary,
             ),
           ),
         ],
-        const SizedBox(height: 10),
-        SignaturePad(controller: controller),
-        const SizedBox(height: 10),
+        const SizedBox(height: KycWizardUi.innerGap),
+        SignaturePad(controller: controller, height: 145),
+        const SizedBox(height: KycWizardUi.innerGap),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
@@ -1596,10 +1605,10 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     ];
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: KycWizardUi.cardPadding,
       decoration: BoxDecoration(
         color: AppConstants.surfaceMuted,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: KycWizardUi.cardRadius,
         border: Border.all(color: AppConstants.border),
       ),
       child: Row(
@@ -1688,7 +1697,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     ];
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: KycWizardUi.cardPadding,
       decoration: BoxDecoration(
         color: AppConstants.borderLight,
         borderRadius: BorderRadius.circular(16),
@@ -1737,7 +1746,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -1749,19 +1758,19 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                   child: Transform.scale(
                     scale: _ringScale.value,
                     child: Container(
-                      width: 108,
-                      height: 108,
+                      width: 84,
+                      height: 84,
                       decoration: BoxDecoration(
                         color: const Color(0xFFF0FDF4),
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: AppConstants.success.withValues(alpha: 0.22),
-                          width: 6,
+                          width: 4,
                         ),
                       ),
                       child: const Icon(
                         Icons.check_rounded,
-                        size: 56,
+                        size: 44,
                         color: AppConstants.success,
                       ),
                     ),
@@ -1769,12 +1778,12 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
                 );
               },
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
             const Text(
               'Application Submitted Successfully',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 17,
                 fontWeight: FontWeight.w800,
                 color: AppConstants.textPrimary,
               ),
@@ -1792,6 +1801,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
             const SizedBox(height: 24),
             if (customerId != null)
               AppButton(
+                compact: true,
                 label: 'Open Customer Detail',
                 width: double.infinity,
                 icon: Icons.visibility_outlined,
@@ -1799,6 +1809,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
               ),
             const SizedBox(height: 12),
             AppButton(
+              compact: true,
               label: 'Back to Customers',
               width: double.infinity,
               outlined: true,
@@ -1811,32 +1822,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     );
   }
 
-  Widget _sectionHeader(String title, String subtitle) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: AppConstants.textPrimary,
-          ),
-        ),
-        if (subtitle.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.5,
-              color: AppConstants.textSecondary,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
+  Widget _sectionHeader(String title, String subtitle) => KycSectionHeader(title: title, subtitle: subtitle);
 
   Widget _summaryRow(String label, String value) {
     if (value.trim().isEmpty) {
@@ -1844,15 +1830,15 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
           SizedBox(
-            width: 90,
+            width: 82,
             child: Text(
               label,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: KycWizardUi.labelSize,
                 fontWeight: FontWeight.w600,
                 color: AppConstants.textSecondary,
               ),

@@ -60,14 +60,16 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   web:
     generate: true
-  image_path: "assets/images/opticedge_app_logo.png"
+  image_path: "assets/images/opticedge_app_launcher_icon.png"
   min_sdk_android: 21
-  adaptive_icon_foreground: "assets/images/opticedge_app_logo.png"
-  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/opticedge_app_launcher_foreground.png"
+  adaptive_icon_background: "#0072BC"
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/opticedge_app_logo.png
+    - assets/images/opticedge_app_launcher_icon.png
+    - assets/images/opticedge_app_launcher_foreground.png
     - assets/images/
     - assets/icons/fluent-color/

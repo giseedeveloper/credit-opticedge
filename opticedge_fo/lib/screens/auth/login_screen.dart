@@ -487,9 +487,9 @@ class _LoginHeader extends StatelessWidget {
     return Column(
       children: [
         const AppLogo(
-          size: 112,
-          borderRadius: 26,
-          elevation: 12,
+          size: 88,
+          borderRadius: 22,
+          elevation: 10,
           showShadow: true,
         ),
         const SizedBox(height: 18),

@@ -407,6 +407,14 @@ def _headshot_candidate_images(hs_img: np.ndarray) -> List[Tuple[str, np.ndarray
     add("center_85", _center_crop(hs_img, 0.85))
     add("center_85_enhanced", _enhance_headshot_image(_center_crop(hs_img, 0.85)))
     add("center_72_enhanced", _enhance_headshot_image(_center_crop(hs_img, 0.72)))
+    # Still JPEG from phones may arrive rotated vs the live preview stream.
+    for label, rotated in (
+        ("rot90", cv2.rotate(hs_img, cv2.ROTATE_90_CLOCKWISE)),
+        ("rot180", cv2.rotate(hs_img, cv2.ROTATE_180)),
+        ("rot270", cv2.rotate(hs_img, cv2.ROTATE_90_COUNTERCLOCKWISE)),
+    ):
+        add(f"full_{label}", rotated)
+        add(f"full_{label}_enhanced", _enhance_headshot_image(rotated))
     return out
 
 

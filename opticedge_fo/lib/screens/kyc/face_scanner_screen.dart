@@ -52,7 +52,7 @@ enum ScanPhase {
 }
 
 class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
-    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   CameraController? _cameraController;
   late final FaceDetector _faceDetector;
   List<CameraDescription> _availableCameras = [];
@@ -85,6 +85,9 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   // Animation controller for scan line
   late final AnimationController _scanLineController;
 
+  /// Soft pulse on the face frame when ready to capture.
+  late final AnimationController _pulseController;
+
   // Camera description for proper rotation
   CameraDescription? _cameraDescription;
 
@@ -101,6 +104,9 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   static const Duration _captureSettleDuration = Duration(milliseconds: 350);
 
   static const int _maxVerifyAttempts = 3;
+
+  /// Re-take still photo locally when preview stream sees a face but JPEG does not.
+  static const int _maxLocalCaptureAttempts = 4;
 
   /// Auto-capture after user stays in [detected] briefly.
   Timer? _detectedHoldTimer;
@@ -124,6 +130,11 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
 
     _faceDetector = FaceDetector(
       options: FaceDetectorOptions(
@@ -501,6 +512,42 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     }
   }
 
+  Future<bool> _stillPhotoHasUsableFace(String path) async {
+    try {
+      final faces = await _faceDetector.processImage(
+        InputImage.fromFilePath(path),
+      );
+      return faces.length == 1;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Capture a JPEG that ML Kit can read (preview stream and still photo often differ).
+  Future<File?> _captureStillWithFace(CameraController controller) async {
+    for (var attempt = 1; attempt <= _maxLocalCaptureAttempts; attempt++) {
+      final image = await controller.takePicture();
+
+      if (await _stillPhotoHasUsableFace(image.path)) {
+        return File(image.path);
+      }
+
+      if (mounted) {
+        setState(() {
+          _scanPhase = ScanPhase.capturing;
+          _errorInstruction =
+              'Picha iliyochukuliwa haikuwa wazi. Tunapiga tena ($attempt/$_maxLocalCaptureAttempts)...';
+        });
+      }
+
+      if (attempt < _maxLocalCaptureAttempts) {
+        await Future<void>.delayed(const Duration(milliseconds: 450));
+      }
+    }
+
+    return null;
+  }
+
   Future<void> _captureAndVerify() async {
     _detectedHoldTimer?.cancel();
     _detectedHoldTimer = null;
@@ -513,6 +560,8 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     setState(() {
       _isProcessing = true;
       _error = null;
+      _scanPhase = ScanPhase.capturing;
+      _errorInstruction = 'Inachukua picha... simama bila kusogea.';
     });
 
     try {
@@ -538,8 +587,17 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
           await Future<void>.delayed(const Duration(milliseconds: 700));
         }
 
-        final image = await controller.takePicture();
-        final file = File(image.path);
+        final file = await _captureStillWithFace(controller);
+        if (file == null) {
+          if (mounted) {
+            setState(() {
+              _errorInstruction =
+                  'Picha iliyochukuliwa haikuonyesha uso wazi. Simama bila kusogea na ujaribu tena.';
+              _scanPhase = ScanPhase.error;
+            });
+          }
+          break;
+        }
 
         lastResult = await FaceVerificationService.instance.verifyFace(
           widget.customerId,
@@ -562,6 +620,12 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
       }
 
       if (!mounted || lastResult == null) {
+        if (mounted && lastResult == null) {
+          setState(() {
+            _isProcessing = false;
+          });
+          await _startImageStream();
+        }
         return;
       }
 
@@ -719,6 +783,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     WidgetsBinding.instance.removeObserver(this);
     _detectedHoldTimer?.cancel();
     _scanLineController.dispose();
+    _pulseController.dispose();
     _cameraController?.dispose();
     _faceDetector.close();
     super.dispose();
@@ -757,60 +822,106 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                onPressed: () => context.pop(false),
-                style: IconButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.white.withValues(alpha: 0.1),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      IconButton(
+                        onPressed: () => context.pop(false),
+                        style: IconButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white.withValues(alpha: 0.1),
+                        ),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Tayari kwa skani ya uso',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                          height: 1.15,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tutakusanya selfie ya moja kwa moja na kulinganisha na picha ya kitambulisho.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.4,
+                          color: Colors.white.withValues(alpha: 0.78),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: Container(
+                          width: 160,
+                          height: 190,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(32),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.22),
+                              width: 2,
+                            ),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white.withValues(alpha: 0.14),
+                                Colors.white.withValues(alpha: 0.04),
+                              ],
+                            ),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Icon(
+                                Icons.face_retouching_natural_rounded,
+                                size: 64,
+                                color: Colors.white.withValues(alpha: 0.35),
+                              ),
+                              ..._cornerBrackets(
+                                12,
+                                Colors.white.withValues(alpha: 0.55),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _preScanTip(
+                        Icons.wb_sunny_outlined,
+                        'Mwanga mzuri',
+                        'Epuka kivuli kali nyuma ya uso; mwanga wa kawaida wa ndani au nje ni bora.',
+                      ),
+                      const SizedBox(height: 12),
+                      _preScanTip(
+                        Icons.person_outline_rounded,
+                        'Mtu mmoja',
+                        'Hakikisha ni mteja pekee anayeonekana kwenye skrini.',
+                      ),
+                      const SizedBox(height: 12),
+                      _preScanTip(
+                        Icons.auto_fix_high_rounded,
+                        'Hatua tatu',
+                        'Kunyaza macho, kugeuza kichwa kidogo, kisha picha inachukuliwa kiotomatiki.',
+                      ),
+                      const SizedBox(height: 12),
+                      _preScanTip(
+                        Icons.verified_user_outlined,
+                        'Kiwango cha kupita',
+                        'Ulinganisho wa ${AppConstants.faceMatchPassPercent}% au zaidi hupita; ${AppConstants.faceMatchReviewPercent}–${AppConstants.faceMatchPassPercent - 1}% inahitaji ukaguzi wa HQ.',
+                      ),
+                    ],
+                  ),
                 ),
-                icon: const Icon(Icons.close_rounded),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Tayari kwa skani ya uso',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: -0.5,
-                  height: 1.15,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Tutakusanya selfie ya moja kwa moja na kulinganisha na picha ya kitambulisho.',
-                style: TextStyle(
-                  fontSize: 15,
-                  height: 1.45,
-                  color: Colors.white.withValues(alpha: 0.78),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 28),
-              _preScanTip(
-                Icons.wb_sunny_outlined,
-                'Mwanga mzuri',
-                'Epuka kivuli kali nyuma ya uso; mwanga wa kawaida wa ndani au nje ni bora.',
-              ),
-              const SizedBox(height: 14),
-              _preScanTip(
-                Icons.person_outline_rounded,
-                'Mtu mmoja',
-                'Hakikisha ni mteja pekee anayeonekana kwenye skrini.',
-              ),
-              const SizedBox(height: 14),
-              _preScanTip(
-                Icons.auto_fix_high_rounded,
-                'Hatua tatu',
-                'Kunyaza macho, kugeuza kichwa kidogo, kisha picha inachukuliwa kiotomatiki.',
-              ),
-              const SizedBox(height: 14),
-              _preScanTip(
-                Icons.verified_user_outlined,
-                'Kiwango cha kupita',
-                'Ulinganisho wa ${AppConstants.faceMatchPassPercent}% au zaidi hupita; ${AppConstants.faceMatchReviewPercent}–${AppConstants.faceMatchPassPercent - 1}% inahitaji ukaguzi wa HQ.',
-              ),
-              const Spacer(),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
@@ -837,7 +948,6 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
               Center(
                 child: TextButton(
                   onPressed: () => context.pop(false),
@@ -850,12 +960,49 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
             ],
           ),
         ),
       ),
     );
+  }
+
+  List<Widget> _cornerBrackets(double inset, Color color) {
+    const len = 26.0;
+    const thick = 3.0;
+    Widget bracket(Alignment align, bool top, bool left) {
+      return Align(
+        alignment: align,
+        child: Container(
+          width: len,
+          height: len,
+          margin: EdgeInsets.all(inset),
+          decoration: BoxDecoration(
+            border: Border(
+              top: top
+                  ? BorderSide(color: color, width: thick)
+                  : BorderSide.none,
+              bottom: !top
+                  ? BorderSide(color: color, width: thick)
+                  : BorderSide.none,
+              left: left
+                  ? BorderSide(color: color, width: thick)
+                  : BorderSide.none,
+              right: !left
+                  ? BorderSide(color: color, width: thick)
+                  : BorderSide.none,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return [
+      bracket(Alignment.topLeft, true, true),
+      bracket(Alignment.topRight, true, false),
+      bracket(Alignment.bottomLeft, false, true),
+      bracket(Alignment.bottomRight, false, false),
+    ];
   }
 
   Widget _preScanTip(IconData icon, String title, String body) {
@@ -1024,13 +1171,29 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   }
 
   Rect _faceGuideRect(Size screen) {
-    final w = screen.width * 0.68;
-    final h = w * 1.22;
+    final w = screen.width * 0.72;
+    final h = w * 1.18;
     return Rect.fromCenter(
-      center: Offset(screen.width / 2, screen.height * 0.36),
+      center: Offset(screen.width / 2, screen.height * 0.34),
       width: w,
       height: h,
     );
+  }
+
+  int get _activeLivenessStep {
+    if (_scanPhase == ScanPhase.detected || _scanPhase == ScanPhase.capturing) {
+      return 3;
+    }
+    if (_scanPhase == ScanPhase.livenessTurn) {
+      return _turnChallengeMet ? 3 : 2;
+    }
+    if (_scanPhase == ScanPhase.livenessBlink) {
+      return _blinkDetected ? 2 : 1;
+    }
+    if (_faceDetected && _faceCentered) {
+      return 1;
+    }
+    return 0;
   }
 
   Color _ringColorForPhase() {
@@ -1056,7 +1219,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     final faceRect = _faceGuideRect(size);
     final ringColor = _ringColorForPhase();
     final isReady = _scanPhase == ScanPhase.detected;
-    final topInset = MediaQuery.paddingOf(context).top;
+    final showPulse = isReady || _scanPhase == ScanPhase.capturing;
 
     return Stack(
       fit: StackFit.expand,
@@ -1067,38 +1230,99 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
             size: size,
             painter: _FaceCutoutDimPainter(
               faceOval: faceRect,
-              dimColor: Colors.black.withValues(alpha: 0.55),
+              dimColor: Colors.black.withValues(alpha: 0.62),
             ),
           ),
         ),
         IgnorePointer(
-          child: CustomPaint(
-            size: size,
-            painter: _FaceGuideRingPainter(
-              faceOval: faceRect,
-              ringColor: ringColor,
-              strokeWidth: isReady ? 3.2 : 2,
+          child: AnimatedBuilder(
+            animation: Listenable.merge([
+              _pulseController,
+              _scanLineController,
+            ]),
+            builder: (context, _) {
+              return CustomPaint(
+                size: size,
+                painter: _ModernFaceFramePainter(
+                  faceOval: faceRect,
+                  ringColor: ringColor,
+                  pulse: showPulse ? _pulseController.value : 0,
+                  isReady: isReady,
+                  showScanLine: _scanPhase == ScanPhase.searching ||
+                      _scanPhase == ScanPhase.livenessBlink ||
+                      _scanPhase == ScanPhase.livenessTurn ||
+                      _scanPhase == ScanPhase.error,
+                  scanProgress: _scanLineController.value,
+                  scanColor: _scanPhase == ScanPhase.error
+                      ? DesignTokens.error
+                      : AppConstants.primary,
+                ),
+              );
+            },
+          ),
+        ),
+        if (_isProcessing)
+          Container(
+            color: Colors.black.withValues(alpha: 0.35),
+            child: Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 22,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.16),
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 3,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          _scanPhase == ScanPhase.capturing
+                              ? 'Inachukua na kuthibitisha...'
+                              : 'Inathibitisha uso...',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
-        if (_scanPhase == ScanPhase.searching ||
-            _scanPhase == ScanPhase.livenessBlink ||
-            _scanPhase == ScanPhase.livenessTurn ||
-            _scanPhase == ScanPhase.error)
-          _buildAnimatedScanLine(faceRect),
-        Positioned(
-          top: topInset + 54,
-          left: 18,
-          right: 18,
-          child: IgnorePointer(
-            child: _buildFloatingHeroInstruction(),
-          ),
-        ),
         Positioned(
           top: 0,
           left: 0,
           right: 0,
           child: _buildTopBar(),
+        ),
+        Positioned(
+          left: 20,
+          right: 20,
+          bottom: MediaQuery.paddingOf(context).bottom + 200,
+          child: IgnorePointer(
+            child: _buildFloatingHeroInstruction(),
+          ),
         ),
         Positioned(
           bottom: 0,
@@ -1110,69 +1334,49 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     );
   }
 
-  Widget _buildAnimatedScanLine(Rect faceRect) {
-    return Positioned.fill(
-      child: IgnorePointer(
-        child: AnimatedBuilder(
-          animation: _scanLineController,
-          builder: (context, child) {
-            final progress = _scanLineController.value;
-            final yPosition =
-                faceRect.top + 16 + progress * (faceRect.height - 32);
-
-            return CustomPaint(
-              painter: _ScanLinePainter(
-                position: yPosition,
-                color: _scanPhase == ScanPhase.error
-                    ? DesignTokens.error.withValues(alpha: 0.75)
-                    : AppConstants.primary.withValues(alpha: 0.75),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  /// Large, glanceable instruction under the top bar (banking-app style).
+  /// Glanceable instruction above the bottom glass panel.
   Widget _buildFloatingHeroInstruction() {
     final (icon, text, color) = _getInstructionForPhase();
 
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.45),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.35),
-              blurRadius: 24,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 12),
-            Flexible(
-              child: Text(
-                text,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.96),
-                  fontSize: 16,
-                  height: 1.25,
-                  fontWeight: FontWeight.w700,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.42),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: color.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  text,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    height: 1.3,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1181,40 +1385,73 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
   Widget _buildSmartStatusPanel(bool canCapture) {
     return SafeArea(
       top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [
-              Colors.black.withValues(alpha: 0.82),
-              Colors.black.withValues(alpha: 0.45),
-              Colors.transparent,
-            ],
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildProgressIndicators(),
-
-            const SizedBox(height: 22),
-
-            _buildCaptureButton(canCapture),
-
-            const SizedBox(height: 10),
-            Text(
-              'Menyu juu: chagua gallery ikiwa kamera ina shida.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.45),
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                height: 1.35,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.14),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildLivenessTimeline(),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildCaptureButton(canCapture),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _isProcessing
+                              ? null
+                              : () => unawaited(_pickFromGallery()),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.28),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          icon: const Icon(Icons.photo_library_outlined, size: 18),
+                          label: const Text(
+                            'Gallery',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    canCapture
+                        ? 'Picha itachukuliwa kiotomatiki — au gusa kitufe cha kamera.'
+                        : 'Fuata hatua 4 hapo juu ili kufungua skani.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.55),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1238,7 +1475,7 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
         ),
       ScanPhase.detected => (
           Icons.auto_awesome_rounded,
-          'Tayari! Picha inachukuliwa kiotomatiki…',
+          'Uso umeonekana — subiri, picha inachukuliwa…',
           DesignTokens.success
         ),
       ScanPhase.livenessBlink => (
@@ -1269,128 +1506,158 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
     };
   }
 
-  Widget _buildProgressIndicators() {
-    final framingOk = _faceDetected &&
-        _faceCentered &&
-        (_eyesOpen || _scanPhase == ScanPhase.livenessBlink);
-    final blinkOk = _blinkDetected;
-    final turnOk = _turnChallengeMet;
-    final ready = _scanPhase == ScanPhase.detected;
+  Widget _buildLivenessTimeline() {
+    const steps = ['Msimamo', 'Blink', 'Geuza', 'Skani'];
+    final active = _activeLivenessStep;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildProgressStep('Uso', framingOk, Icons.face_retouching_natural_rounded),
-          _buildProgressConnector(framingOk),
-          _buildProgressStep('Blink', blinkOk, Icons.remove_red_eye_outlined),
-          _buildProgressConnector(blinkOk),
-          _buildProgressStep('Geuza', turnOk, Icons.sync_alt_rounded),
-          _buildProgressConnector(turnOk),
-          _buildProgressStep('Skani', ready, Icons.verified_outlined),
-        ],
-      ),
+    return Row(
+      children: List.generate(steps.length * 2 - 1, (index) {
+        if (index.isOdd) {
+          final stepIndex = index ~/ 2;
+          final done = active > stepIndex;
+          return Expanded(
+            child: Container(
+              height: 2,
+              margin: const EdgeInsets.only(bottom: 18),
+              decoration: BoxDecoration(
+                color: done
+                    ? DesignTokens.success
+                    : Colors.white.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          );
+        }
+
+        final stepIndex = index ~/ 2;
+        final done = active > stepIndex;
+        final current = active == stepIndex;
+
+        return _buildTimelineStep(
+          label: steps[stepIndex],
+          done: done,
+          current: current,
+        );
+      }),
     );
   }
 
-  Widget _buildProgressStep(String label, bool completed, IconData icon) {
+  Widget _buildTimelineStep({
+    required String label,
+    required bool done,
+    required bool current,
+  }) {
+    final color = done
+        ? DesignTokens.success
+        : current
+            ? AppConstants.primaryLight
+            : Colors.white.withValues(alpha: 0.35);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         AnimatedContainer(
-          duration: 300.ms,
-          width: 36,
-          height: 36,
+          duration: 250.ms,
+          width: current ? 34 : 30,
+          height: current ? 34 : 30,
           decoration: BoxDecoration(
-            color: completed
+            color: done
                 ? DesignTokens.success
-                : Colors.white.withValues(alpha: 0.1),
+                : current
+                    ? AppConstants.primary.withValues(alpha: 0.22)
+                    : Colors.white.withValues(alpha: 0.08),
             shape: BoxShape.circle,
-            border: Border.all(
-              color: completed
-                  ? DesignTokens.success
-                  : Colors.white.withValues(alpha: 0.3),
-              width: 2,
-            ),
+            border: Border.all(color: color, width: current ? 2.2 : 1.6),
+            boxShadow: current
+                ? [
+                    BoxShadow(
+                      color: AppConstants.primary.withValues(alpha: 0.35),
+                      blurRadius: 12,
+                    ),
+                  ]
+                : null,
           ),
           child: Icon(
-            completed ? Icons.check_rounded : icon,
-            size: 18,
-            color:
-                completed ? Colors.white : Colors.white.withValues(alpha: 0.5),
+            done ? Icons.check_rounded : Icons.circle,
+            size: done ? 18 : 8,
+            color: done ? Colors.white : color,
           ),
         ),
         const SizedBox(height: 6),
         Text(
           label,
           style: TextStyle(
-            color:
-                completed ? Colors.white : Colors.white.withValues(alpha: 0.5),
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
+            color: done || current
+                ? Colors.white
+                : Colors.white.withValues(alpha: 0.45),
+            fontSize: 10,
+            fontWeight: current ? FontWeight.w800 : FontWeight.w600,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildProgressConnector(bool completed) {
-    return Container(
-      width: 30,
-      height: 2,
-      margin: const EdgeInsets.only(bottom: 22),
-      decoration: BoxDecoration(
-        color: completed
-            ? DesignTokens.success
-            : Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(1),
-      ),
-    );
-  }
-
   Widget _buildCaptureButton(bool canCapture) {
-    return GestureDetector(
-      onTap: canCapture && !_isProcessing ? _captureAndVerify : null,
-      child: Container(
-        width: 80,
-        height: 80,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: canCapture
-              ? DesignTokens.success
-              : Colors.white.withValues(alpha: 0.2),
-          border: Border.all(
-            color:
-                canCapture ? Colors.white : Colors.white.withValues(alpha: 0.4),
-            width: 4,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: canCapture && !_isProcessing ? _captureAndVerify : null,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: 200.ms,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: canCapture
+                ? LinearGradient(
+                    colors: [
+                      DesignTokens.success,
+                      DesignTokens.success.withValues(alpha: 0.82),
+                    ],
+                  )
+                : null,
+            color: canCapture ? null : Colors.white.withValues(alpha: 0.08),
+            border: Border.all(
+              color: canCapture
+                  ? DesignTokens.success.withValues(alpha: 0.5)
+                  : Colors.white.withValues(alpha: 0.2),
+            ),
           ),
-          boxShadow: canCapture
-              ? [
-                  BoxShadow(
-                    color: DesignTokens.success.withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    spreadRadius: 2,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (_isProcessing)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.2,
                   ),
-                ]
-              : null,
-        ),
-        child: _isProcessing
-            ? const Padding(
-                padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 3,
+                )
+              else
+                Icon(
+                  Icons.camera_alt_rounded,
+                  color: canCapture
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.45),
+                  size: 20,
                 ),
-              )
-            : Icon(
-                Icons.camera_alt_rounded,
-                color: canCapture
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.5),
-                size: 32,
+              const SizedBox(width: 8),
+              Text(
+                _isProcessing ? 'Inachakata...' : 'Piga picha',
+                style: TextStyle(
+                  color: canCapture
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.45),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1640,76 +1907,60 @@ class _FaceScannerScreenState extends ConsumerState<FaceScannerScreen>
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
 
-                // Score display
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 20,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.15),
-                    ),
-                  ),
-                  child: Column(
+                SizedBox(
+                  width: 132,
+                  height: 132,
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      Text(
-                        'Alama ya Ulinganisho',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.6),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+                      SizedBox(
+                        width: 132,
+                        height: 132,
+                        child: CircularProgressIndicator(
+                          value: score / 100,
+                          strokeWidth: 8,
+                          backgroundColor: Colors.white.withValues(alpha: 0.12),
+                          color: color,
+                          strokeCap: StrokeCap.round,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Row(
+                      Column(
                         mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
                             '$score',
                             style: TextStyle(
                               color: color,
-                              fontSize: 48,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 36,
+                              fontWeight: FontWeight.w900,
+                              height: 1,
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Text(
-                              '%',
-                              style: TextStyle(
-                                color: color,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          Text(
+                            '%',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.55),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      // Progress bar
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(99),
-                        child: SizedBox(
-                          width: 200,
-                          child: LinearProgressIndicator(
-                            value: score / 100,
-                            minHeight: 8,
-                            backgroundColor:
-                                Colors.white.withValues(alpha: 0.1),
-                            valueColor: AlwaysStoppedAnimation(color),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1, end: 0),
+
+                const SizedBox(height: 10),
+                Text(
+                  'Alama ya ulinganisho',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.55),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
 
                 if (_result!.reason != null && !isSuccess) ...[
                   const SizedBox(height: 20),
@@ -1876,89 +2127,115 @@ class _FaceCutoutDimPainter extends CustomPainter {
   }
 }
 
-/// Thin ring + soft glow around the face guide oval.
-class _FaceGuideRingPainter extends CustomPainter {
+/// Modern ID-scan frame: corner brackets, glow, and scan beam inside the oval.
+class _ModernFaceFramePainter extends CustomPainter {
   final Rect faceOval;
   final Color ringColor;
-  final double strokeWidth;
+  final double pulse;
+  final bool isReady;
+  final bool showScanLine;
+  final double scanProgress;
+  final Color scanColor;
 
-  _FaceGuideRingPainter({
+  _ModernFaceFramePainter({
     required this.faceOval,
     required this.ringColor,
-    required this.strokeWidth,
+    required this.pulse,
+    required this.isReady,
+    required this.showScanLine,
+    required this.scanProgress,
+    required this.scanColor,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
+    final expand = pulse * 6;
+    final oval = faceOval.inflate(expand);
+
     final glow = Paint()
-      ..color = ringColor.withValues(alpha: 0.2)
+      ..color = ringColor.withValues(alpha: 0.18 + pulse * 0.12)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth + 10
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
-    canvas.drawOval(faceOval, glow);
+      ..strokeWidth = 12
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+    canvas.drawOval(oval, glow);
 
     canvas.drawOval(
-      faceOval,
+      oval,
       Paint()
-        ..color = ringColor
+        ..color = ringColor.withValues(alpha: isReady ? 0.95 : 0.75)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth,
+        ..strokeWidth = isReady ? 2.8 : 2,
     );
+
+    _drawCornerBrackets(canvas, oval, ringColor, isReady ? 3 : 2.2);
+
+    if (showScanLine) {
+      final y = oval.top + 12 + scanProgress * (oval.height - 24);
+      final linePaint = Paint()
+        ..shader = LinearGradient(
+          colors: [
+            scanColor.withValues(alpha: 0),
+            scanColor.withValues(alpha: 0.85),
+            scanColor.withValues(alpha: 0),
+          ],
+        ).createShader(Rect.fromLTWH(oval.left, y, oval.width, 2))
+        ..strokeWidth = 2.5
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(
+        Offset(oval.left + 12, y),
+        Offset(oval.right - 12, y),
+        linePaint,
+      );
+    }
   }
 
-  @override
-  bool shouldRepaint(covariant _FaceGuideRingPainter oldDelegate) {
-    return oldDelegate.faceOval != faceOval ||
-        oldDelegate.ringColor != ringColor ||
-        oldDelegate.strokeWidth != strokeWidth;
-  }
-}
-
-/// Custom painter for animated scan line
-class _ScanLinePainter extends CustomPainter {
-  final double position;
-  final Color color;
-
-  _ScanLinePainter({
-    required this.position,
-    required this.color,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
+  void _drawCornerBrackets(
+    Canvas canvas,
+    Rect rect,
+    Color color,
+    double stroke,
+  ) {
+    const len = 28.0;
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 2
       ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round;
 
-    // Draw horizontal scan line at the given position
-    final y = position;
-    const lineLength = 180.0;
-    final centerX = size.width / 2;
+    void corner(Offset start, Offset hEnd, Offset vEnd) {
+      canvas.drawLine(start, hEnd, paint);
+      canvas.drawLine(start, vEnd, paint);
+    }
 
-    // Main scan line
-    canvas.drawLine(
-      Offset(centerX - lineLength, y),
-      Offset(centerX + lineLength, y),
-      paint,
+    corner(
+      Offset(rect.left, rect.top + len),
+      Offset(rect.left, rect.top),
+      Offset(rect.left + len, rect.top),
     );
-
-    // Glow effect
-    final glowPaint = Paint()
-      ..color = color.withValues(alpha: 0.3)
-      ..strokeWidth = 6
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-
-    canvas.drawLine(
-      Offset(centerX - lineLength, y),
-      Offset(centerX + lineLength, y),
-      glowPaint,
+    corner(
+      Offset(rect.right - len, rect.top),
+      Offset(rect.right, rect.top),
+      Offset(rect.right, rect.top + len),
+    );
+    corner(
+      Offset(rect.left, rect.bottom - len),
+      Offset(rect.left, rect.bottom),
+      Offset(rect.left + len, rect.bottom),
+    );
+    corner(
+      Offset(rect.right - len, rect.bottom),
+      Offset(rect.right, rect.bottom),
+      Offset(rect.right, rect.bottom - len),
     );
   }
 
   @override
-  bool shouldRepaint(covariant _ScanLinePainter oldDelegate) {
-    return oldDelegate.position != position || oldDelegate.color != color;
+  bool shouldRepaint(covariant _ModernFaceFramePainter oldDelegate) {
+    return oldDelegate.faceOval != faceOval ||
+        oldDelegate.ringColor != ringColor ||
+        oldDelegate.pulse != pulse ||
+        oldDelegate.isReady != isReady ||
+        oldDelegate.showScanLine != showScanLine ||
+        oldDelegate.scanProgress != scanProgress;
   }
 }

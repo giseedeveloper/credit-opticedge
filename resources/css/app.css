@@ -17,6 +17,19 @@
     --color-brand-orange-hover: #e67818;
     --color-brand-canvas: #eef0f4;
 
+    /* OpticEdge FO / customer apps — navy hero + logo blue */
+    --color-brand-navy: #103454;
+    --color-brand-navy-mid: #1e5987;
+    --color-brand-navy-end: #1f5a88;
+    --color-brand-blue: #0072bc;
+    --color-brand-ink: #0e1826;
+    --color-brand-surface: #f2f5f9;
+
+    /* FO primary accent (closer to mobile app) */
+    --color-brand-accent: #f36d34;
+    --color-brand-accent-hover: #d7561e;
+    --color-brand-accent-soft: #fff1e8;
+
     /* Short tokens for Tailwind utilities: bg-oe, text-oe, hover:bg-oe-hover, etc. */
     --color-oe: #f58220;
     --color-oe-hover: #e67818;

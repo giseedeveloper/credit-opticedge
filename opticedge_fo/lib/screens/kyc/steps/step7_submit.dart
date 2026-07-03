@@ -433,7 +433,7 @@ class _Step7State extends ConsumerState<Step7SubmitScreen>
               const SizedBox(height: 10),
               Container(
                 padding: KycWizardUi.cardPadding,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppConstants.borderLight,
                   borderRadius: KycWizardUi.cardRadius,
                 ),

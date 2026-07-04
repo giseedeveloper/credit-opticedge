@@ -3,6 +3,7 @@
 use App\Console\Commands\PenaltyAutomator;
 use App\Http\Middleware\AddApiVersionHeaders;
 use App\Http\Middleware\AuditTrailMiddleware;
+use App\Http\Middleware\EnsureAdminTwoFactorAuthenticationIsConfigured;
 use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
@@ -37,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->appendToGroup('web', AuditTrailMiddleware::class);
         $middleware->appendToGroup('web', EnsureUserIsActive::class);
+        $middleware->appendToGroup('web', EnsureAdminTwoFactorAuthenticationIsConfigured::class);
         $middleware->prependToGroup('api', HandleCors::class);
         $middleware->appendToGroup('api', EnsureUserIsActive::class);
     })

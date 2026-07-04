@@ -2,9 +2,12 @@
 
 namespace App\Livewire\Auth;
 
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
+use Laravel\Fortify\Features;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -77,10 +80,11 @@ class Login extends Component
             $loginId = $phone;
         }
 
-        if (Auth::attempt([$field => $loginId, 'password' => $this->password])) {
-            if (! Auth::user()->is_active) {
+        $user = User::query()->where($field, $loginId)->first();
+
+        if ($user && Hash::check($this->password, $user->password)) {
+            if (! $user->is_active) {
                 RateLimiter::hit($rateLimitKey, 60);
-                Auth::logout();
 
                 throw ValidationException::withMessages([
                     'login_identifier' => 'Your account has been deactivated. Contact your administrator.',
@@ -89,15 +93,42 @@ class Login extends Component
 
             RateLimiter::clear($rateLimitKey);
 
+            if ($this->shouldChallengeTwoFactor($user)) {
+                session()->put([
+                    'login.id' => $user->getKey(),
+                    'login.remember' => $this->remember,
+                ]);
+
+                activity('security')
+                    ->performedOn($user)
+                    ->withProperties(['ip' => $ip])
+                    ->log('Web Login Password Accepted; MFA Challenge Required.');
+
+                return redirect()->route('two-factor.login');
+            }
+
+            Auth::login($user, $this->remember);
+            session()->regenerate();
+
             activity('security')
-                ->performedOn(Auth::user())
-                ->causedBy(Auth::user())
+                ->performedOn($user)
+                ->causedBy($user)
                 ->withProperties(['ip' => $ip])
                 ->log('Successful Web Login (Secure Console).');
 
-            session()->regenerate();
+            if ($user->mustConfigureTwoFactorAuthentication()) {
+                session()->put([
+                    'admin_mfa_setup_required' => true,
+                    'auth.password_confirmed_at' => time(),
+                ]);
 
-            return redirect()->route(Auth::user()->firstAccessibleRouteName());
+                return redirect()->route('admin.mfa.setup')->with(
+                    'mfa_setup_required',
+                    'Admin accounts must set up multi-factor authentication before using the console.',
+                );
+            }
+
+            return redirect()->route($user->firstAccessibleRouteName());
         }
 
         RateLimiter::hit($rateLimitKey, 60);
@@ -112,5 +143,11 @@ class Login extends Component
     public function render()
     {
         return view('livewire.auth.login');
+    }
+
+    private function shouldChallengeTwoFactor(User $user): bool
+    {
+        return Features::canManageTwoFactorAuthentication()
+            && $user->hasEnabledTwoFactorAuthentication();
     }
 }

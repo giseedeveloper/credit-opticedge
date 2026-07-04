@@ -151,6 +151,9 @@ class Security extends Component
 
         $confirmTwoFactorAuthentication(auth()->user(), $this->code);
 
+        session()->forget('admin_mfa_setup_required');
+        session()->flash('mfa_recovery_codes_ready', true);
+
         $this->closeModal();
 
         $this->twoFactorEnabled = true;
@@ -171,6 +174,12 @@ class Security extends Component
      */
     public function disable(DisableTwoFactorAuthentication $disableTwoFactorAuthentication): void
     {
+        if (auth()->user()->requiresMandatoryTwoFactorAuthentication()) {
+            $this->addError('twoFactor', __('Admin accounts must keep two-factor authentication enabled.'));
+
+            return;
+        }
+
         $disableTwoFactorAuthentication(auth()->user());
 
         $this->twoFactorEnabled = false;

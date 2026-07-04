@@ -4,11 +4,13 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -18,7 +20,29 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(LoginResponseContract::class, function () {
+            return new class implements LoginResponseContract
+            {
+                public function toResponse($request)
+                {
+                    if ($request->user()?->mustConfigureTwoFactorAuthentication()) {
+                        $request->session()->put([
+                            'admin_mfa_setup_required' => true,
+                            'auth.password_confirmed_at' => time(),
+                        ]);
+
+                        return redirect()->route('admin.mfa.setup')->with(
+                            'mfa_setup_required',
+                            'Admin accounts must set up multi-factor authentication before using the console.',
+                        );
+                    }
+
+                    return $request->wantsJson()
+                        ? new JsonResponse('', 204)
+                        : redirect()->intended(Fortify::redirects('login'));
+                }
+            };
+        });
     }
 
     /**

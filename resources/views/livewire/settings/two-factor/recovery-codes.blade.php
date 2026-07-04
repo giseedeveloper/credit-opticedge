@@ -1,13 +1,18 @@
 <div
     class="py-6 space-y-6 border shadow-sm rounded-xl border-zinc-200 dark:border-white/10"
     wire:cloak
-    x-data="{ showRecoveryCodes: false }"
+    x-data="{ showRecoveryCodes: @js((bool) session()->get('mfa_recovery_codes_ready', false)) }"
 >
     <div class="px-6 space-y-2">
         <div class="flex items-center gap-2">
             <flux:icon.lock-closed variant="outline" class="size-4"/>
             <flux:heading size="lg" level="3">{{ __('2FA recovery codes') }}</flux:heading>
         </div>
+        @if ((bool) session()->get('mfa_recovery_codes_ready', false))
+            <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+                {{ __('Save these recovery codes now. They are your backup if you lose access to your authenticator app.') }}
+            </div>
+        @endif
         <flux:text variant="subtle">
             {{ __('Recovery codes let you regain access if you lose your 2FA device. Store them in a secure password manager.') }}
         </flux:text>

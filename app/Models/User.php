@@ -94,6 +94,17 @@ class User extends Authenticatable
         return $this->hasRole('admin');
     }
 
+    public function requiresMandatoryTwoFactorAuthentication(): bool
+    {
+        return $this->isAdmin();
+    }
+
+    public function mustConfigureTwoFactorAuthentication(): bool
+    {
+        return $this->requiresMandatoryTwoFactorAuthentication()
+            && ! $this->hasEnabledTwoFactorAuthentication();
+    }
+
     public function isOwner(): bool
     {
         return $this->hasRole('owner');

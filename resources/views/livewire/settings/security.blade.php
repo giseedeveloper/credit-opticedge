@@ -3,6 +3,12 @@
 
     <flux:heading class="sr-only">{{ __('Security settings') }}</flux:heading>
 
+    @if (session('mfa_setup_required') || (bool) session()->get('admin_mfa_setup_required', false))
+        <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+            {{ __('Admin accounts must set up Google Authenticator or another authenticator app before using the console.') }}
+        </div>
+    @endif
+
     <x-settings.layout :heading="__('Update password')" :subheading="__('Ensure your account is using a long, random password to stay secure')">
         <form method="POST" wire:submit="updatePassword" class="mt-6 space-y-6">
             <flux:input
@@ -53,14 +59,24 @@
                                 {{ __('You will be prompted for a secure, random pin during login, which you can retrieve from the TOTP-supported application on your phone.') }}
                             </flux:text>
 
-                            <div class="flex justify-start">
-                                <flux:button
-                                    variant="danger"
-                                    wire:click="disable"
-                                >
-                                    {{ __('Disable 2FA') }}
-                                </flux:button>
-                            </div>
+                            @if (auth()->user()?->requiresMandatoryTwoFactorAuthentication())
+                                <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
+                                    {{ __('Two-factor authentication is required for admin accounts and cannot be disabled from this screen.') }}
+                                </div>
+                            @else
+                                <div class="flex justify-start">
+                                    <flux:button
+                                        variant="danger"
+                                        wire:click="disable"
+                                    >
+                                        {{ __('Disable 2FA') }}
+                                    </flux:button>
+                                </div>
+                            @endif
+
+                            @error('twoFactor')
+                                <flux:text color="red">{{ $message }}</flux:text>
+                            @enderror
 
                             <livewire:settings.two-factor.recovery-codes :$requiresConfirmation/>
                         </div>

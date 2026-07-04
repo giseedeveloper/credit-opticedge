@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardNotificationController;
 use App\Livewire\Access\RoleManager;
 use App\Livewire\Accounting\AccountingWorkspace;
 use App\Livewire\Audits\AuditLogDashboard;
+use App\Livewire\Auth\AdminMfaSetup;
 use App\Livewire\Auth\Login;
 use App\Livewire\Communications\AuditTrail;
 use App\Livewire\Communications\SmsLogs;
@@ -37,6 +38,8 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/admin/mfa/setup', AdminMfaSetup::class)->name('admin.mfa.setup');
+
     // V2 Dashboards - Executive UI
     Route::get('/dashboard', ExecutiveDashboard::class)->name('dashboard')->middleware('can:dashboard.view');
     Route::get('/dashboard/notifications', DashboardNotificationController::class)

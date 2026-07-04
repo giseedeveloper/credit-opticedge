@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Opticedge Credit — mfumo wa mikopo ya vifaa kwa Tanzania: KYC, face match, Selcom, FO app, na HQ dashboard.">
+    <meta name="description" content="Opticedge Credit is a secure device financing platform for KYC, face verification, payments, inventory control, field operations, and HQ approvals.">
     <title>{{ $title ?? config('app.name', 'Opticedge Credit') }}</title>
 
     <link rel="icon" href="{{ asset('opticedge_credit_website_logo.png') }}" type="image/png" sizes="any">

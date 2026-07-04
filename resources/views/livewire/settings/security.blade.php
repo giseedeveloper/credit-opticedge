@@ -1,102 +1,260 @@
-<section class="w-full">
-    @include('partials.settings-heading')
+<section class="w-full px-4 py-6 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-6xl space-y-6">
+        <div class="overflow-hidden rounded-4xl border border-zinc-200/80 bg-white shadow-sm ring-1 ring-black/5">
+            <div class="relative isolate p-6 sm:p-8">
+                <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,rgba(249,115,22,0.18),transparent_34%),linear-gradient(135deg,#ffffff_0%,#f8fafc_55%,#fff7ed_100%)]"></div>
 
-    <flux:heading class="sr-only">{{ __('Security settings') }}</flux:heading>
+                <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="max-w-2xl space-y-3">
+                        <div class="inline-flex items-center gap-2 rounded-full border border-brand-orange/20 bg-brand-orange/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.22em] text-brand-orange">
+                            <flux:icon.shield-check class="size-4" />
+                            {{ __('Admin security') }}
+                        </div>
 
-    @if (session('mfa_setup_required') || (bool) session()->get('admin_mfa_setup_required', false))
-        <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
-            {{ __('Admin accounts must set up Google Authenticator or another authenticator app before using the console.') }}
+                        <div>
+                            <h1 class="text-2xl font-black tracking-tight text-brand-charcoal sm:text-3xl">
+                                {{ __('Security center') }}
+                            </h1>
+                            <p class="mt-2 max-w-xl text-sm leading-6 text-zinc-600">
+                                {{ __('Control password changes, authenticator protection, email OTP backup, and recovery access from one place.') }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-3 lg:min-w-120">
+                        <div class="rounded-2xl border border-zinc-200 bg-white/80 p-4 shadow-sm">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ __('Authenticator') }}</p>
+                            <p class="mt-1 text-sm font-bold {{ $twoFactorEnabled ? 'text-emerald-700' : 'text-amber-700' }}">
+                                {{ $twoFactorEnabled ? __('Enabled') : __('Setup needed') }}
+                            </p>
+                        </div>
+                        <div class="rounded-2xl border border-zinc-200 bg-white/80 p-4 shadow-sm">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ __('Email OTP') }}</p>
+                            <p class="mt-1 text-sm font-bold {{ $emailOtpEnabled ? 'text-emerald-700' : 'text-zinc-700' }}">
+                                {{ $emailOtpEnabled ? __('Enabled') : __('Optional') }}
+                            </p>
+                        </div>
+                        <div class="rounded-2xl border border-zinc-200 bg-white/80 p-4 shadow-sm">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ __('Admin policy') }}</p>
+                            <p class="mt-1 text-sm font-bold text-brand-charcoal">
+                                {{ auth()->user()?->requiresMandatoryTwoFactorAuthentication() ? __('MFA required') : __('Standard') }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    @endif
 
-    <x-settings.layout :heading="__('Update password')" :subheading="__('Ensure your account is using a long, random password to stay secure')">
-        <form method="POST" wire:submit="updatePassword" class="mt-6 space-y-6">
-            <flux:input
-                wire:model="current_password"
-                :label="__('Current password')"
-                type="password"
-                required
-                autocomplete="current-password"
-                viewable
-            />
-            <flux:input
-                wire:model="password"
-                :label="__('New password')"
-                type="password"
-                required
-                autocomplete="new-password"
-                viewable
-            />
-            <flux:input
-                wire:model="password_confirmation"
-                :label="__('Confirm password')"
-                type="password"
-                required
-                autocomplete="new-password"
-                viewable
-            />
+        @if (session('mfa_setup_required') || (bool) session()->get('admin_mfa_setup_required', false))
+            <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+                {{ __('Admin accounts must set up Google Authenticator or another authenticator app before using the console.') }}
+            </div>
+        @endif
 
-            <div class="flex items-center gap-4">
-                <div class="flex items-center justify-end">
-                    <flux:button variant="primary" type="submit" class="w-full" data-test="update-password-button">{{ __('Save') }}</flux:button>
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)]">
+            <div class="space-y-6">
+                <div class="rounded-[1.75rem] border border-zinc-200 bg-white p-6 shadow-sm ring-1 ring-black/5">
+                    <div class="flex items-start gap-4">
+                        <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-brand-charcoal">
+                            <flux:icon.lock-closed class="size-5" />
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-brand-charcoal">{{ __('Update password') }}</h2>
+                            <p class="mt-1 text-sm text-zinc-600">{{ __('Use a strong password that is not shared with any other system.') }}</p>
+                        </div>
+                    </div>
+
+                    <form method="POST" wire:submit="updatePassword" class="mt-6 space-y-4">
+                        <flux:input
+                            wire:model="current_password"
+                            :label="__('Current password')"
+                            type="password"
+                            required
+                            autocomplete="current-password"
+                            viewable
+                        />
+                        <flux:input
+                            wire:model="password"
+                            :label="__('New password')"
+                            type="password"
+                            required
+                            autocomplete="new-password"
+                            viewable
+                        />
+                        <flux:input
+                            wire:model="password_confirmation"
+                            :label="__('Confirm password')"
+                            type="password"
+                            required
+                            autocomplete="new-password"
+                            viewable
+                        />
+
+                        <div class="flex items-center gap-4">
+                            <flux:button variant="primary" type="submit" data-test="update-password-button">
+                                {{ __('Save password') }}
+                            </flux:button>
+
+                            <x-action-message on="password-updated">
+                                {{ __('Saved.') }}
+                            </x-action-message>
+                        </div>
+                    </form>
                 </div>
 
-                <x-action-message class="me-3" on="password-updated">
-                    {{ __('Saved.') }}
-                </x-action-message>
-            </div>
-        </form>
+                @if ($twoFactorEnabled)
+                    <div class="rounded-[1.75rem] border border-zinc-200 bg-white p-6 shadow-sm ring-1 ring-black/5">
+                        <div class="flex items-start gap-4">
+                            <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                                <flux:icon.key class="size-5" />
+                            </div>
+                            <div>
+                                <h2 class="text-base font-bold text-brand-charcoal">{{ __('Recovery codes') }}</h2>
+                                <p class="mt-1 text-sm text-zinc-600">{{ __('Keep these offline so you can recover access if your device is lost.') }}</p>
+                            </div>
+                        </div>
 
-        @if ($canManageTwoFactor)
-            <section class="mt-12">
-                <flux:heading>{{ __('Two-factor authentication') }}</flux:heading>
-                <flux:subheading>{{ __('Manage your two-factor authentication settings') }}</flux:subheading>
-
-                <div class="flex flex-col w-full mx-auto space-y-6 text-sm" wire:cloak>
-                    @if ($twoFactorEnabled)
-                        <div class="space-y-4">
-                            <flux:text>
-                                {{ __('You will be prompted for a secure, random pin during login, which you can retrieve from the TOTP-supported application on your phone.') }}
-                            </flux:text>
-
-                            @if (auth()->user()?->requiresMandatoryTwoFactorAuthentication())
-                                <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
-                                    {{ __('Two-factor authentication is required for admin accounts and cannot be disabled from this screen.') }}
-                                </div>
-                            @else
-                                <div class="flex justify-start">
-                                    <flux:button
-                                        variant="danger"
-                                        wire:click="disable"
-                                    >
-                                        {{ __('Disable 2FA') }}
-                                    </flux:button>
-                                </div>
-                            @endif
-
-                            @error('twoFactor')
-                                <flux:text color="red">{{ $message }}</flux:text>
-                            @enderror
-
+                        <div class="mt-5">
                             <livewire:settings.two-factor.recovery-codes :$requiresConfirmation/>
                         </div>
-                    @else
-                        <div class="space-y-4">
-                            <flux:text variant="subtle">
-                                {{ __('When you enable two-factor authentication, you will be prompted for a secure pin during login. This pin can be retrieved from a TOTP-supported application on your phone.') }}
-                            </flux:text>
+                    </div>
+                @endif
+            </div>
 
-                            <flux:button
-                                variant="primary"
-                                wire:click="enable"
-                            >
-                                {{ __('Enable 2FA') }}
-                            </flux:button>
+            @if ($canManageTwoFactor)
+                <div class="rounded-[1.75rem] border border-zinc-200 bg-white p-6 shadow-sm ring-1 ring-black/5" wire:cloak>
+                    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                            <h2 class="text-base font-bold text-brand-charcoal">{{ __('Two-factor methods') }}</h2>
+                            <p class="mt-1 text-sm leading-6 text-zinc-600">
+                                {{ __('Authenticator app is the default method. Email OTP can be enabled as a backup after authenticator setup.') }}
+                            </p>
                         </div>
-                    @endif
-                </div>
-            </section>
 
+                        <span class="inline-flex w-fit items-center gap-2 rounded-full bg-brand-orange/10 px-3 py-1 text-xs font-bold text-brand-orange">
+                            <span class="size-1.5 rounded-full bg-brand-orange"></span>
+                            {{ __('Password required for changes') }}
+                        </span>
+                    </div>
+
+                    <div class="mt-5 rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4">
+                        <flux:input
+                            wire:model="email_otp_password"
+                            :label="__('Confirm security changes with your password')"
+                            type="password"
+                            autocomplete="current-password"
+                            viewable
+                        />
+                        @error('email_otp_password')
+                            <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
+                        @enderror
+                        <x-action-message class="mt-2" on="security-method-updated">
+                            {{ __('Security method updated.') }}
+                        </x-action-message>
+                    </div>
+
+                    <div class="mt-5 divide-y divide-zinc-200 overflow-hidden rounded-2xl border border-zinc-200">
+                        <div class="grid gap-4 bg-white p-5 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
+                            <div class="flex size-12 items-center justify-center rounded-2xl bg-brand-orange/10 text-brand-orange">
+                                <flux:icon.device-phone-mobile class="size-6" />
+                            </div>
+
+                            <div class="space-y-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h3 class="font-bold text-brand-charcoal">{{ __('Authenticator app') }}</h3>
+                                    <span @class([
+                                        'rounded-full px-2.5 py-1 text-xs font-bold',
+                                        'bg-emerald-100 text-emerald-800' => $twoFactorEnabled,
+                                        'bg-amber-100 text-amber-800' => ! $twoFactorEnabled,
+                                    ])>
+                                        {{ $twoFactorEnabled ? __('Default') : __('Required') }}
+                                    </span>
+                                </div>
+                                <p class="text-sm leading-6 text-zinc-600">
+                                    {{ __('Use Google Authenticator or any TOTP app to generate rotating 6-digit login codes.') }}
+                                </p>
+
+                                @if (auth()->user()?->requiresMandatoryTwoFactorAuthentication() && $twoFactorEnabled)
+                                    <p class="text-sm font-medium text-emerald-700">
+                                        {{ __('Required for admin accounts and cannot be disabled here.') }}
+                                    </p>
+                                @endif
+
+                                @error('twoFactor')
+                                    <p class="text-sm font-medium text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div class="flex justify-start md:justify-end">
+                                @if ($twoFactorEnabled)
+                                    @if (auth()->user()?->requiresMandatoryTwoFactorAuthentication())
+                                        <flux:button variant="outline" disabled>
+                                            {{ __('Required') }}
+                                        </flux:button>
+                                    @else
+                                        <flux:button variant="danger" wire:click="disable">
+                                            {{ __('Disable') }}
+                                        </flux:button>
+                                    @endif
+                                @else
+                                    <flux:button variant="primary" wire:click="enable">
+                                        {{ __('Enable') }}
+                                    </flux:button>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="grid gap-4 bg-white p-5 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
+                            <div class="flex size-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
+                                <flux:icon.envelope class="size-6" />
+                            </div>
+
+                            <div class="space-y-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h3 class="font-bold text-brand-charcoal">{{ __('Email OTP backup') }}</h3>
+                                    <span @class([
+                                        'rounded-full px-2.5 py-1 text-xs font-bold',
+                                        'bg-emerald-100 text-emerald-800' => $emailOtpEnabled,
+                                        'bg-zinc-100 text-zinc-700' => ! $emailOtpEnabled,
+                                    ])>
+                                        {{ $emailOtpEnabled ? __('Enabled') : __('Off') }}
+                                    </span>
+                                </div>
+                                <p class="text-sm leading-6 text-zinc-600">
+                                    {{ __('Send one-time login codes to') }}
+                                    <span class="font-semibold text-brand-charcoal">{{ $this->maskedEmail }}</span>
+                                    {{ __('when your authenticator app is unavailable.') }}
+                                </p>
+
+                                @if (! $twoFactorEnabled)
+                                    <p class="text-sm font-medium text-amber-700">
+                                        {{ __('Enable authenticator app first before adding email OTP.') }}
+                                    </p>
+                                @endif
+
+                                @error('emailOtp')
+                                    <p class="text-sm font-medium text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div class="flex justify-start md:justify-end">
+                                @if ($emailOtpEnabled)
+                                    <flux:button variant="danger" wire:click="disableEmailOtp">
+                                        {{ __('Disable') }}
+                                    </flux:button>
+                                @else
+                                    <flux:button variant="primary" wire:click="enableEmailOtp" :disabled="! $twoFactorEnabled">
+                                        {{ __('Enable') }}
+                                    </flux:button>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        @if ($canManageTwoFactor)
             <flux:modal
                 name="two-factor-setup-modal"
                 class="max-w-md md:min-w-md"
@@ -105,22 +263,8 @@
             >
                 <div class="space-y-6">
                     <div class="flex flex-col items-center space-y-4">
-                        <div class="p-0.5 w-auto rounded-full border border-stone-100 dark:border-stone-600 bg-white dark:bg-stone-800 shadow-sm">
-                            <div class="p-2.5 rounded-full border border-stone-200 dark:border-stone-600 overflow-hidden bg-stone-100 dark:bg-stone-200 relative">
-                                <div class="flex items-stretch absolute inset-0 w-full h-full divide-x [&>div]:flex-1 divide-stone-200 dark:divide-stone-300 justify-around opacity-50">
-                                    @for ($i = 1; $i <= 5; $i++)
-                                        <div></div>
-                                    @endfor
-                                </div>
-
-                                <div class="flex flex-col items-stretch absolute w-full h-full divide-y [&>div]:flex-1 inset-0 divide-stone-200 dark:divide-stone-300 justify-around opacity-50">
-                                    @for ($i = 1; $i <= 5; $i++)
-                                        <div></div>
-                                    @endfor
-                                </div>
-
-                                <flux:icon.qr-code class="relative z-20 dark:text-accent-foreground"/>
-                            </div>
+                        <div class="rounded-full border border-brand-orange/20 bg-brand-orange/10 p-3 text-brand-orange">
+                            <flux:icon.qr-code class="size-6"/>
                         </div>
 
                         <div class="space-y-2 text-center">
@@ -131,7 +275,7 @@
 
                     @if ($showVerificationStep)
                         <div class="space-y-6">
-                            <div class="flex flex-col items-center space-y-3 justify-center">
+                            <div class="flex flex-col items-center justify-center space-y-3">
                                 <flux:otp
                                     name="code"
                                     wire:model="code"
@@ -167,17 +311,17 @@
                         @enderror
 
                         <div class="flex justify-center">
-                            <div class="relative w-64 overflow-hidden border rounded-lg border-stone-200 dark:border-stone-700 aspect-square">
+                            <div class="relative aspect-square w-64 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
                                 @empty($qrCodeSvg)
-                                    <div class="absolute inset-0 flex items-center justify-center bg-white dark:bg-stone-700 animate-pulse">
+                                    <div class="absolute inset-0 flex items-center justify-center bg-white animate-pulse">
                                         <flux:icon.loading/>
                                     </div>
                                 @else
-                                <div x-data class="flex items-center justify-center h-full p-4">
-                                    <div
-                                        class="bg-white p-3 rounded"
-                                        :style="($flux.appearance === 'dark' || ($flux.appearance === 'system' && $flux.dark)) ? 'filter: invert(1) brightness(1.5)' : ''"
-                                    >
+                                    <div x-data class="flex h-full items-center justify-center p-4">
+                                        <div
+                                            class="rounded bg-white p-3"
+                                            :style="($flux.appearance === 'dark' || ($flux.appearance === 'system' && $flux.dark)) ? 'filter: invert(1) brightness(1.5)' : ''"
+                                        >
                                             {!! $qrCodeSvg !!}
                                         </div>
                                     </div>
@@ -185,27 +329,21 @@
                             </div>
                         </div>
 
-                        <div>
-                            <flux:button
-                                :disabled="$errors->has('setupData')"
-                                variant="primary"
-                                class="w-full"
-                                wire:click="showVerificationIfNecessary"
-                            >
-                                {{ $this->modalConfig['buttonText'] }}
-                            </flux:button>
-                        </div>
+                        <flux:button
+                            :disabled="$errors->has('setupData')"
+                            variant="primary"
+                            class="w-full"
+                            wire:click="showVerificationIfNecessary"
+                        >
+                            {{ $this->modalConfig['buttonText'] }}
+                        </flux:button>
 
-                        <div class="space-y-4">
-                            <div class="relative flex items-center justify-center w-full">
-                                <div class="absolute inset-0 w-full h-px top-1/2 bg-stone-200 dark:bg-stone-600"></div>
-                                <span class="relative px-2 text-sm bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-400">
-                                    {{ __('or, enter the code manually') }}
-                                </span>
-                            </div>
-
+                        <details class="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                            <summary class="cursor-pointer text-sm font-semibold text-brand-charcoal">
+                                {{ __("Can't scan the QR code?") }}
+                            </summary>
                             <div
-                                class="flex items-center space-x-2"
+                                class="mt-3 flex items-center space-x-2"
                                 x-data="{
                                     copied: false,
                                     async copy() {
@@ -219,9 +357,9 @@
                                     }
                                 }"
                             >
-                                <div class="flex items-stretch w-full border rounded-xl dark:border-stone-700">
+                                <div class="flex w-full items-stretch rounded-xl border bg-white">
                                     @empty($manualSetupKey)
-                                        <div class="flex items-center justify-center w-full p-3 bg-stone-100 dark:bg-stone-700">
+                                        <div class="flex w-full items-center justify-center p-3">
                                             <flux:icon.loading variant="mini"/>
                                         </div>
                                     @else
@@ -229,12 +367,13 @@
                                             type="text"
                                             readonly
                                             value="{{ $manualSetupKey }}"
-                                            class="w-full p-3 bg-transparent outline-none text-stone-900 dark:text-stone-100"
+                                            class="w-full bg-transparent p-3 text-sm text-stone-900 outline-none"
                                         />
 
                                         <button
+                                            type="button"
                                             @click="copy()"
-                                            class="px-3 transition-colors border-l cursor-pointer border-stone-200 dark:border-stone-600"
+                                            class="cursor-pointer border-l border-stone-200 px-3 transition-colors"
                                         >
                                             <flux:icon.document-duplicate x-show="!copied" variant="outline"></flux:icon>
                                             <flux:icon.check
@@ -246,10 +385,10 @@
                                     @endempty
                                 </div>
                             </div>
-                        </div>
+                        </details>
                     @endif
                 </div>
             </flux:modal>
         @endif
-    </x-settings.layout>
+    </div>
 </section>

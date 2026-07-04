@@ -38,6 +38,7 @@ class UserFactory extends Factory
             'joined_at' => fake()->dateTimeBetween('-2 years', 'now')->format('Y-m-d'),
             'employee_code' => strtoupper(fake()->unique()->bothify('EMP-####')),
             'is_active' => true,
+            'email_otp_enabled' => false,
             'dealer_id' => null,
         ];
     }

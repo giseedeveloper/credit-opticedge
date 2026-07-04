@@ -22,7 +22,7 @@ use Spatie\Permission\Exceptions\PermissionDoesNotExist;
 use Spatie\Permission\Traits\HasPermissions;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'phone', 'role', 'dealer_id', 'joined_at', 'employee_code', 'is_active', 'avatar_url'])]
+#[Fillable(['name', 'email', 'password', 'phone', 'role', 'dealer_id', 'joined_at', 'employee_code', 'is_active', 'avatar_url', 'email_otp_enabled'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -55,6 +55,7 @@ class User extends Authenticatable
             'joined_at' => 'date',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'email_otp_enabled' => 'boolean',
         ];
     }
 
@@ -103,6 +104,17 @@ class User extends Authenticatable
     {
         return $this->requiresMandatoryTwoFactorAuthentication()
             && ! $this->hasEnabledTwoFactorAuthentication();
+    }
+
+    public function hasEnabledEmailOtpAuthentication(): bool
+    {
+        return (bool) $this->email_otp_enabled && filled($this->email);
+    }
+
+    public function canUseEmailOtpForTwoFactorChallenge(): bool
+    {
+        return $this->hasEnabledTwoFactorAuthentication()
+            && $this->hasEnabledEmailOtpAuthentication();
     }
 
     public function isOwner(): bool

@@ -92,13 +92,14 @@
                         ['href'=>route('financials.collections'),'label'=>'Collections','icon'=>'currency-dollar','ability'=>'accounting.view','active'=>request()->routeIs('financials.collections')],
                         ['href'=>route('financials.accounting'),'label'=>'Accounting Workspace','icon'=>'calculator','ability'=>'accounting.view','active'=>request()->routeIs('financials.accounting')],
                     ]],
-                    ['icon'=>'cog-6-tooth','label'=>'System Control','active'=>request()->routeIs('comms.*','audits.*','access','settings.*','staff.*','dealers.*'),'links'=>[
+                    ['icon'=>'cog-6-tooth','label'=>'System Control','active'=>request()->routeIs('comms.*','audits.*','access','security.edit','settings.*','staff.*','dealers.*'),'links'=>[
                         ['href'=>route('comms.sms'),'label'=>'SMS Center','icon'=>'chat-bubble-left-right','ability'=>'sms_campaign.view','active'=>request()->routeIs('comms.sms')],
                         ['href'=>route('comms.audit'),'label'=>'Audit Trail','icon'=>'eye','ability'=>'reports.view','active'=>request()->routeIs('comms.audit')],
                         ['href'=>route('audits.logs'),'label'=>'Forensic Logs','icon'=>'shield-exclamation','ability'=>'reports.view','active'=>request()->routeIs('audits.logs')],
                         ['href'=>route('dealers.index'),'label'=>'Dealers','icon'=>'building-office-2','ability'=>'dealers.view','active'=>request()->routeIs('dealers.*')],
                         ['href'=>route('staff.index'),'label'=>'Staff Management','icon'=>'users','ability'=>'staff.view','active'=>request()->routeIs('staff.*')],
                         ['href'=>route('access'),'label'=>'Roles & Permissions','icon'=>'key','ability'=>'access.view','active'=>request()->routeIs('access')],
+                        ['href'=>route('security.edit'),'label'=>'Security','icon'=>'shield-check','ability'=>'settings.view','active'=>request()->routeIs('security.edit')],
                         ['href'=>route('settings.integrations'),'label'=>'Integrations','icon'=>'puzzle-piece','ability'=>'settings.view','active'=>request()->routeIs('settings.integrations')],
                         ['href'=>route('settings.health'),'label'=>'System Health','icon'=>'heart','ability'=>'settings.view','active'=>request()->routeIs('settings.health')],
                     ]],

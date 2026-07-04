@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\EmailOtpChallengeController;
 use App\Http\Controllers\DashboardNotificationController;
 use App\Livewire\Access\RoleManager;
 use App\Livewire\Accounting\AccountingWorkspace;
@@ -35,6 +36,12 @@ Route::get('/', function () {
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', Login::class)->name('login');
+    Route::post('/two-factor-challenge/email', [EmailOtpChallengeController::class, 'send'])
+        ->middleware('throttle:two-factor')
+        ->name('two-factor.email.send');
+    Route::post('/two-factor-challenge/email/verify', [EmailOtpChallengeController::class, 'store'])
+        ->middleware('throttle:two-factor')
+        ->name('two-factor.email.store');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

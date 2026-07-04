@@ -5,6 +5,8 @@ use App\Livewire\Auth\AdminMfaSetup;
 use App\Livewire\Settings\Security;
 use App\Models\Role;
 use App\Models\User;
+use App\Notifications\Auth\EmailOtpCodeNotification;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Features;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
@@ -114,6 +116,59 @@ test('admin cannot disable mandatory two factor authentication', function () {
         ->assertHasErrors(['twoFactor']);
 
     expect($admin->fresh()->hasEnabledTwoFactorAuthentication())->toBeTrue();
+});
+
+test('admin can use enabled email otp as a backup mfa challenge', function () {
+    Notification::fake();
+
+    $admin = adminUser(withTwoFactor: true);
+    $admin->forceFill(['email_otp_enabled' => true])->save();
+
+    $this->withSession([
+        'login.id' => $admin->getKey(),
+        'login.remember' => false,
+    ]);
+
+    $this->from(route('two-factor.login'))
+        ->post(route('two-factor.email.send'))
+        ->assertRedirect(route('two-factor.login'))
+        ->assertSessionHas('email_otp_sent');
+
+    $code = null;
+
+    Notification::assertSentTo(
+        $admin,
+        EmailOtpCodeNotification::class,
+        function (EmailOtpCodeNotification $notification) use (&$code) {
+            $code = $notification->code;
+
+            return strlen($code) === 6;
+        },
+    );
+
+    $this->post(route('two-factor.email.store'), [
+        'email_code' => $code,
+    ])->assertRedirect();
+
+    $this->assertAuthenticatedAs($admin);
+});
+
+test('email otp challenge is blocked until the backup method is enabled', function () {
+    Notification::fake();
+
+    $admin = adminUser(withTwoFactor: true);
+
+    $this->withSession([
+        'login.id' => $admin->getKey(),
+        'login.remember' => false,
+    ]);
+
+    $this->from(route('two-factor.login'))
+        ->post(route('two-factor.email.send'))
+        ->assertRedirect(route('two-factor.login'))
+        ->assertSessionHasErrors('email_code');
+
+    Notification::assertNothingSent();
 });
 
 function adminUser(bool $withTwoFactor = false): User

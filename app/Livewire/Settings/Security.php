@@ -5,6 +5,7 @@ namespace App\Livewire\Settings;
 use App\Concerns\PasswordValidationRules;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
 use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
@@ -30,13 +31,16 @@ class Security extends Component
     public string $password_confirmation = '';
 
     #[Locked]
-    public bool $canManageTwoFactor;
+    public bool $canManageTwoFactor = false;
 
     #[Locked]
-    public bool $twoFactorEnabled;
+    public bool $twoFactorEnabled = false;
 
     #[Locked]
-    public bool $requiresConfirmation;
+    public bool $requiresConfirmation = false;
+
+    #[Locked]
+    public bool $emailOtpEnabled = false;
 
     #[Locked]
     public string $qrCodeSvg = '';
@@ -50,6 +54,8 @@ class Security extends Component
 
     #[Validate('required|string|size:6', onUpdate: false)]
     public string $code = '';
+
+    public string $email_otp_password = '';
 
     /**
      * Mount the component.
@@ -65,6 +71,7 @@ class Security extends Component
 
             $this->twoFactorEnabled = auth()->user()->hasEnabledTwoFactorAuthentication();
             $this->requiresConfirmation = Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm');
+            $this->emailOtpEnabled = auth()->user()->hasEnabledEmailOtpAuthentication();
         }
     }
 
@@ -98,6 +105,8 @@ class Security extends Component
      */
     public function enable(EnableTwoFactorAuthentication $enableTwoFactorAuthentication): void
     {
+        $this->confirmSecurityPassword();
+
         $enableTwoFactorAuthentication(auth()->user());
 
         if (! $this->requiresConfirmation) {
@@ -105,6 +114,7 @@ class Security extends Component
         }
 
         $this->loadSetupData();
+        $this->reset('email_otp_password');
 
         $this->showModal = true;
     }
@@ -180,9 +190,45 @@ class Security extends Component
             return;
         }
 
+        $this->confirmSecurityPassword();
+
         $disableTwoFactorAuthentication(auth()->user());
+        auth()->user()->forceFill(['email_otp_enabled' => false])->save();
 
         $this->twoFactorEnabled = false;
+        $this->emailOtpEnabled = false;
+        $this->reset('email_otp_password');
+        $this->dispatch('security-method-updated');
+    }
+
+    public function enableEmailOtp(): void
+    {
+        $user = auth()->user();
+
+        if (! $user->hasEnabledTwoFactorAuthentication()) {
+            $this->addError('emailOtp', __('Enable authenticator app MFA before adding email OTP as a backup.'));
+
+            return;
+        }
+
+        $this->confirmSecurityPassword();
+
+        $user->forceFill(['email_otp_enabled' => true])->save();
+
+        $this->emailOtpEnabled = true;
+        $this->reset('email_otp_password');
+        $this->dispatch('security-method-updated');
+    }
+
+    public function disableEmailOtp(): void
+    {
+        $this->confirmSecurityPassword();
+
+        auth()->user()->forceFill(['email_otp_enabled' => false])->save();
+
+        $this->emailOtpEnabled = false;
+        $this->reset('email_otp_password');
+        $this->dispatch('security-method-updated');
     }
 
     /**
@@ -231,5 +277,36 @@ class Security extends Component
             'description' => __('To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app.'),
             'buttonText' => __('Continue'),
         ];
+    }
+
+    public function getMaskedEmailProperty(): string
+    {
+        $email = auth()->user()?->email ?? '';
+
+        if (! str_contains($email, '@')) {
+            return $email;
+        }
+
+        [$localPart, $domain] = explode('@', $email, 2);
+        $visible = substr($localPart, 0, min(2, strlen($localPart)));
+
+        return $visible.str_repeat('*', max(strlen($localPart) - strlen($visible), 3)).'@'.$domain;
+    }
+
+    private function confirmSecurityPassword(): void
+    {
+        if ($this->email_otp_password === '') {
+            throw ValidationException::withMessages([
+                'email_otp_password' => __('Please enter your password to confirm this security change.'),
+            ]);
+        }
+
+        if (! Hash::check($this->email_otp_password, auth()->user()->password)) {
+            $this->reset('email_otp_password');
+
+            throw ValidationException::withMessages([
+                'email_otp_password' => __('The provided password does not match your current password.'),
+            ]);
+        }
     }
 }
